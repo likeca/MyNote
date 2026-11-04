@@ -39,6 +39,7 @@ import { timeAgo } from "../lib/time";
 import { ancestorKeys, resolveWikiLink } from "../lib/tree";
 import { aiAccess, type AiAccess } from "../lib/ai";
 import { wantsNewTab } from "../lib/nav";
+import { useSettings } from "../lib/settings";
 import { useVault } from "../lib/vault";
 import { CoverBox, CoverCredit, CoverPicker, photoCover } from "./Cover";
 import { IconPicker } from "./LazyIconPicker";
@@ -67,6 +68,7 @@ const parentOf = (path: string) => (path.includes("/") ? `${path.slice(0, path.l
 
 export function PageView(p: Props) {
   const { notes, refreshKey, openPage, peek, createPage, refresh, aiPolicy } = useVault();
+  const settings = useSettings();
   const [doc, setDoc] = useState<Doc | "missing" | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const [title, setTitleState] = useState(() => notes.find((n) => n.path === p.path)?.title ?? titleOf(p.path));
@@ -265,7 +267,10 @@ export function PageView(p: Props) {
   const font = values.font === "serif" || values.font === "mono" ? values.font : "default";
   const small = values.small === true;
   const peekMode = p.mode === "peek";
-  const fullWidth = values.fullWidth === true || (isDb && !peekMode && values.fullWidth !== false);
+  // A page's own `fullWidth` wins; otherwise databases and (per Settings → Appearance) pages fill the
+  // window. The side peek stays its own width unless the page asks for full width.
+  const fullWidthDefault = isDb || settings.fullWidth;
+  const fullWidth = typeof values.fullWidth === "boolean" ? values.fullWidth : !peekMode && fullWidthDefault;
   const width = fullWidth ? "max-w-none px-24" : peekMode ? "max-w-none px-12" : "max-w-[708px] px-0";
   const emptyBody = doc && !isDb && !body.current.trim() && !parentIsDb;
 
@@ -501,6 +506,8 @@ export function PageView(p: Props) {
         <PageMenu
           anchor={menu}
           values={values}
+          fullWidth={typeof values.fullWidth === "boolean" ? values.fullWidth : fullWidthDefault}
+          fullWidthDefault={fullWidthDefault}
           words={body.current.split(/\s+/).filter(Boolean).length}
           meta={meta}
           onClose={() => setMenu(null)}
@@ -612,6 +619,8 @@ function TopBar(p: Props & { meta?: NoteMeta; saving: boolean; onMenu: (el: HTML
 function PageMenu({
   anchor,
   values,
+  fullWidth,
+  fullWidthDefault,
   words,
   meta,
   favorite,
@@ -626,6 +635,9 @@ function PageMenu({
 }: {
   anchor: HTMLElement;
   values: Record<string, unknown>;
+  /** Whether the page is full width (outside the side peek), and whether it would be without its own flag. */
+  fullWidth: boolean;
+  fullWidthDefault: boolean;
   words: number;
   meta?: NoteMeta;
   favorite?: boolean;
@@ -664,7 +676,12 @@ function PageMenu({
         ))}
       </div>
       <MenuItem label="Small text" right={<Toggle on={values.small === true} />} onClick={() => onPatch({ small: values.small === true ? null : true })} />
-      <MenuItem label="Full width" right={<Toggle on={values.fullWidth === true} />} onClick={() => onPatch({ fullWidth: values.fullWidth === true ? null : true })} />
+      <MenuItem
+        label="Full width"
+        right={<Toggle on={fullWidth} />}
+        // Smallest override: none when the page would already be that wide without its own flag.
+        onClick={() => onPatch({ fullWidth: !fullWidth === fullWidthDefault ? null : !fullWidth })}
+      />
       <MenuDivider />
       {ai.source === "parent" && !ai.visible ? (
         <div className="px-2 py-1.5 text-xs leading-relaxed text-muted">

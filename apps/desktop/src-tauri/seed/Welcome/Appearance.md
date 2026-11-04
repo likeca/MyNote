@@ -26,5 +26,9 @@ The accent colours buttons, selections, checkboxes and links: Ember, Blue, Viole
 
 Small, Default or Large, for the text of every page.
 
+## Full width pages
+
+On by default: pages use the whole window width. Turn it off for a narrower column of text that's easier to read.
+
 > [!gray] 🖋️
 > To change one page instead, use **Style**, **Small text** and **Full width** in its `•••` menu. Those are saved in the page itself. See [[Pages and sub-pages]].

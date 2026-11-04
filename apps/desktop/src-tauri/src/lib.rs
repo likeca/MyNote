@@ -1,5 +1,6 @@
 mod importer;
 mod library;
+mod script;
 mod seed;
 
 // The workspace engine lives in the shared core crate; these keep `crate::vault` / `crate::git` paths working.
@@ -39,6 +40,8 @@ struct Shared {
     syncing: AtomicBool,
     /// The media library service (plugins use it through `ctx.library`).
     library: library::Shared,
+    /// Shell code blocks being run from pages.
+    scripts: script::Running,
 }
 
 impl Default for Shared {
@@ -55,6 +58,7 @@ impl Default for Shared {
             sync_lock: Mutex::default(),
             syncing: AtomicBool::new(false),
             library: Arc::default(),
+            scripts: script::Running::default(),
         }
     }
 }
@@ -653,6 +657,26 @@ async fn plugin_store_install(app: AppHandle, id: String) -> Result<String, Stri
     tauri::async_runtime::spawn_blocking(move || plugin_store::install(&plugin_dirs(&app), &id)).await.map_err(|e| e.to_string())?
 }
 
+/// Runs a page's shell code block in the workspace folder, streaming its output to `on_output`.
+/// Returns the exit code, or `None` when it was stopped.
+#[tauri::command]
+async fn run_script(state: State<'_, AppState>, id: u32, language: String, script: String, on_output: tauri::ipc::Channel<String>) -> Result<Option<i32>, String> {
+    let state = state.inner().clone();
+    let cwd = vault(&state)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        script::run(&state.scripts, id, &cwd, &language, &script, move |chunk| {
+            let _ = on_output.send(chunk);
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn stop_script(state: State<AppState>, id: u32) {
+    script::stop(&state.scripts, id)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let state: AppState = Arc::default();
@@ -731,7 +755,9 @@ pub fn run() {
             plugin_data_get,
             plugin_data_set,
             plugin_store_index,
-            plugin_store_install
+            plugin_store_install,
+            run_script,
+            stop_script
         ])
         .run(tauri::generate_context!())
         .expect("error while running Betelgeuse");

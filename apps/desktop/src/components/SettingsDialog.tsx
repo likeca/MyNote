@@ -240,6 +240,9 @@ function Appearance() {
             ]}
           />
         </Row>
+        <Row label="Full width pages" hint="Pages use the whole window width. A page can change this in its ••• menu.">
+          <Switch label="Full width pages" checked={s.fullWidth} onChange={(fullWidth) => updateSettings({ fullWidth })} />
+        </Row>
       </div>
     </>
   );

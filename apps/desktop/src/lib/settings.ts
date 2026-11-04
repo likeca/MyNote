@@ -11,6 +11,8 @@ export type Settings = {
   palette: Palette;
   accent: string;
   textSize: TextSize;
+  /** Pages use the whole window width, unless a page sets its own `fullWidth`. */
+  fullWidth: boolean;
   /** Seconds of quiet before auto-committing; 0 turns it off. */
   autocommit: number;
   /** Seconds between automatic syncs with the remote; 0 turns it off. */
@@ -38,7 +40,7 @@ export const PALETTES: { id: Palette; label: string; hint: string; swatch: [stri
   { id: "midnight", label: "Midnight", hint: "Cool blue slate", swatch: ["#13161d", "#191d26", "#5b7cfa"] },
 ];
 
-const DEFAULTS: Settings = { mode: "system", palette: "betelgeuse", accent: "ember", textSize: "default", autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
+const DEFAULTS: Settings = { mode: "system", palette: "betelgeuse", accent: "ember", textSize: "default", fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
 const KEY = "betelgeuse-settings";
 
 function load(): Settings {

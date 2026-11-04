@@ -35,7 +35,7 @@ Click `•••` in the top right of a page:
 | -------------------- | ---------------------------------------------------- |
 | Style                | Default, Serif or Mono text for this page            |
 | Small text           | Smaller text on this page                            |
-| Full width           | Use the whole window width                           |
+| Full width           | Use the whole window width, or a narrower column     |
 | Visible to AI agents | Hide this page and its sub-pages from agents         |
 | Add to Favorites     | Pin it to the top of the sidebar, like the star does |
 | Copy link            | Copy the page's link, ready to paste                 |

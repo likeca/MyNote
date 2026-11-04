@@ -7,7 +7,7 @@
  *   database   ![[Tasks]]               (Obsidian embed syntax)
  */
 import { PageIcon, assetUrl } from "../components/PageIcon";
-import { Mark, Node, mergeAttributes, type JSONContent, type NodeViewRendererProps } from "@tiptap/core";
+import { Extension, Mark, Node, mergeAttributes, type Editor as TiptapEditor, type JSONContent, type NodeViewRendererProps } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { Details } from "@tiptap/extension-details";
 import Image from "@tiptap/extension-image";
@@ -15,17 +15,18 @@ import { Table } from "@tiptap/extension-table";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, Selection, TextSelection } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
-import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
-import { Check, ChevronDown, Copy, FileText, Image as ImageIcon, Maximize2, Trash2, WrapText, X } from "lucide-react";
+import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
+import { Check, ChevronDown, Copy, FileText, Image as ImageIcon, LoaderCircle, Maximize2, Play, Square, TextCursor, Trash2, WrapText, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { common, createLowlight } from "lowlight";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { IconPicker } from "../components/LazyIconPicker";
 import { MenuItem, Popover } from "../components/Popover";
 import { DatabaseView } from "../database/DatabaseView";
 import { api } from "../lib/api";
 import { COLORS, bgColor, textColor } from "../lib/colors";
 import { resolveWikiLink } from "../lib/tree";
+import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
 
 const isColor = (c: unknown): c is string => typeof c === "string" && (COLORS as readonly string[]).includes(c);
@@ -678,19 +679,105 @@ export const LANGUAGES: [string, string][] = [
 
 const ALIASES: Record<string, string> = { js: "javascript", ts: "typescript", sh: "bash", zsh: "bash", py: "python", rs: "rust", html: "xml", yml: "yaml", toml: "ini", jsx: "javascript", tsx: "typescript" };
 
+/** Shell blocks run with Ctrl-E or their Run button (desktop only). The output shows under the block and isn't saved. */
+const SHELLS: Record<string, true> = { bash: true, sh: true, shell: true, zsh: true };
+const runnable = (language: unknown) => typeof language === "string" && SHELLS[language] === true && currentPlatform() === "desktop";
+/** The code blocks on screen that can run, so Ctrl-E finds the one with the cursor. */
+const runners = new Set<{ editor: TiptapEditor; pos: () => number | undefined; run: () => void }>();
+/** Only the end of very long output is kept, so a chatty script can't grow the page without bound. */
+const MAX_OUTPUT = 200_000;
+let runIds = 0;
+
+/** Ctrl-E in a shell block runs it. Ahead of Tiptap's own Ctrl-E (end of block, on macOS). */
+const RunShortcut = Extension.create({
+  name: "codeBlockRun",
+  priority: 1000,
+  addKeyboardShortcuts() {
+    return {
+      "Ctrl-e": () => {
+        const { $from } = this.editor.state.selection;
+        if ($from.parent.type.name !== "codeBlock" || !runnable($from.parent.attrs.language)) return false;
+        const pos = $from.before();
+        const runner = [...runners].find((r) => r.editor === this.editor && r.pos() === pos);
+        runner?.run();
+        return !!runner;
+      },
+    };
+  },
+});
+
 export const CodeBlock = CodeBlockLowlight.extend({
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView);
   },
+  addExtensions() {
+    return [...(this.parent?.() ?? []), RunShortcut];
+  },
 }).configure({ lowlight, defaultLanguage: null, enableTabIndentation: true });
 
-function CodeBlockView({ node, updateAttributes }: NodeViewProps) {
+/** A run of a shell block (or one of its lines): its output so far, then its exit code (null when stopped) or why it couldn't start. */
+type ScriptRun = { id: number; line?: number; output: string; exit?: number | null; error?: string };
+
+/** The line of a code block at `pos` that the cursor is on (1-based), or null when the cursor is elsewhere. */
+function cursorLine(editor: TiptapEditor, pos: number | undefined): { number: number; text: string } | null {
+  const block = pos === undefined ? null : editor.state.doc.nodeAt(pos);
+  if (pos === undefined || !block) return null;
+  const offset = editor.state.selection.head - (pos + 1);
+  if (offset < 0 || offset > block.content.size) return null;
+  const text = block.textContent;
+  const start = text.lastIndexOf("\n", offset - 1) + 1;
+  const end = text.indexOf("\n", offset);
+  return { number: text.slice(0, start).split("\n").length, text: text.slice(start, end < 0 ? undefined : end) };
+}
+
+function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
   const [wrap, setWrap] = useState(false);
+  const [run, setRun] = useState<ScriptRun | null>(null);
   const lang = ALIASES[node.attrs.language] ?? node.attrs.language ?? "";
   const label = LANGUAGES.find(([id]) => id === lang)?.[1] ?? (lang || "Plain text");
+  const canRun = runnable(node.attrs.language);
+  const running = !!run && run.exit === undefined && run.error === undefined;
+  // The line "Run line" would run (null when the cursor isn't on a non-blank line here); re-read on every selection change.
+  const line = useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      const at = canRun ? cursorLine(e, getPos()) : null;
+      return at?.text.trim() ? at.number : null;
+    },
+  });
+
+  const live = useRef<number | null>(null);
+  /** Runs the whole block, or just `line`. */
+  const start = (only?: { number: number; text: string }) => {
+    if (live.current !== null) return;
+    const id = ++runIds;
+    live.current = id;
+    const patch = (f: (r: ScriptRun) => ScriptRun) => setRun((r) => (r?.id === id ? f(r) : r));
+    setRun({ id, line: only?.number, output: "" });
+    api.runScript(id, node.attrs.language, only?.text ?? node.textContent, (chunk) => patch((r) => ({ ...r, output: (r.output + chunk).slice(-MAX_OUTPUT) }))).then(
+      (exit) => patch((r) => ({ ...r, exit })),
+      (e) => patch((r) => ({ ...r, error: String(e) })),
+    ).finally(() => {
+      if (live.current === id) live.current = null;
+    });
+  };
+  const runLine = () => {
+    const only = cursorLine(editor, getPos());
+    if (only?.text.trim()) start(only);
+  };
+  const startRef = useRef(start);
+  startRef.current = start;
+  useEffect(() => {
+    if (!canRun) return;
+    const entry = { editor, pos: getPos, run: () => startRef.current() };
+    runners.add(entry);
+    return () => void runners.delete(entry);
+  }, [canRun, editor, getPos]);
+  // A script doesn't outlive its block: closing the page or deleting the block stops it.
+  useEffect(() => () => void (live.current !== null && api.stopScript(live.current)), []);
 
   return (
     <NodeViewWrapper className="code-block group/code">
@@ -699,6 +786,23 @@ function CodeBlockView({ node, updateAttributes }: NodeViewProps) {
           {label} <ChevronDown size={12} />
         </button>
         <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/code:opacity-100">
+          {canRun && (
+            <>
+              <button onClick={() => start()} disabled={running} title="Run (⌃E)" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50">
+                <Play size={12} /> Run
+              </button>
+              <button
+                // Keep the cursor (and so the line) where it is.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={runLine}
+                disabled={running || line === null}
+                title={line === null ? "Put the cursor on a line to run just that line" : `Run line ${line}`}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50"
+              >
+                <TextCursor size={12} /> Run line
+              </button>
+            </>
+          )}
           <button onClick={() => setWrap((w) => !w)} className={`flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover ${wrap ? "text-ink" : ""}`}>
             <WrapText size={12} /> Wrap
           </button>
@@ -717,6 +821,31 @@ function CodeBlockView({ node, updateAttributes }: NodeViewProps) {
       <pre className={wrap ? "wrap" : ""}>
         <NodeViewContent<"code"> as="code" className={lang ? `language-${lang}` : undefined} />
       </pre>
+      {run && (
+        <div contentEditable={false} className="code-output">
+          <div className="code-output-bar">
+            {running ? (
+              <>
+                <LoaderCircle size={12} className="animate-spin" /> {run.line ? `Running line ${run.line}…` : "Running…"}
+                <button onClick={() => api.stopScript(run.id)} className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover">
+                  <Square size={11} /> Stop
+                </button>
+              </>
+            ) : (
+              <>
+                <span className={run.error || run.exit ? "text-[var(--c-red-text)]" : ""}>
+                  {run.line ? `Line ${run.line} · ` : ""}
+                  {run.error ? "Couldn't run" : run.exit === null ? "Stopped" : `Exited with ${run.exit}`}
+                </span>
+                <button onClick={() => setRun(null)} title="Clear output" className="ml-auto grid size-5 place-items-center rounded hover:bg-hover">
+                  <X size={12} />
+                </button>
+              </>
+            )}
+          </div>
+          {(run.output || run.error) && <pre className={wrap ? "wrap" : ""}>{run.error ?? run.output}</pre>}
+        </div>
+      )}
       {menu && (
         <Popover anchor={menu} onClose={() => (setMenu(null), setQuery(""))} className="w-56 p-1">
           <input

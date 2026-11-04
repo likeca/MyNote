@@ -257,6 +257,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "imagesize",
+ "libc",
  "notify",
  "regex",
  "scraper",

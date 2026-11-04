@@ -45,7 +45,7 @@ Betelgeuse/
 | `tags`      | `tags: [guide, files]` | The page's tags                              |
 | `font`      | `font: serif`          | `serif` or `mono` style                      |
 | `small`     | `small: true`          | Small text                                   |
-| `fullWidth` | `fullWidth: true`      | Full width                                   |
+| `fullWidth` | `fullWidth: false`     | Full width (`true`) or a narrow column       |
 | `ai`        | `ai: false`            | Hide from AI agents, or `true` to share      |
 | `order`     | `order: 2`             | Its place among sibling pages in the sidebar |
 | `type`      | `type: database`       | Makes the page a database                    |

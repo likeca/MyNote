@@ -90,6 +90,8 @@ A divider is a line across the page:
 const greet = (name) => `Hello, ${name}!`;
 ```
 
+On the desktop app, a **Bash**, **Shell** or **zsh** block can be run: put the cursor in it and press `Ctrl E`, or hover it and click **Run**. To run just one line, put the cursor on it and click **Run line**. It runs in your workspace folder, with the same `PATH` as your terminal. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
+
 ### Image
 
 `/Image`, then paste a link to an image and click **Embed image**. Images that come in with an import are copied into the workspace's `.assets/` folder.

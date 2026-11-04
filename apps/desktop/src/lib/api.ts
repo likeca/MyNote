@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 export type NoteMeta = {
   path: string;
@@ -68,5 +68,12 @@ export const api = {
   /** Per-machine UI state kept in a file, for things that must survive a quit or crash (Recents). */
   uiStateGet: (key: string) => invoke<string | null>("ui_state_get", { key }),
   uiStateSet: (key: string, value: string) => invoke<void>("ui_state_set", { key, value }),
+  /** Runs a shell code block in the workspace folder (desktop only). Resolves to its exit code, or null when stopped. */
+  runScript: (id: number, language: string, script: string, onOutput: (chunk: string) => void) => {
+    const channel = new Channel<string>();
+    channel.onmessage = onOutput;
+    return invoke<number | null>("run_script", { id, language, script, onOutput: channel });
+  },
+  stopScript: (id: number) => invoke<void>("stop_script", { id }),
 
 };
