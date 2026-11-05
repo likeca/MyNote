@@ -2,9 +2,9 @@
 icon: ✨
 tags: [betelgeuse, guide]
 ---
-Betelgeuse is a block-based notebook. Every page is a plain **Markdown file** in a **git repository** on your computer, and AI agents can read and write it through an open **MCP server**.
+MyNote is a block-based notebook. Every page is a plain **Markdown file** in a **git repository** on your computer, and AI agents can read and write it through an open **MCP server**.
 
-The pages inside this one are a guide to everything Betelgeuse can do. Each guide page uses the blocks it describes, so open them, edit them and see what happens. They're ordinary pages, so move them to the [[Trash]] when you're done.
+The pages inside this one are a guide to everything MyNote can do. Each guide page uses the blocks it describes, so open them, edit them and see what happens. They're ordinary pages, so move them to the [[Trash]] when you're done.
 
 > [!yellow] 💡
 > This page is the file `Welcome.md`. The guide pages are its sub-pages, so they live in a `Welcome/` folder next to it. See [[Your files on disk]].

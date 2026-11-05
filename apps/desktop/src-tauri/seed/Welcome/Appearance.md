@@ -24,7 +24,7 @@ The accent colours buttons, selections, checkboxes and links: Ember, Blue, Viole
 
 ## Text size
 
-Small, Default or Large, for the text of every page.
+Small, Default or Large, for the text of every page. To go further, press `⌘+` or `⌘−` anywhere to zoom page text in or out (50% to 200%), and `⌘0` to go back to 100%. The zoom is kept when you restart.
 
 ## Full width pages
 

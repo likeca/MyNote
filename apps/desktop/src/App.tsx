@@ -22,7 +22,7 @@ import { isQuietWrite } from "./lib/quiet";
 import { loadIcons } from "./components/PageIcon";
 import { VaultContext, type VaultContextValue } from "./lib/vault";
 import { useFullscreen } from "./lib/window";
-import { useApplySettings } from "./lib/settings";
+import { useApplySettings, zoomText } from "./lib/settings";
 
 const store = {
   get: (k: string) => {
@@ -343,7 +343,7 @@ export default function App() {
     try {
       await fn();
     } catch (e) {
-      await message(String(e), { title: "Betelgeuse", kind: "error" });
+      await message(String(e), { title: "MyNote", kind: "error" });
     } finally {
       setBusy(null);
       refresh();
@@ -389,6 +389,12 @@ export default function App() {
         selectTab((tabs.active + (e.shiftKey ? tabs.list.length - 1 : 1)) % tabs.list.length);
       }
       if (key === "t" && !e.shiftKey && openPath) (e.preventDefault(), openPage(openPath, { newTab: true }));
+      // Page text zoom: ⌘+ (or ⌘=) and ⌘− step it, ⌘0 resets it.
+      const zoom = e.altKey ? null : key === "=" || key === "+" ? 1 : key === "-" ? -1 : key === "0" ? 0 : null;
+      if (zoom !== null) {
+        e.preventDefault();
+        setToast({ message: `Text zoom ${Math.round(zoomText(zoom) * 100)}%` });
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -417,7 +423,7 @@ export default function App() {
       try {
         await writeOrders(writes);
       } catch (e) {
-        await message(String(e), { title: "Betelgeuse", kind: "error" });
+        await message(String(e), { title: "MyNote", kind: "error" });
       } finally {
         await refresh();
         // An open page picks up its new frontmatter instead of saving over it.
@@ -449,7 +455,7 @@ export default function App() {
         if (!(next in writes) && byPath.get(next)?.order != null) writes[next] = null;
         await writeOrders(writes);
       } catch (e) {
-        await message(String(e), { title: "Betelgeuse", kind: "error" });
+        await message(String(e), { title: "MyNote", kind: "error" });
       } finally {
         await refresh();
         setRefreshKey((k) => k + 1);

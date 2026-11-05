@@ -11,6 +11,8 @@ export type Settings = {
   palette: Palette;
   accent: string;
   textSize: TextSize;
+  /** Page text zoom on top of the text size (⌘+ and ⌘−): 1 is 100%. */
+  textZoom: number;
   /** Pages use the whole window width, unless a page sets its own `fullWidth`. */
   fullWidth: boolean;
   /** Seconds of quiet before auto-committing; 0 turns it off. */
@@ -40,12 +42,17 @@ export const PALETTES: { id: Palette; label: string; hint: string; swatch: [stri
   { id: "midnight", label: "Midnight", hint: "Cool blue slate", swatch: ["#13161d", "#191d26", "#5b7cfa"] },
 ];
 
-const DEFAULTS: Settings = { mode: "system", palette: "betelgeuse", accent: "ember", textSize: "default", fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
+const DEFAULTS: Settings = { mode: "system", palette: "betelgeuse", accent: "ember", textSize: "default", textZoom: 1, fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
+
+/** The steps ⌘+ and ⌘− move through, like a browser's zoom. */
+const TEXT_ZOOMS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 const KEY = "betelgeuse-settings";
 
 function load(): Settings {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    const s: Settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    if (!(typeof s.textZoom === "number" && s.textZoom >= TEXT_ZOOMS[0] && s.textZoom <= TEXT_ZOOMS.at(-1)!)) s.textZoom = 1;
+    return s;
   } catch {
     return DEFAULTS;
   }
@@ -67,6 +74,16 @@ export function updateSettings(patch: Partial<Settings>) {
   listeners.forEach((l) => l());
 }
 
+/** Zooms page text one step in (1) or out (-1), or back to 100% (0). Returns the new zoom. */
+export function zoomText(step: 1 | -1 | 0): number {
+  const z = current.textZoom;
+  const bigger = TEXT_ZOOMS.filter((s) => s > z + 0.001);
+  const smaller = TEXT_ZOOMS.filter((s) => s < z - 0.001);
+  const next = step === 0 ? 1 : step > 0 ? (bigger[0] ?? z) : (smaller.at(-1) ?? z);
+  updateSettings({ textZoom: next });
+  return next;
+}
+
 export function useSettings(): Settings {
   return useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
@@ -86,6 +103,7 @@ function apply() {
   root.dataset.palette = current.palette;
   root.dataset.text = current.textSize;
   root.style.setProperty("--blue", ACCENTS.find((a) => a.id === current.accent)?.color ?? ACCENTS[0].color);
+  root.style.setProperty("--text-zoom", String(current.textZoom));
   root.style.colorScheme = dark ? "dark" : "light";
 }
 

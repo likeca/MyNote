@@ -2,7 +2,7 @@
 icon: 🤖
 tags: [guide, mcp, agents]
 ---
-Betelgeuse comes with an MCP server that works directly on this workspace. AI agents such as Claude and Cursor can list, search, read, create and edit pages, query databases, follow backlinks and read git history. **Every change an agent makes is a separate git commit**, so you can review it or undo it.
+MyNote comes with an MCP server that works directly on this workspace. AI agents such as Claude and Cursor can list, search, read, create and edit pages, query databases, follow backlinks and read git history. **Every change an agent makes is a separate git commit**, so you can review it or undo it.
 
 ## Connecting an agent
 
@@ -24,9 +24,9 @@ Turn on **read-only** to give an agent the reading tools only.
 <summary>Running the server by hand</summary>
 
 ```bash
-node packages/mcp/dist/index.js --workspace ~/Betelgeuse              # stdio
-node packages/mcp/dist/index.js --workspace ~/Betelgeuse --http 3917  # http://127.0.0.1:3917/mcp
-node packages/mcp/dist/index.js --workspace ~/Betelgeuse --read-only  # read tools only
+node packages/mcp/dist/index.js --workspace ~/MyNote              # stdio
+node packages/mcp/dist/index.js --workspace ~/MyNote --http 3917  # http://127.0.0.1:3917/mcp
+node packages/mcp/dist/index.js --workspace ~/MyNote --read-only  # read tools only
 ```
 
 </details>

@@ -385,7 +385,7 @@ export function PageView(p: Props) {
               editor.commands.focus("start");
               return true;
             }}
-            className={`page-title w-full bg-transparent leading-[1.2] font-bold text-ink outline-none placeholder:text-[var(--placeholder)] ${peekMode ? "text-[32px]" : "text-[40px]"}`}
+            className={`page-title w-full bg-transparent leading-[1.2] font-bold text-ink outline-none placeholder:text-[var(--placeholder)] ${peekMode ? "text-[calc(32px*var(--text-zoom,1))]" : "text-[calc(40px*var(--text-zoom,1))]"}`}
           />
 
           {(tags.length > 0 || addingTag) && (

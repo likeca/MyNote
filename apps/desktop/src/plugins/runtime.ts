@@ -165,7 +165,7 @@ export function satisfies(version: string, range: string): boolean {
 export function incompatibility(m: PluginManifest, version = appVersion): string | null {
   if (!m.id || !m.name || !m.version) return "Its manifest is missing an id, name or version.";
   if (String(m.engines?.api ?? "") !== String(API_VERSION)) return `It's made for plugin API ${m.engines?.api ?? "?"}; this app has API ${API_VERSION}.`;
-  if (m.engines?.betelgeuse && !satisfies(version, m.engines.betelgeuse)) return `It needs Betelgeuse ${m.engines.betelgeuse}; this is ${version}.`;
+  if (m.engines?.betelgeuse && !satisfies(version, m.engines.betelgeuse)) return `It needs MyNote ${m.engines.betelgeuse}; this is ${version}.`;
   if (!(m.platforms ?? ["desktop"]).includes(platform)) return platform === "mobile" ? "It's for the desktop app only." : "It isn't made for the desktop app.";
   return null;
 }
@@ -384,7 +384,7 @@ export async function activate(id: string) {
     const module: { exports: Record<string, unknown> } = { exports: {} };
     const require = (name: string) => {
       if (name in SHARED) return SHARED[name];
-      throw new Error(`requires "${name}", which Betelgeuse doesn't provide: bundle it into the plugin`);
+      throw new Error(`requires "${name}", which MyNote doesn't provide: bundle it into the plugin`);
     };
     new Function("require", "module", "exports", `${code}\n//# sourceURL=betelgeuse-plugin://${id}/${main}`)(require, module, module.exports);
     const exp = (module.exports.activate ? module.exports : module.exports.default) as { activate?: (ctx: PluginContext) => unknown; deactivate?: () => unknown } | undefined;

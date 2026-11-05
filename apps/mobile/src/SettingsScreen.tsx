@@ -154,7 +154,7 @@ export function SettingsScreen() {
           <LinkRow icon={<Globe size={18} />} label="Website" onClick={() => open(LINKS.website)} />
           <LinkRow icon={<GitFork size={18} />} label="Source code" onClick={() => open(LINKS.repo)} />
           <LinkRow icon={<Bug size={18} />} label="Report an issue" onClick={() => open(LINKS.issues)} />
-          <LinkRow icon={<Heart size={18} />} label="Support Betelgeuse" onClick={() => open(LINKS.sponsor)} />
+          <LinkRow icon={<Heart size={18} />} label="Support MyNote" onClick={() => open(LINKS.sponsor)} />
         </Group>
       </main>
     </div>

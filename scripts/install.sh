@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Betelgeuse from source and installs it (macOS and Linux).
+# Builds MyNote from source and installs it (macOS and Linux).
 #
 #   git clone https://github.com/devian-labs/betelgeuse && cd betelgeuse && ./scripts/install.sh
 #
@@ -45,10 +45,10 @@ fi
 bold "Installing dependencies"
 npm ci --no-audit --no-fund
 
-bold "Building Betelgeuse (the first build takes a few minutes)"
+bold "Building MyNote (the first build takes a few minutes)"
 if [[ "$OS" == "Darwin" ]]; then
   npm run tauri -w @betelgeuse/desktop -- build --bundles app
-  APP="target/release/bundle/macos/Betelgeuse.app"
+  APP="target/release/bundle/macos/MyNote.app"
   [[ -d "$APP" ]] || fail "Build finished but $APP was not found."
   ok "Built $APP"
   if $BUILD_ONLY; then exit 0; fi
@@ -57,12 +57,13 @@ if [[ "$OS" == "Darwin" ]]; then
   DEST="/Applications"
   [[ -w "$DEST" ]] || DEST="$HOME/Applications"
   mkdir -p "$DEST"
-  rm -rf "$DEST/Betelgeuse.app"
+  # The app was called Betelgeuse before; the same app under its old name goes too.
+  rm -rf "$DEST/MyNote.app" "$DEST/Betelgeuse.app"
   cp -R "$APP" "$DEST/"
-  xattr -dr com.apple.quarantine "$DEST/Betelgeuse.app" 2>/dev/null || true
-  ok "Installed to $DEST/Betelgeuse.app"
+  xattr -dr com.apple.quarantine "$DEST/MyNote.app" 2>/dev/null || true
+  ok "Installed to $DEST/MyNote.app"
   echo
-  bold "Done. Open Betelgeuse from Launchpad or Spotlight, or run: open \"$DEST/Betelgeuse.app\""
+  bold "Done. Open MyNote from Launchpad or Spotlight, or run: open \"$DEST/MyNote.app\""
 else
   npm run tauri -w @betelgeuse/desktop -- build --bundles appimage,deb
   BUNDLE="target/release/bundle"

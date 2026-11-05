@@ -3,9 +3,9 @@
  * Betelgeuse MCP server: gives AI agents structured access to a Betelgeuse workspace
  * (a folder of Markdown notes tracked in git).
  *
- *   betelgeuse-mcp --workspace ~/Betelgeuse                 # stdio
- *   betelgeuse-mcp --workspace ~/Betelgeuse --http 3917     # Streamable HTTP on 127.0.0.1:3917/mcp
- *   betelgeuse-mcp --workspace ~/Betelgeuse --read-only     # no write tools
+ *   betelgeuse-mcp --workspace ~/MyNote                     # stdio
+ *   betelgeuse-mcp --workspace ~/MyNote --http 3917         # Streamable HTTP on 127.0.0.1:3917/mcp
+ *   betelgeuse-mcp --workspace ~/MyNote --read-only         # no write tools
  */
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -29,7 +29,7 @@ const { values: args } = parseArgs({
 });
 
 const expandHome = (p: string) => (p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p);
-const root = path.resolve(expandHome(args.workspace ?? args.vault ?? process.env.BETELGEUSE_WORKSPACE ?? process.env.BETELGEUSE_VAULT ?? "~/Betelgeuse"));
+const root = path.resolve(expandHome(args.workspace ?? args.vault ?? process.env.BETELGEUSE_WORKSPACE ?? process.env.BETELGEUSE_VAULT ?? "~/MyNote"));
 if (!existsSync(root) || !statSync(root).isDirectory()) {
   console.error(`betelgeuse-mcp: workspace folder not found: ${root}\nPass --workspace <path> or set BETELGEUSE_WORKSPACE.`);
   process.exit(1);

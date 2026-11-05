@@ -16,7 +16,7 @@ import type { Node as PMNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, Selection, TextSelection } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
-import { Check, ChevronDown, Copy, FileText, Image as ImageIcon, LoaderCircle, Maximize2, Play, Square, TextCursor, Trash2, WrapText, X } from "lucide-react";
+import { Check, ChevronDown, Copy, FilePlay, FileTerminal, FileText, Image as ImageIcon, LoaderCircle, Maximize2, Square, Trash2, WrapText, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { common, createLowlight } from "lowlight";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
@@ -788,9 +788,6 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
         <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/code:opacity-100">
           {canRun && (
             <>
-              <button onClick={() => start()} disabled={running} title="Run (⌃E)" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50">
-                <Play size={12} /> Run
-              </button>
               <button
                 // Keep the cursor (and so the line) where it is.
                 onMouseDown={(e) => e.preventDefault()}
@@ -799,7 +796,10 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
                 title={line === null ? "Put the cursor on a line to run just that line" : `Run line ${line}`}
                 className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50"
               >
-                <TextCursor size={12} /> Run line
+                <FileTerminal size={12} /> Run line
+              </button>
+              <button onClick={() => start()} disabled={running} title="Run (⌃E)" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50">
+                <FilePlay size={12} /> Run
               </button>
             </>
           )}

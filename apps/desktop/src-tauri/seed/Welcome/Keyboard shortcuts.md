@@ -6,15 +6,17 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 
 ## Anywhere
 
-| Shortcut      | What it does              |
-| ------------- | ------------------------- |
-| `⌘K` or `⌘P`  | Search pages              |
-| `⌘N`          | New page                  |
-| `⌘\`          | Show or hide the sidebar  |
-| `⌘[` and `⌘]` | Back and forward          |
-| `⌘S`          | Commit changes to git now |
-| `⌘,`          | Open Settings             |
-| `Esc`         | Close the side peek       |
+| Shortcut      | What it does                 |
+| ------------- | ---------------------------- |
+| `⌘K` or `⌘P`  | Search pages                 |
+| `⌘N`          | New page                     |
+| `⌘\`          | Show or hide the sidebar     |
+| `⌘[` and `⌘]` | Back and forward             |
+| `⌘S`          | Commit changes to git now    |
+| `⌘,`          | Open Settings                |
+| `⌘+` and `⌘−` | Zoom page text in and out    |
+| `⌘0`          | Reset page text zoom to 100% |
+| `Esc`         | Close the side peek          |
 
 ## Writing
 

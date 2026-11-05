@@ -25,7 +25,7 @@ The bottom of each page lists its **backlinks**: every page that links to it. Sc
 
 ## Renaming
 
-Click a page's title to rename it. Betelgeuse renames the file and its sub-page folder, then updates every link to it across the workspace, so no links break. Agents can rename pages the same way.
+Click a page's title to rename it. MyNote renames the file and its sub-page folder, then updates every link to it across the workspace, so no links break. Agents can rename pages the same way.
 
 ## Embeds
 

@@ -158,7 +158,7 @@ function Appearance() {
   const s = useSettings();
   return (
     <>
-      <Heading title="Appearance" hint="Make Betelgeuse yours. These settings are stored on this device." />
+      <Heading title="Appearance" hint="Make MyNote yours. These settings are stored on this device." />
 
       <div className="mb-2 text-sm font-medium text-ink">Theme</div>
       <div className="grid grid-cols-4 gap-3">
@@ -229,7 +229,7 @@ function Appearance() {
             ]}
           />
         </Row>
-        <Row label="Text size" hint="Size of page text in the editor.">
+        <Row label="Text size" hint={`Size of page text in the editor. ⌘+ and ⌘− zoom it further, ⌘0 resets (now ${Math.round(s.textZoom * 100)}%).`}>
           <Segmented<TextSize>
             value={s.textSize}
             onChange={(textSize) => updateSettings({ textSize })}
@@ -347,7 +347,7 @@ function GitSection({ status, onChanged }: { status: RepoStatus | null; onChange
           )}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          Create an empty repository, then paste its HTTPS or SSH URL. Betelgeuse uses your system git and its credentials (SSH keys, credential helper or
+          Create an empty repository, then paste its HTTPS or SSH URL. MyNote uses your system git and its credentials (SSH keys, credential helper or
           GitHub CLI).
         </p>
         <div className="mt-3 flex gap-2">
@@ -497,7 +497,7 @@ function AgentsSection({ onOpenAgents, policy, onPolicy }: { onOpenAgents: () =>
 
   return (
     <>
-      <Heading title="AI agents" hint="Betelgeuse includes an MCP server, so Claude, Cursor and other agents can read and edit your workspace." />
+      <Heading title="AI agents" hint="MyNote includes an MCP server, so Claude, Cursor and other agents can read and edit your workspace." />
       <div className="rounded-lg border border-line p-4">
         <div className="flex items-center gap-3">
           <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-[var(--blue)]">
@@ -621,7 +621,7 @@ function ImportSection({ onChanged }: { onChanged: () => void }) {
                   Choose <b>HTML</b> (recommended: it keeps page icons, covers, colours, highlights and toggles) or <b>Markdown &amp; CSV</b>, and turn
                   on <b>Include subpages</b>.
                 </li>
-                <li>Pick the downloaded .zip here. Both formats work. Databases become Betelgeuse databases with their columns and values.</li>
+                <li>Pick the downloaded .zip here. Both formats work. Databases become MyNote databases with their columns and values.</li>
               </ol>
             </div>
           </div>
@@ -697,7 +697,7 @@ function About() {
   if (notices !== null) {
     return (
       <>
-        <Heading title="Open-source licenses" hint="Betelgeuse is built on these open-source projects, under the licenses below." />
+        <Heading title="Open-source licenses" hint="MyNote is built on these open-source projects, under the licenses below." />
         <Button onClick={() => setNotices(null)}>
           <ArrowLeft size={14} /> Back to About
         </Button>
@@ -712,7 +712,7 @@ function About() {
       <div className="flex items-center gap-4">
         <Logo className="size-14" />
         <div>
-          <div className="text-lg font-semibold text-ink">Betelgeuse</div>
+          <div className="text-lg font-semibold text-ink">MyNote</div>
           <div className="text-sm text-muted">Version 0.1.0 · Free and open source (MIT)</div>
           <div className="mt-1 text-xs text-faint">Plain Markdown + git workspace · Tauri · React · Tiptap · MCP</div>
         </div>
@@ -737,14 +737,14 @@ function About() {
             <Heart size={18} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-ink">Support Betelgeuse</div>
+            <div className="text-sm font-medium text-ink">Support MyNote</div>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              Betelgeuse is built in the open, without ads or tracking. Sponsorships pay for things like an Apple developer account, so the app can be signed and
+              MyNote is built in the open, without ads or tracking. Sponsorships pay for things like an Apple developer account, so the app can be signed and
               installed with a double-click.
             </p>
             <div className="mt-3 flex gap-2">
               <Button primary onClick={() => open(LINKS.sponsor)}>
-                <Heart size={14} /> Sponsor on GitHub
+                <Heart size={14} /> MyNote on GitHub
               </Button>
               <Button onClick={() => open(LINKS.kofi)}>
                 <Coffee size={14} /> One-off tip on Ko-fi
@@ -754,7 +754,7 @@ function About() {
         </div>
       </div>
       <p className="mt-6 text-xs text-faint">
-        Betelgeuse™ is a trademark of Devian Labs. © 2026 Devian Labs and contributors ·{" "}
+        MyNote is built on Betelgeuse™, a trademark of Devian Labs. © 2026 Devian Labs and contributors ·{" "}
         <button onClick={() => open(LINKS.devianlabs)} className="underline decoration-line underline-offset-2 hover:text-ink">
           devianlabs.com
         </button>

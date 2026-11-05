@@ -80,7 +80,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
       mark: <span className="text-[13px] font-semibold">C</span>,
       steps: [
         { text: <>Open <b>Settings → Developer → Edit Config</b>, or edit this file:</>, code: "~/Library/Application Support/Claude/claude_desktop_config.json" },
-        { text: "Add Betelgeuse to mcpServers:", code: json },
+        { text: "Add MyNote to mcpServers:", code: json },
         { text: "Restart Claude Desktop." },
       ],
     },
@@ -90,7 +90,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
       mark: <span className="text-[13px] font-semibold">▲</span>,
       steps: [
         { text: <>Open <b>Settings → MCP → Add new global MCP server</b>, or edit:</>, code: "~/.cursor/mcp.json" },
-        { text: "Add Betelgeuse to mcpServers:", code: json },
+        { text: "Add MyNote to mcpServers:", code: json },
       ],
     },
     {

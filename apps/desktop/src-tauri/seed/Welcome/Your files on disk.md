@@ -2,12 +2,12 @@
 icon: 📁
 tags: [guide, files]
 ---
-A workspace is an ordinary folder of Markdown files, and a git repository. Nothing is locked inside Betelgeuse. The first workspace is `~/Betelgeuse`, and **Settings → Workspace** shows where the current one is.
+A workspace is an ordinary folder of Markdown files, and a git repository. Nothing is locked inside MyNote. The first workspace is `~/MyNote`, and **Settings → Workspace** shows where the current one is.
 
 ## What's in the folder
 
 ```
-Betelgeuse/
+MyNote/
 ├── Welcome.md
 ├── Welcome/
 │   ├── Appearance.md
@@ -24,7 +24,7 @@ Betelgeuse/
 └── .git/           every version of every page
 ```
 
-| In Betelgeuse               | On disk                                                  |
+| In MyNote                   | On disk                                                  |
 | --------------------------- | -------------------------------------------------------- |
 | Page                        | `Title.md`. The file name is the title.                  |
 | Sub-page                    | `Parent/Child.md`, nested under `Parent.md`              |
@@ -36,7 +36,7 @@ Betelgeuse/
 ## Frontmatter
 
 <details>
-<summary>Every key Betelgeuse uses</summary>
+<summary>Every key MyNote uses</summary>
 
 | Key         | Example                | Meaning                                      |
 | ----------- | ---------------------- | -------------------------------------------- |
@@ -56,10 +56,10 @@ A database row's frontmatter also holds its property values, such as `Status: Do
 
 ## Editing with other tools
 
-Obsidian, VS Code, a terminal or plain git can work on the workspace while Betelgeuse is open. Betelgeuse watches the folder and reloads open pages when their files change.
+Obsidian, VS Code, a terminal or plain git can work on the workspace while MyNote is open. MyNote watches the folder and reloads open pages when their files change.
 
-- **Obsidian** reads links, callouts and embeds, because Betelgeuse uses Obsidian's syntax for them.
+- **Obsidian** reads links, callouts and embeds, because MyNote uses Obsidian's syntax for them.
 - Colours, toggles and columns are small HTML tags, so any Markdown viewer still shows their text.
-- Opening and saving a page in Betelgeuse doesn't reformat it, so diffs only show what you changed.
+- Opening and saving a page in MyNote doesn't reformat it, so diffs only show what you changed.
 
 See [[Writing and blocks]] for the Markdown behind each block, and [[History and sync]] for git.

@@ -373,21 +373,22 @@ pre {
 [data-font="mono"] .page-title {
   font-family: var(--font-mono);
 }
+/* Text size (Settings → Appearance), times the ⌘+ / ⌘− zoom. */
 :root[data-text="large"] .betelgeuse-prose {
-  font-size: 17.5px;
+  font-size: calc(17.5px * var(--text-zoom, 1));
 }
 :root[data-text="small"] .betelgeuse-prose {
-  font-size: 15px;
+  font-size: calc(15px * var(--text-zoom, 1));
 }
 [data-small] .betelgeuse-prose {
-  font-size: 14px;
+  font-size: calc(14px * var(--text-zoom, 1));
 }
 
 /* ---------- Editor ---------- */
 
 .betelgeuse-prose {
   outline: none;
-  font-size: 16px;
+  font-size: calc(16px * var(--text-zoom, 1));
   line-height: 1.5;
   color: var(--ink);
   caret-color: var(--ink);

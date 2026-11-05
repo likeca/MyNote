@@ -260,7 +260,7 @@ fn current_vault(app: AppHandle, state: State<AppState>) -> Result<VaultInfo, St
         return activate(&app, &state, PathBuf::from(path), false);
     }
     let path = saved_vault(&app)
-        .or_else(|| dirs::home_dir().map(|h| h.join("Betelgeuse")))
+        .or_else(|| dirs::home_dir().map(|h| h.join("MyNote")))
         .ok_or("could not determine a workspace location")?;
     activate(&app, &state, path, true)
 }

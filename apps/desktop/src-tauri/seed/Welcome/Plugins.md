@@ -2,7 +2,7 @@
 icon: 🧩
 tags: [guide]
 ---
-Plugins add features to Betelgeuse: new screens in the sidebar, panels on pages, settings, commands and search results. The app stays small, and you add only what you need.
+Plugins add features to MyNote: new screens in the sidebar, panels on pages, settings, commands and search results. The app stays small, and you add only what you need.
 
 ## Install one
 

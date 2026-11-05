@@ -2,7 +2,7 @@
 icon: 🧭
 tags: [guide, basics]
 ---
-Betelgeuse has two parts: the sidebar on the left and the open page on the right.
+MyNote has two parts: the sidebar on the left and the open page on the right.
 
 ## The sidebar
 
@@ -34,7 +34,7 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 
 ## Workspaces
 
-A workspace is a folder. To switch, click the workspace name at the bottom of the sidebar and pick another folder. If you pick an empty one, Betelgeuse sets it up with these guide pages and starts a git repository in it. **Settings → Workspace** shows where the current workspace is.
+A workspace is a folder. To switch, click the workspace name at the bottom of the sidebar and pick another folder. If you pick an empty one, MyNote sets it up with these guide pages and starts a git repository in it. **Settings → Workspace** shows where the current workspace is.
 
 > [!blue] 🗂️
 > Next: [[Pages and sub-pages]] covers icons, covers, tags and the page menu.

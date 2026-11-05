@@ -11,7 +11,7 @@ A database is a page whose sub-pages are its rows. Each row's values are saved i
 - `/Database – Inline` creates a database under the current page and shows it in place, like the one above.
 - `/Database – Full page` creates a database as a sub-page and links to it.
 - On an empty page, **Get started with** offers Table, Board and Calendar.
-- [[Import]] turns each Notion database into a Betelgeuse database.
+- [[Import]] turns each Notion database into a MyNote database.
 
 ## Views
 

@@ -70,7 +70,7 @@ export function PluginsSection() {
     <>
       <div className="mb-4 border-b border-line pb-3">
         <h2 className="text-lg font-semibold text-ink">Plugins</h2>
-        <p className="mt-0.5 text-sm text-muted">Add features to Betelgeuse. Plugins are installed on this computer and turned on for each workspace.</p>
+        <p className="mt-0.5 text-sm text-muted">Add features to MyNote. Plugins are installed on this computer and turned on for each workspace.</p>
       </div>
 
       <div className="mb-4 flex gap-1 text-sm">

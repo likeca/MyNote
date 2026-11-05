@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 export const LINKS = {
   repo: "https://github.com/devian-labs/betelgeuse",
   issues: "https://github.com/devian-labs/betelgeuse/issues",
-  sponsor: "https://github.com/sponsors/devian-labs",
+  sponsor: "https://github.com/likeca/MyNote",
   kofi: "https://ko-fi.com/devianlabs",
   website: "https://betelgeuse.devianlabs.com",
   devianlabs: "https://devianlabs.com",

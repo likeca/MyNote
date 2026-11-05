@@ -300,7 +300,7 @@ export function Sidebar(p: Props) {
           <span className="min-w-0 truncate text-sm font-medium text-ink">{p.vault.name}</span>
           <ChevronDown size={14} className="shrink-0 text-faint" />
         </button>
-        <IconButton title="Support Betelgeuse" onClick={() => openLink(LINKS.sponsor)}>
+        <IconButton title="Support MyNote" onClick={() => openLink(LINKS.sponsor)}>
           <Heart size={15} />
         </IconButton>
         <IconButton

@@ -10,7 +10,7 @@ Pages save as you type. The top bar shows "Saving…" and then when the page was
 
 ## Commits
 
-- After **8 seconds** without changes, Betelgeuse commits everything that changed, with a message such as "Update Welcome".
+- After **8 seconds** without changes, MyNote commits everything that changed, with a message such as "Update Welcome".
 - Press `⌘S`, or click the commit button at the bottom of the sidebar, to commit right away. Its badge counts the uncommitted changes.
 - Every change an agent makes is its own commit. See [[Connect your AI agents]].
 
@@ -32,9 +32,9 @@ Sync keeps your workspace the same on every computer and phone you use, through 
 2. Open **Settings → Git &amp; sync**, paste the repository's HTTPS or SSH address under **Remote repository** and click **Save**.
 3. Click **Test connection**, then **Push** to upload your workspace.
 
-From then on, Betelgeuse **syncs on its own**: once you've stopped editing for a moment, it pulls what changed elsewhere and pushes your changes, every 5 minutes and whenever you come back to the window. Change how often, or turn it off, with **Sync automatically** in **Settings → Git &amp; sync**. To sync right away, click the sync button at the bottom of the sidebar, or **Sync (pull + push)** in Settings.
+From then on, MyNote **syncs on its own**: once you've stopped editing for a moment, it pulls what changed elsewhere and pushes your changes, every 5 minutes and whenever you come back to the window. Change how often, or turn it off, with **Sync automatically** in **Settings → Git &amp; sync**. To sync right away, click the sync button at the bottom of the sidebar, or **Sync (pull + push)** in Settings.
 
-Betelgeuse uses the git installed on your computer and its credentials, such as SSH keys, a credential helper or the GitHub CLI.
+MyNote uses the git installed on your computer and its credentials, such as SSH keys, a credential helper or the GitHub CLI.
 
 ### On your phone
 
@@ -47,7 +47,7 @@ Your pages download, and from then on the phone syncs every couple of minutes wh
 
 ### When a page changed in two places
 
-If a page was edited on two devices between syncs, sync never stops half-way and nothing is lost: the other device's version takes the page's place, and yours is kept beside it as "*Page* (conflicted copy)". Betelgeuse tells you when that happens. Copy what you need across, then delete the copy.
+If a page was edited on two devices between syncs, sync never stops half-way and nothing is lost: the other device's version takes the page's place, and yours is kept beside it as "*Page* (conflicted copy)". MyNote tells you when that happens. Copy what you need across, then delete the copy.
 
 > [!orange] ⚠️
 > On one computer, if you and an agent edit the same page at the same moment, the last save wins, but git keeps both versions.
@@ -57,7 +57,7 @@ If a page was edited on two devices between syncs, sync never stops half-way and
 It's an ordinary repository, so any git tool works on it:
 
 ```bash
-cd ~/Betelgeuse
+cd ~/MyNote
 git log --oneline -5
 ```
 
