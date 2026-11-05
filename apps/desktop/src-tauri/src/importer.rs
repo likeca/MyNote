@@ -2542,7 +2542,7 @@ if (a &lt; 2) {}</code></pre>"#,
             "Some <span data-color=\"green\">green **bold**</span> text, *italics*, ~~gone~~, `code_span` and a\\_b.  \nNext line.",
             "<span data-color=\"purple\">A purple paragraph.</span>",
             "<details open>\n<summary>Read <span data-color=\"gray\">more</span></summary>\n\nHidden **text**.\n\n- inside\n\n</details>",
-            "<details open>\n<summary>**Phase 1 &amp; 2**</summary>\n\n- [x] Init `repo`.\n  - [ ] Sub task\n\n</details>",
+            "<details open>\n<summary><h3>Phase 1 &amp; 2</h3></summary>\n\n- [x] Init `repo`.\n  - [ ] Sub task\n\n</details>",
             "1. first\n   1. inner\n2. second\n\n- bullet\n  - nested\n- bullet two",
             "```jsx\nconst a = 1;\nif (a < 2) {}\n```",
             "> Ship *small*.  \n> Ship often.\n\n---",
@@ -2679,7 +2679,7 @@ if (a &lt; 2) {}</code></pre>"#,
         let leftovers = Regex::new(r"\]\((?:[^)/:]|/[^/)])[^):]*(?:%20|\.md\)|\.csv\)|\.html\))").unwrap();
         // HTML the editor doesn't own (its own: colour spans, toggles, columns, <br> in tables).
         let tag = Regex::new(r"</?([a-zA-Z][a-zA-Z0-9]*)[^>]*>").unwrap();
-        let own = Regex::new(r#"^(?:<span(?: data-(?:color|bg)="[a-z]+")+>|</span>|<details(?: open)?>|</details>|</?summary>|<div class="columns?"(?: data-width="[\d.]+")?>|</div>|<br>)$"#).unwrap();
+        let own = Regex::new(r#"^(?:<span(?: data-(?:color|bg)="[a-z]+")+>|</span>|<details(?: open)?>|</details>|</?summary>|</?h[1-3]>|<div class="columns?"(?: data-width="[\d.]+")?>|</div>|<br>)$"#).unwrap();
         let code = Regex::new(r"(?s)```.*?```|`[^`\n]*`|\[\[[^\]\n]*\]\]").unwrap();
         let mut stats: BTreeMap<String, usize> = BTreeMap::new();
         let mut count = |k: String, n: usize| *stats.entry(k).or_default() += n;

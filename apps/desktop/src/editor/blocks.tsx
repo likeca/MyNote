@@ -3,23 +3,23 @@
  *   colours    <span data-color="red" data-bg="yellow">text</span>
  *   callout    > [!yellow] 💡            (Obsidian callout syntax)
  *   toggle     <details><summary>…</summary> … </details>
+ *   toggle heading  <details><summary><h2>…</h2></summary> … </details>
  *   columns    <div class="columns"><div class="column"> … </div></div>
  *   database   ![[Tasks]]               (Obsidian embed syntax)
  */
 import { PageIcon, assetUrl } from "../components/PageIcon";
 import { Extension, Mark, Node, mergeAttributes, type Editor as TiptapEditor, type JSONContent, type NodeViewRendererProps } from "@tiptap/core";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { Details } from "@tiptap/extension-details";
+import { CodeBlock as TiptapCodeBlock } from "@tiptap/extension-code-block";
+import { Details, DetailsSummary } from "@tiptap/extension-details";
 import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
-import type { Node as PMNode } from "@tiptap/pm/model";
-import { Plugin, PluginKey, Selection, TextSelection } from "@tiptap/pm/state";
+import { Fragment, type Node as PMNode } from "@tiptap/pm/model";
+import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
-import { Check, ChevronDown, Copy, FilePlay, FileTerminal, FileText, Image as ImageIcon, LoaderCircle, Maximize2, Square, Trash2, WrapText, X } from "lucide-react";
+import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, FilePlay, FileTerminal, FileText, Heading1, Heading2, Heading3, Image as ImageIcon, LoaderCircle, Maximize2, Square, Trash2, WrapText, X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { common, createLowlight } from "lowlight";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IconPicker } from "../components/LazyIconPicker";
 import { MenuItem, Popover } from "../components/Popover";
 import { DatabaseView } from "../database/DatabaseView";
@@ -28,6 +28,7 @@ import { COLORS, bgColor, textColor } from "../lib/colors";
 import { resolveWikiLink } from "../lib/tree";
 import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
+import { codeHighlight } from "./highlight";
 
 const isColor = (c: unknown): c is string => typeof c === "string" && (COLORS as readonly string[]).includes(c);
 
@@ -66,16 +67,16 @@ export const ColorMark = Mark.create({
     return {
       setColor:
         (attrs) =>
-        ({ editor, commands, tr }) => {
-          tr.setMeta(KEEP_COLOR, true);
-          const current = editor.getAttributes("color");
-          const next = { ...current, ...attrs };
-          const clean = {
-            color: next.color && next.color !== "default" ? next.color : null,
-            bg: next.bg && next.bg !== "default" ? next.bg : null,
-          };
-          return clean.color || clean.bg ? commands.setMark(this.name, clean) : commands.unsetMark(this.name);
-        },
+          ({ editor, commands, tr }) => {
+            tr.setMeta(KEEP_COLOR, true);
+            const current = editor.getAttributes("color");
+            const next = { ...current, ...attrs };
+            const clean = {
+              color: next.color && next.color !== "default" ? next.color : null,
+              bg: next.bg && next.bg !== "default" ? next.bg : null,
+            };
+            return clean.color || clean.bg ? commands.setMark(this.name, clean) : commands.unsetMark(this.name);
+          },
     };
   },
   // Pressing Enter starts the next block without the previous block's colour.
@@ -222,7 +223,104 @@ function takeDetails(src: string) {
   return undefined;
 }
 
+/** A toggle heading's title: `<summary><h2>Title</h2></summary>` (levels 1–3). */
+const SUMMARY_HEADING = /^<h([1-3])>([\s\S]*)<\/h\1>$/;
+
+/** The toggle the selection is on: the one whose title holds the cursor, or a selected toggle block. */
+function titledToggle(selection: Selection): { pos: number; node: PMNode } | null {
+  if (selection instanceof NodeSelection && selection.node.type.name === "details") return { pos: selection.from, node: selection.node };
+  const { $from } = selection;
+  if ($from.parent.type.name !== "detailsSummary") return null;
+  return { pos: $from.before($from.depth - 1), node: $from.node($from.depth - 1) };
+}
+
+/** The level of the toggle the selection is on: 1–3 for a toggle heading, null for a plain toggle, undefined when it isn't on one. */
+export function toggleLevel(editor: TiptapEditor): number | null | undefined {
+  const toggle = titledToggle(editor.state.selection);
+  return toggle ? (toggle.node.attrs.level ?? null) : undefined;
+}
+
+/** Command: makes the toggle the selection is on a toggle heading (`level` 1–3) or a plain toggle (null). */
+export const setToggleLevel =
+  (level: 1 | 2 | 3 | null) =>
+  ({ tr }: { tr: Transaction }) => {
+    const toggle = titledToggle(tr.selection);
+    if (!toggle) return false;
+    tr.setNodeAttribute(toggle.pos, "level", level);
+    return true;
+  };
+
+/**
+ * Command: turns the block at the cursor into a toggle (a toggle heading with `level` 1–3), as Notion
+ * does: a paragraph's or heading's text becomes its title, other blocks (lists, quotes…) go inside it.
+ * On a toggle's title, it only changes the level.
+ */
+export const turnIntoToggle =
+  (level: 1 | 2 | 3 | null) =>
+  ({ tr }: { tr: Transaction }) => {
+    if (titledToggle(tr.selection)) return setToggleLevel(level)({ tr });
+    const { $from, $to } = tr.selection;
+    const range = $from.blockRange($to);
+    if (!range) return false;
+    const { schema } = tr.doc.type;
+    const blocks: PMNode[] = [];
+    tr.doc.slice(range.start, range.end).content.forEach((n) => void blocks.push(n));
+    const [first, ...rest] = blocks;
+    const titled = !!first && first.isTextblock && first.type !== schema.nodes.codeBlock && schema.nodes.detailsSummary.validContent(first.content);
+    const inside = titled ? rest : blocks;
+    const body = inside.length ? inside : [schema.nodes.paragraph.create()];
+    if (!schema.nodes.detailsContent.validContent(Fragment.from(body))) return false;
+    const summary = schema.nodes.detailsSummary.create(null, titled ? first.content : null);
+    // Open, as in Notion: Enter in its title then goes inside it (a closed toggle's Enter adds a line after it).
+    tr.replaceWith(range.start, range.end, schema.nodes.details.create({ level, open: true }, [summary, schema.nodes.detailsContent.create(null, body)]));
+    tr.setSelection(TextSelection.create(tr.doc, range.start + 2 + summary.content.size));
+    return true;
+  };
+
+/**
+ * Command: unwraps the toggle the selection is on, as Notion's Backspace and Turn into do: its title
+ * becomes a heading of `level` (or text, for null) and its contents follow it.
+ */
+export const unwrapToggle =
+  (level: 1 | 2 | 3 | null) =>
+  ({ tr }: { tr: Transaction }) => {
+    const toggle = titledToggle(tr.selection);
+    if (!toggle) return false;
+    const { schema } = tr.doc.type;
+    const [summary, body] = [toggle.node.child(0), toggle.node.child(1)];
+    const blocks = [level ? schema.nodes.heading.create({ level }, summary.content) : schema.nodes.paragraph.create(null, summary.content)];
+    const onlyEmpty = body.childCount === 1 && body.firstChild!.type.name === "paragraph" && body.firstChild!.content.size === 0;
+    if (!onlyEmpty) body.forEach((n) => void blocks.push(n));
+    const offset = tr.selection.$from.parent.type.name === "detailsSummary" ? tr.selection.$from.parentOffset : 0;
+    tr.replaceWith(toggle.pos, toggle.pos + toggle.node.nodeSize, blocks);
+    tr.setSelection(TextSelection.create(tr.doc, toggle.pos + 1 + offset));
+    return true;
+  };
+
+/** A toggle heading's icon: the heading glyph with the toggle's arrow. */
+export function ToggleHeadingIcon({ level, size }: { level: 1 | 2 | 3; size: number }) {
+  const Glyph = level === 1 ? Heading1 : level === 2 ? Heading2 : Heading3;
+  return (
+    <span className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
+      <Glyph size={size * 0.78} className="translate-x-[18%]" />
+      <span className="absolute left-0 top-1/2 -translate-y-1/2 border-y-[3px] border-l-[4px] border-y-transparent border-l-current" />
+    </span>
+  );
+}
+
 export const Toggle = Details.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      // A toggle heading (Notion's "Toggle heading 1–3"): its title is a heading of this level.
+      level: {
+        default: null,
+        // Pasted HTML (GitHub, the web) has the level only as the title's tag: <summary><h2>.
+        parseHTML: (el) => Number(el.getAttribute("data-level")) || Number(el.querySelector(":scope > summary > h1, :scope > summary > h2, :scope > summary > h3")?.tagName[1]) || null,
+        renderHTML: (attrs) => (attrs.level ? { "data-level": attrs.level } : {}),
+      },
+    };
+  },
   // The stock view flips its open/closed look on events and can fall out of step with the saved
   // `open` (e.g. when a page opens with the cursor in a toggle): each click then flips it twice
   // and seems to do nothing. Here the look always follows `open`.
@@ -234,9 +332,42 @@ export const Toggle = Details.extend({
       const sync = (node: PMNode) => {
         const open = !!node.attrs.open;
         dom.classList.toggle("is-open", open);
+        if (node.attrs.level) dom.setAttribute("data-level", String(node.attrs.level));
+        else dom.removeAttribute("data-level");
         dom.querySelector(':scope > div > [data-type="detailsContent"]')?.toggleAttribute("hidden", !open);
       };
       setTimeout(() => sync(props.node)); // after the stock view's own first toggle
+      // The stock arrow saves the toggle's attributes as just `open`, which drops a toggle heading's
+      // level: this handler runs first (capturing on the toggle) and changes `open` alone.
+      const button = dom.querySelector<HTMLButtonElement>(":scope > button");
+      dom.addEventListener(
+        "click",
+        (event) => {
+          if (event.target !== button) return;
+          event.stopPropagation();
+          const { editor, getPos } = props;
+          const pos = typeof getPos === "function" ? getPos() : undefined;
+          if (!editor.isEditable || typeof pos !== "number") {
+            const open = !dom.classList.contains("is-open");
+            dom.classList.toggle("is-open", open);
+            dom.querySelector(':scope > div > [data-type="detailsContent"]')?.toggleAttribute("hidden", !open);
+            return;
+          }
+          const { from, to } = editor.state.selection;
+          editor
+            .chain()
+            .command(({ tr }) => {
+              const node = tr.doc.nodeAt(pos);
+              if (node?.type.name !== "details") return false;
+              tr.setNodeAttribute(pos, "open", !node.attrs.open);
+              return true;
+            })
+            .setTextSelection({ from, to })
+            .focus(undefined, { scrollIntoView: false })
+            .run();
+        },
+        true,
+      );
       const update = view.update?.bind(view);
       return {
         ...view,
@@ -252,21 +383,12 @@ export const Toggle = Details.extend({
     const base = this.parent?.() ?? {};
     return {
       ...base,
-      // Backspace at the start of a toggle's title turns it back into text, its contents following.
+      // Backspace at the start of a toggle's title unwraps it: a toggle heading becomes a heading of its
+      // level, a toggle becomes text, its contents following (as in Notion).
       Backspace: (props) => {
-        const { state, view } = this.editor;
-        const { $from, empty } = state.selection;
+        const { $from, empty } = this.editor.state.selection;
         if (empty && $from.parent.type.name === "detailsSummary" && $from.parentOffset === 0) {
-          const depth = $from.depth - 1;
-          const details = $from.node(depth);
-          const pos = $from.before(depth);
-          const blocks: PMNode[] = [state.schema.nodes.paragraph.create(null, details.child(0).content)];
-          details.child(1).forEach((n) => {
-            if (!(n.type.name === "paragraph" && n.content.size === 0 && details.child(1).childCount === 1)) blocks.push(n);
-          });
-          const tr = state.tr.replaceWith(pos, pos + details.nodeSize, blocks);
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)).scrollIntoView());
-          return true;
+          return this.editor.chain().command(unwrapToggle($from.node($from.depth - 1).attrs.level ?? null)).scrollIntoView().run();
         }
         return base.Backspace?.(props) ?? false;
       },
@@ -279,14 +401,16 @@ export const Toggle = Details.extend({
     tokenize(src, _tokens, lexer) {
       const d = takeDetails(src);
       if (!d) return undefined;
-      return { type: "details", raw: d.raw, open: d.open, summaryTokens: lexer.inlineTokens(d.summary), tokens: lexer.blockTokens(d.inner) };
+      const heading = SUMMARY_HEADING.exec(d.summary);
+      const summary = heading ? heading[2].trim() : d.summary;
+      return { type: "details", raw: d.raw, open: d.open, level: heading ? Number(heading[1]) : null, summaryTokens: lexer.inlineTokens(summary), tokens: lexer.blockTokens(d.inner) };
     },
   },
   parseMarkdown: (token, h) => {
     const content = h.parseChildren(token.tokens ?? []);
     return {
       type: "details",
-      attrs: { open: token.open },
+      attrs: { open: token.open, level: token.level ?? null },
       content: [
         { type: "detailsSummary", content: h.parseInline(token.summaryTokens ?? []) },
         { type: "detailsContent", content: content.length ? content : [{ type: "paragraph" }] },
@@ -296,9 +420,18 @@ export const Toggle = Details.extend({
   renderMarkdown: (node, h) => {
     const [summary, body] = (node.content ?? []) as JSONContent[];
     const inner = body ? h.renderChildren(body.content ?? [], "\n\n").trim() : "";
-    return `<details${node.attrs?.open ? " open" : ""}>\n<summary>${summary ? h.renderChildren(summary) : ""}</summary>\n\n${inner}\n\n</details>`;
+    const title = summary?.content?.length ? h.renderChildren(summary.content) : "";
+    const level = node.attrs?.level;
+    return `<details${node.attrs?.open ? " open" : ""}>\n<summary>${level ? `<h${level}>${title}</h${level}>` : title}</summary>\n\n${inner}\n\n</details>`;
   },
 }).configure({ persist: true });
+
+/** A toggle's title. Pasted HTML puts a toggle heading's title in a heading: <summary><h2>Title</h2></summary>. */
+export const ToggleSummary = DetailsSummary.extend({
+  parseHTML() {
+    return [{ tag: "summary", contentElement: (el: HTMLElement) => el.querySelector<HTMLElement>(":scope > h1, :scope > h2, :scope > h3") ?? el }];
+  },
+});
 
 // ---------- tables ----------
 
@@ -642,11 +775,10 @@ function EmbedView({ node }: NodeViewProps) {
 
 // ---------- code block ----------
 
-export const lowlight = createLowlight(common);
-
 export const LANGUAGES: [string, string][] = [
   ["", "Plain text"],
   ["bash", "Bash"],
+  ["bash-profile", "Bash + profile"],
   ["c", "C"],
   ["cpp", "C++"],
   ["csharp", "C#"],
@@ -675,20 +807,24 @@ export const LANGUAGES: [string, string][] = [
   ["swift", "Swift"],
   ["typescript", "TypeScript"],
   ["yaml", "YAML"],
+  ["zsh", "Zsh"],
 ];
 
-const ALIASES: Record<string, string> = { js: "javascript", ts: "typescript", sh: "bash", zsh: "bash", py: "python", rs: "rust", html: "xml", yml: "yaml", toml: "ini", jsx: "javascript", tsx: "typescript" };
+/** What people type after ``` for a menu language (the menu shows and ticks the language it stands for). */
+const ALIASES: Record<string, string> = { js: "javascript", ts: "typescript", sh: "bash", py: "python", rs: "rust", html: "xml", yml: "yaml", toml: "ini", jsx: "javascript", tsx: "typescript" };
 
 /** Shell blocks run with Ctrl-E or their Run button (desktop only). The output shows under the block and isn't saved. */
-const SHELLS: Record<string, true> = { bash: true, sh: true, shell: true, zsh: true };
+const SHELLS: Record<string, true> = { bash: true, "bash-profile": true, sh: true, shell: true, zsh: true };
+/** What a run of each shell loads from the user's setup (see script.rs), shown in the language menu. */
+const RUN_SETUP: Record<string, string> = { "bash-profile": "~/.bash_profile, ~/.profile", shell: "PATH, exports", zsh: "~/.zshrc" };
 const runnable = (language: unknown) => typeof language === "string" && SHELLS[language] === true && currentPlatform() === "desktop";
 /** The code blocks on screen that can run, so Ctrl-E finds the one with the cursor. */
-const runners = new Set<{ editor: TiptapEditor; pos: () => number | undefined; run: () => void }>();
+const runners = new Set<{ editor: TiptapEditor; pos: () => number | undefined; runLine: () => void }>();
 /** Only the end of very long output is kept, so a chatty script can't grow the page without bound. */
 const MAX_OUTPUT = 200_000;
 let runIds = 0;
 
-/** Ctrl-E in a shell block runs it. Ahead of Tiptap's own Ctrl-E (end of block, on macOS). */
+/** Ctrl-E in a shell block runs the line the cursor is on. Ahead of Tiptap's own Ctrl-E (end of block, on macOS). */
 const RunShortcut = Extension.create({
   name: "codeBlockRun",
   priority: 1000,
@@ -699,21 +835,24 @@ const RunShortcut = Extension.create({
         if ($from.parent.type.name !== "codeBlock" || !runnable($from.parent.attrs.language)) return false;
         const pos = $from.before();
         const runner = [...runners].find((r) => r.editor === this.editor && r.pos() === pos);
-        runner?.run();
+        runner?.runLine();
         return !!runner;
       },
     };
   },
 });
 
-export const CodeBlock = CodeBlockLowlight.extend({
+export const CodeBlock = TiptapCodeBlock.extend({
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView);
   },
   addExtensions() {
     return [...(this.parent?.() ?? []), RunShortcut];
   },
-}).configure({ lowlight, defaultLanguage: null, enableTabIndentation: true });
+  addProseMirrorPlugins() {
+    return [...(this.parent?.() ?? []), codeHighlight()];
+  },
+}).configure({ defaultLanguage: null, enableTabIndentation: true });
 
 /** A run of a shell block (or one of its lines): its output so far, then its exit code (null when stopped) or why it couldn't start. */
 type ScriptRun = { id: number; line?: number; output: string; exit?: number | null; error?: string };
@@ -736,6 +875,14 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
   const [copied, setCopied] = useState(false);
   const [wrap, setWrap] = useState(false);
   const [run, setRun] = useState<ScriptRun | null>(null);
+  // The output panel scrolls past a fixed height; expanded, it shows everything.
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const outputRef = useRef<HTMLPreElement>(null);
+  useLayoutEffect(() => {
+    const el = outputRef.current;
+    setOverflows(!!el && el.scrollHeight > el.clientHeight + 1);
+  }, [run?.output, run?.error, wrap, expanded]);
   const lang = ALIASES[node.attrs.language] ?? node.attrs.language ?? "";
   const label = LANGUAGES.find(([id]) => id === lang)?.[1] ?? (lang || "Plain text");
   const canRun = runnable(node.attrs.language);
@@ -768,11 +915,11 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
     const only = cursorLine(editor, getPos());
     if (only?.text.trim()) start(only);
   };
-  const startRef = useRef(start);
-  startRef.current = start;
+  const runLineRef = useRef(runLine);
+  runLineRef.current = runLine;
   useEffect(() => {
     if (!canRun) return;
-    const entry = { editor, pos: getPos, run: () => startRef.current() };
+    const entry = { editor, pos: getPos, runLine: () => runLineRef.current() };
     runners.add(entry);
     return () => void runners.delete(entry);
   }, [canRun, editor, getPos]);
@@ -793,12 +940,12 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={runLine}
                 disabled={running || line === null}
-                title={line === null ? "Put the cursor on a line to run just that line" : `Run line ${line}`}
+                title={line === null ? "Put the cursor on a line to run just that line (⌃E)" : `Run line ${line} (⌃E)`}
                 className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50"
               >
                 <FileTerminal size={12} /> Run line
               </button>
-              <button onClick={() => start()} disabled={running} title="Run (⌃E)" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50">
+              <button onClick={() => start()} disabled={running} title="Run the whole block" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover disabled:opacity-50">
                 <FilePlay size={12} /> Run
               </button>
             </>
@@ -827,27 +974,39 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
             {running ? (
               <>
                 <LoaderCircle size={12} className="animate-spin" /> {run.line ? `Running line ${run.line}…` : "Running…"}
-                <button onClick={() => api.stopScript(run.id)} className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover">
-                  <Square size={11} /> Stop
-                </button>
               </>
             ) : (
-              <>
-                <span className={run.error || run.exit ? "text-[var(--c-red-text)]" : ""}>
-                  {run.line ? `Line ${run.line} · ` : ""}
-                  {run.error ? "Couldn't run" : run.exit === null ? "Stopped" : `Exited with ${run.exit}`}
-                </span>
-                <button onClick={() => setRun(null)} title="Clear output" className="ml-auto grid size-5 place-items-center rounded hover:bg-hover">
+              <span className={run.error || run.exit ? "text-[var(--c-red-text)]" : ""}>
+                {run.line ? `Line ${run.line} · ` : ""}
+                {run.error ? "Couldn't run" : run.exit === null ? "Stopped" : `Exited with ${run.exit}`}
+              </span>
+            )}
+            <span className="ml-auto flex items-center gap-0.5">
+              {(expanded || overflows) && (
+                <button onClick={() => setExpanded((x) => !x)} className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover">
+                  {expanded ? <ChevronsDownUp size={12} /> : <ChevronsUpDown size={12} />} {expanded ? "Collapse" : "Expand"}
+                </button>
+              )}
+              {running ? (
+                <button onClick={() => api.stopScript(run.id)} className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-hover">
+                  <Square size={11} /> Stop
+                </button>
+              ) : (
+                <button onClick={() => setRun(null)} title="Clear output" className="grid size-5 place-items-center rounded hover:bg-hover">
                   <X size={12} />
                 </button>
-              </>
-            )}
+              )}
+            </span>
           </div>
-          {(run.output || run.error) && <pre className={wrap ? "wrap" : ""}>{run.error ?? run.output}</pre>}
+          {(run.output || run.error) && (
+            <pre ref={outputRef} className={`${wrap ? "wrap" : ""} ${expanded ? "expanded" : ""}`}>
+              {run.error ?? run.output}
+            </pre>
+          )}
         </div>
       )}
       {menu && (
-        <Popover anchor={menu} onClose={() => (setMenu(null), setQuery(""))} className="w-56 p-1">
+        <Popover anchor={menu} onClose={() => (setMenu(null), setQuery(""))} className="w-72 p-1">
           <input
             autoFocus
             value={query}
@@ -860,6 +1019,7 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
               <MenuItem
                 key={id || "plain"}
                 label={name}
+                hint={runnable(id) ? RUN_SETUP[id] : undefined}
                 right={id === lang ? <Check size={14} className="text-muted" /> : null}
                 onClick={() => {
                   updateAttributes({ language: id || null });
@@ -877,7 +1037,26 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
 
 // ---------- image ----------
 
+// A width (px) keeps a resized image's size; its height follows the aspect ratio. In Markdown the
+// width is Obsidian's: ![alt|320](src). Obsidian's ![alt|320x200](src) reads too, keeping only the width.
+const WIDTH_IN_ALT = /^(.*?)\s*\|\s*(\d+)(?:x\d+)?$/;
+
 export const ImageBlock = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: { default: null, parseHTML: (el) => Number.parseInt(el.getAttribute("width") ?? "", 10) || null },
+    };
+  },
+  parseMarkdown: (token, h) => {
+    const sized = WIDTH_IN_ALT.exec(token.text ?? "");
+    return h.createNode("image", { src: token.href, title: token.title, alt: sized ? sized[1] : token.text, width: sized ? Number(sized[2]) || null : null });
+  },
+  renderMarkdown: (node) => {
+    const { src, alt, title, width } = node.attrs ?? {};
+    const label = `${alt ?? ""}${width ? `|${width}` : ""}`;
+    return title ? `![${label}](${src ?? ""} "${title}")` : `![${label}](${src ?? ""})`;
+  },
   addNodeView() {
     return ReactNodeViewRenderer(ImageView);
   },
@@ -961,28 +1140,99 @@ function ImageView({ node, updateAttributes, deleteNode, selected }: NodeViewPro
       </NodeViewWrapper>
     );
   }
-  return <ImageBlockView src={node.attrs.src} alt={node.attrs.alt ?? ""} selected={selected} onDelete={deleteNode} />;
+  return (
+    <ImageBlockView
+      src={node.attrs.src}
+      alt={node.attrs.alt ?? ""}
+      width={node.attrs.width}
+      selected={selected}
+      onDelete={deleteNode}
+      onResize={(width) => updateAttributes({ width })}
+    />
+  );
 }
 
-/** An image block: a hover toolbar (view full size, copy, delete); double-click views it too. */
-function ImageBlockView({ src, alt, selected, onDelete }: { src: string; alt: string; selected: boolean; onDelete: () => void }) {
+/** Narrowest an image can be dragged to, in px. */
+const MIN_IMAGE_WIDTH = 48;
+
+/**
+ * An image block: a hover toolbar (view full size, copy, delete), handles on both sides to resize it
+ * (double-click one for the image's own size); double-click the image to view it full size.
+ */
+function ImageBlockView({
+  src,
+  alt,
+  width,
+  selected,
+  onDelete,
+  onResize,
+}: {
+  src: string;
+  alt: string;
+  width: number | null;
+  selected: boolean;
+  onDelete: () => void;
+  onResize: (width: number | null) => void;
+}) {
   const url = useAssetUrl(src);
   const [viewing, setViewing] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The width while a handle is dragged; saved to the page when it's let go.
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const img = useRef<HTMLImageElement>(null);
   // Toolbar buttons act on mouse down and keep the editor from treating the press as its own.
   const act = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     fn();
   };
+  // `side` is 1 for the right handle, -1 for the left: dragging either outwards widens the image.
+  const startResize = (side: 1 | -1) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = img.current;
+    // The node view's own box spans the page's width: the widest the image can be.
+    const max = el?.parentElement?.parentElement?.clientWidth;
+    if (!el || !max) return;
+    const startX = e.clientX;
+    const startWidth = el.getBoundingClientRect().width;
+    let next = startWidth;
+    const move = (ev: MouseEvent) => {
+      next = Math.round(Math.min(max, Math.max(MIN_IMAGE_WIDTH, startWidth + side * (ev.clientX - startX))));
+      setDragWidth(next);
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      document.body.style.removeProperty("cursor");
+      setDragWidth(null);
+      if (next !== Math.round(startWidth)) onResize(next);
+    };
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const shown = dragWidth ?? width;
   return (
     <NodeViewWrapper className={`group/img relative my-1 w-fit max-w-full ${selected ? "rounded ring-2 ring-[var(--blue)]/50" : ""}`}>
       {url ? (
         <>
-          <img src={url} alt={alt} className="block max-w-full rounded-sm" draggable={false} />
+          <img ref={img} src={url} alt={alt} style={shown ? { width: shown } : undefined} className="block max-w-full rounded-sm" draggable={false} />
           {/* Covers the photo so WebKit's Live Text can't pick out words in it: a click selects the
               image block, a double-click views it full size. */}
           <div className="absolute inset-0" onDoubleClick={() => setViewing(true)} />
+          {([-1, 1] as const).map((side) => (
+            <button
+              key={side}
+              contentEditable={false}
+              title="Drag to resize · double-click for the original size"
+              onMouseDown={startResize(side)}
+              onDoubleClick={act(() => onResize(null))}
+              className={`absolute top-0 bottom-0 grid w-4 cursor-col-resize place-items-center transition-opacity ${side < 0 ? "left-0" : "right-0"} ${dragWidth === null ? "opacity-0 group-hover/img:opacity-100" : "opacity-100"}`}
+            >
+              <span className="h-12 max-h-[50%] w-1.5 rounded-full border border-white/80 bg-black/55 shadow-sm" />
+            </button>
+          ))}
         </>
       ) : (
         <div className="h-24 w-64 max-w-full animate-pulse rounded-sm bg-hover" />
@@ -1000,7 +1250,7 @@ function ImageBlockView({ src, alt, selected, onDelete }: { src: string; alt: st
             onMouseDown={act(() =>
               copyImage(url).then(
                 () => (setCopied(true), setTimeout(() => setCopied(false), 1200)),
-                () => {},
+                () => { },
               ),
             )}
           >
@@ -1048,18 +1298,18 @@ async function copyImage(url: string) {
     blob.type === "image/png"
       ? blob
       : await new Promise<Blob>((resolve, reject) => {
-          const img = new window.Image(); // (Image here is the editor extension)
-          img.crossOrigin = "anonymous";
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            canvas.getContext("2d")!.drawImage(img, 0, 0);
-            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no image"))), "image/png");
-          };
-          img.onerror = reject;
-          img.src = url;
-        });
+        const img = new window.Image(); // (Image here is the editor extension)
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d")!.drawImage(img, 0, 0);
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no image"))), "image/png");
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
   await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
 }
 
@@ -1070,7 +1320,7 @@ function useAssetUrl(src: string) {
   useEffect(() => {
     if (!local) return setUrl(src);
     let alive = true;
-    assetUrl(src).then((u) => alive && setUrl(u)).catch(() => {});
+    assetUrl(src).then((u) => alive && setUrl(u)).catch(() => { });
     return () => {
       alive = false;
     };

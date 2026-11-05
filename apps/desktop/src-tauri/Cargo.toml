@@ -39,3 +39,9 @@ ureq = "3"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# The Dock icon for dark themes (set_dock_icon); the versions and features Tauri already uses.
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSImage"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSData"] }

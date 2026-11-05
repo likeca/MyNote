@@ -57,6 +57,13 @@ Whether a toggle is open or closed is saved with the page.
 
 </details>
 
+<details>
+<summary><h3>Toggle headings open and close too</h3></summary>
+
+A toggle heading is a heading with a toggle's arrow: everything under it folds away. Type `/Toggle heading 1`, `2` or `3`, or use **Turn into** on a heading or a toggle. Toggle headings show in the page's outline, like other headings.
+
+</details>
+
 ### Quote
 
 > Quotes set words apart from the rest of the page.
@@ -90,11 +97,13 @@ A divider is a line across the page:
 const greet = (name) => `Hello, ${name}!`;
 ```
 
-On the desktop app, a **Bash**, **Shell** or **zsh** block can be run: put the cursor in it and press `Ctrl E`, or hover it and click **Run**. To run just one line, put the cursor on it and click **Run line**. It runs in your workspace folder, with the same `PATH` as your terminal. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
+On the desktop app, a **Bash**, **Bash + profile**, **Shell** or **Zsh** block can be run: hover it and click **Run** to run the whole block, or put the cursor on a line and press `Ctrl E` (or click **Run line**) to run just that line. It runs in your workspace folder. **Bash** runs on its own, without your startup files. **Bash + profile** first loads `~/.bash_profile` (or `~/.profile`), **Zsh** loads `~/.zprofile` and `~/.zshrc`, aliases included, and **Shell** runs Bash with the `PATH` and exports from your own shell's startup files. The language menu shows what each one loads. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
 
 ### Image
 
 `/Image`, then paste a link to an image and click **Embed image**. Images that come in with an import are copied into the workspace's `.assets/` folder.
+
+To resize an image, hover it and drag the handle on either side; it keeps its proportions. Double-click a handle to go back to the image's own size. The width is saved in the page the way Obsidian writes it, `![description|320](link)` for 320 pixels wide.
 
 ### Columns
 
@@ -131,10 +140,12 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Quote           | `> text`                                                 |
 | Callout         | `> [!yellow] 💡`, then `> text` lines                    |
 | Toggle          | `<details><summary>…</summary>…</details>`               |
+| Toggle heading  | `<details><summary><h2>…</h2></summary>…</details>`      |
 | Columns         | `<div class="columns"><div class="column">…</div></div>` |
 | Divider         | `---`                                                    |
 | Code            | Three backticks and the language                         |
 | Image           | `![description](link)`                                   |
+| Resized image   | `![description\|320](link)`                              |
 | Page link       | `[[Ideas]]`                                              |
 | Inline database | `![[Roadmap]]`                                           |
 | Colour          | `<span data-color="red">…</span>`                        |

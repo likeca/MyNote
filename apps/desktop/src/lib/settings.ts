@@ -93,7 +93,10 @@ export function useSettings(): Settings {
 
 const systemDark = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 
-/** Writes the appearance settings onto <html> as data attributes and the accent variable. */
+/** Whether the Dock shows the dark icon, so it changes only when the theme flips. */
+let dockDark: boolean | undefined;
+
+/** Writes the appearance settings onto <html> as data attributes and the accent variable, and matches the Dock icon. */
 function apply() {
   const root = document.documentElement;
   const dark = current.mode === "dark" || current.mode === "black" || (current.mode === "system" && systemDark());
@@ -105,6 +108,10 @@ function apply() {
   root.style.setProperty("--blue", ACCENTS.find((a) => a.id === current.accent)?.color ?? ACCENTS[0].color);
   root.style.setProperty("--text-zoom", String(current.textZoom));
   root.style.colorScheme = dark ? "dark" : "light";
+  if (dark !== dockDark) {
+    dockDark = dark;
+    api.setDockIcon(dark).catch(() => {}); // only the macOS app has a Dock icon
+  }
 }
 
 /** Applies settings at startup and follows the OS theme while in System mode. */

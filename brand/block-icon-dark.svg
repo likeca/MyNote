@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    App icon for dark themes (block-icon.svg on black): the Dock icon while MyNote shows a dark theme.
+    Same macOS icon grid: a rounded-square tile filling the 824px icon shape, the block well inside it.
+  -->
+  <defs>
+    <linearGradient id="tile-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26292E" />
+      <stop offset="1" stop-color="#0B0C0E" />
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3D9BE0" />
+      <stop offset="1" stop-color="#1E6FB0" />
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F2833" />
+      <stop offset="1" stop-color="#161D26" />
+    </linearGradient>
+  </defs>
+  <rect id="tile" x="100" y="100" width="824" height="824" rx="185" fill="url(#tile-fill)" />
+  <g transform="translate(512 512) scale(0.66) translate(-512 -512)">
+    <!-- The block's thickness, showing below and to the right of its face. -->
+    <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#2A84C8" stroke-width="30" stroke-linejoin="round" />
+    <!-- Its face. -->
+    <rect x="152" y="152" width="680" height="680" rx="76" fill="url(#face)" stroke="#5AB8F5" stroke-width="38" />
+    <text x="492" y="508" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="560" fill="#5AB8F5">N</text>
+  </g>
+</svg>

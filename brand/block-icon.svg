@@ -1,18 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- App icon: a block with an "N", in light blue. Inside macOS's 824px icon grid. -->
+  <!--
+    App icon, on Apple's macOS icon grid: a light blue block outline with an "N", everything else
+    transparent (the block's face too, so the background shows through, light or dark), well inside
+    the 824px icon shape so the system's rounded edge never cuts into it. The in-app logo is the same
+    block, cropped to its edges.
+  -->
   <defs>
     <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#7CC8F8" />
       <stop offset="1" stop-color="#3A9FE8" />
     </linearGradient>
-    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" />
-      <stop offset="1" stop-color="#F1F8FE" />
-    </linearGradient>
+    <!-- The block's thickness shows only outside its face, which is see-through. -->
+    <mask id="outside-face" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="white" />
+      <rect x="152" y="152" width="680" height="680" rx="76" fill="black" stroke="black" stroke-width="38" />
+    </mask>
   </defs>
-  <!-- The block's thickness, showing below and to the right of its face. -->
-  <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#3A9FE8" stroke-width="30" stroke-linejoin="round" />
-  <!-- Its face. -->
-  <rect x="152" y="152" width="680" height="680" rx="76" fill="url(#face)" stroke="#4AAEF2" stroke-width="38" />
-  <text x="492" y="508" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="560" fill="#4AAEF2">N</text>
+  <g transform="translate(512 512) scale(0.66) translate(-512 -512)">
+    <!-- The block's thickness, showing below and to the right of its face. -->
+    <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#3A9FE8" stroke-width="30" stroke-linejoin="round" mask="url(#outside-face)" />
+    <!-- Its face: just the outline. -->
+    <rect x="152" y="152" width="680" height="680" rx="76" fill="none" stroke="#4AAEF2" stroke-width="38" />
+    <text x="492" y="508" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="560" fill="#4AAEF2">N</text>
+  </g>
 </svg>

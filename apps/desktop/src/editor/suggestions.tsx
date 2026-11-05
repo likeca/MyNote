@@ -34,6 +34,7 @@ import { visibleBottom } from "../lib/viewport";
 import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { searchCommands } from "./commandSearch";
 import { SuggestionMenu, type MenuHandle, type MenuItem } from "./SuggestionMenu";
+import { ToggleHeadingIcon, turnIntoToggle } from "./blocks";
 
 type Action = {
   id: string;
@@ -146,7 +147,14 @@ function blocks(page: PageActions): Action[] {
     { id: "table", title: "Table", icon: <Table size={18} />, keywords: "grid simple", action: (e, r) => run(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { id: "bullet", title: "Bulleted list", icon: <List size={18} />, keywords: "ul unordered", shortcut: "-", action: (e, r) => run(e, r).toggleBulletList().run() },
     { id: "number", title: "Numbered list", icon: <ListOrdered size={18} />, keywords: "ol ordered", shortcut: "1.", action: (e, r) => run(e, r).toggleOrderedList().run() },
-    { id: "toggle", title: "Toggle list", icon: <ChevronRight size={18} />, keywords: "details collapse expand", action: (e, r) => run(e, r).setDetails().run() },
+    { id: "toggle", title: "Toggle list", icon: <ChevronRight size={18} />, keywords: "details collapse expand", action: (e, r) => run(e, r).command(turnIntoToggle(null)).run() },
+    ...([1, 2, 3] as const).map((level) => ({
+      id: `toggle-h${level}`,
+      title: `Toggle heading ${level}`,
+      icon: <ToggleHeadingIcon level={level} size={18} />,
+      keywords: `h${level} heading details collapse expand`,
+      action: (e: Editor, r: Range) => run(e, r).command(turnIntoToggle(level)).run(),
+    })),
     { id: "quote", title: "Quote", icon: <Quote size={18} />, keywords: "blockquote", shortcut: ">", action: (e, r) => run(e, r).toggleBlockquote().run() },
     { id: "divider", title: "Divider", icon: <Minus size={18} />, keywords: "hr rule line", shortcut: "---", action: (e, r) => run(e, r).setHorizontalRule().run() },
     { id: "callout", title: "Callout", icon: <Lightbulb size={18} />, keywords: "note info warning tip", action: (e, r) => run(e, r).wrapIn("callout").run() },

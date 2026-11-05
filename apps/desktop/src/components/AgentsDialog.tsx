@@ -7,7 +7,7 @@ import {
   FilePlus2,
   FileText,
   FolderTree,
-  GitCommitHorizontal,
+  BookDown,
   History,
   Info,
   PencilLine,
@@ -201,7 +201,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
           {/* Tools */}
           <div className="mt-6 grid grid-cols-2 gap-4">
             <ToolGroup title="Read" tools={READ_TOOLS} />
-            <ToolGroup title="Write" tools={WRITE_TOOLS} disabled={readOnly} note={<><GitCommitHorizontal size={13} /> Each write is a git commit</>} />
+            <ToolGroup title="Write" tools={WRITE_TOOLS} disabled={readOnly} note={<><BookDown size={13} /> Each write is a git commit</>} />
           </div>
         </div>
       </div>

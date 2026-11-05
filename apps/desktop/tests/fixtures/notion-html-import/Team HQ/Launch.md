@@ -17,7 +17,7 @@ Hidden **text**.
 </details>
 
 <details open>
-<summary>**Phase 1 &amp; 2**</summary>
+<summary><h3>Phase 1 &amp; 2</h3></summary>
 
 - [x] Init `repo`.
   - [ ] Sub task

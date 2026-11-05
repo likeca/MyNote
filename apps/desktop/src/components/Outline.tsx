@@ -2,6 +2,18 @@ import { useEffect, useState, type RefObject } from "react";
 
 type Heading = { el: HTMLElement; text: string; level: number };
 
+/**
+ * Headings in page order: top-level ones, ones inside toggles, and toggle headings (whose title is the
+ * heading) at any depth. Those in closed toggles are hidden and left out.
+ */
+const HEADINGS = [
+  ".betelgeuse-prose > :is(h1, h2, h3)",
+  '.betelgeuse-prose [data-type="detailsContent"] > :is(h1, h2, h3)',
+  '.betelgeuse-prose [data-type="details"][data-level] > div > summary',
+].join(", ");
+const levelOf = (el: HTMLElement) => (el.tagName === "SUMMARY" ? Number(el.closest<HTMLElement>('[data-type="details"]')?.dataset.level) : Number(el.tagName[1]));
+const headingsIn = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>(HEADINGS)].filter((el) => el.offsetParent !== null && el.textContent?.trim());
+
 /** Table-of-contents rail: dashes per heading that expand into a clickable outline on hover. */
 export function Outline({ scroller }: { scroller: RefObject<HTMLDivElement | null> }) {
   const [headings, setHeadings] = useState<Heading[]>([]);
@@ -12,12 +24,11 @@ export function Outline({ scroller }: { scroller: RefObject<HTMLDivElement | nul
     const root = scroller.current;
     if (!root) return;
     const collect = () => {
-      const els = [...root.querySelectorAll<HTMLElement>(".betelgeuse-prose > h1, .betelgeuse-prose > h2, .betelgeuse-prose > h3")];
-      setHeadings(els.filter((el) => el.textContent?.trim()).map((el) => ({ el, text: el.textContent!.trim(), level: Number(el.tagName[1]) })));
+      setHeadings(headingsIn(root).map((el) => ({ el, text: el.textContent!.trim(), level: levelOf(el) })));
     };
     const onScroll = () => {
       const top = root.getBoundingClientRect().top + 80;
-      const els = [...root.querySelectorAll<HTMLElement>(".betelgeuse-prose > h1, .betelgeuse-prose > h2, .betelgeuse-prose > h3")].filter((el) => el.textContent?.trim());
+      const els = headingsIn(root);
       let idx = 0;
       els.forEach((el, i) => el.getBoundingClientRect().top <= top && (idx = i));
       setActive(idx);
@@ -25,7 +36,8 @@ export function Outline({ scroller }: { scroller: RefObject<HTMLDivElement | nul
     collect();
     onScroll();
     const observer = new MutationObserver(collect);
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    // `hidden` flips when a toggle opens or closes, showing or hiding the headings inside it.
+    observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });
     root.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       observer.disconnect();

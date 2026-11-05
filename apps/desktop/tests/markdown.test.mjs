@@ -105,6 +105,87 @@ test("callout titles (Obsidian's `> [!type] Title`) open the callout instead of 
 test("toggles, including nested ones", () =>
   same("<details>\n<summary>Click to expand</summary>\n\nHidden **content**.\n\n<details open>\n<summary>Inner</summary>\n\nDeep.\n\n</details>\n\n</details>"));
 
+test("toggle headings: levels 1–3, inline formatting, and plain toggles inside them", () => {
+  same("<details open>\n<summary><h1>Plan</h1></summary>\n\nOverview.\n\n</details>");
+  same("<details>\n<summary><h2>Phase **1** &amp; `2`</h2></summary>\n\n- [ ] Ship\n\n<details>\n<summary>Notes</summary>\n\nDeep.\n\n</details>\n\n</details>");
+  same("<details open>\n<summary><h3>Later</h3></summary>\n\n\n\n</details>");
+});
+
+test("a toggle's title switches between plain toggle and toggle heading, without touching toggles around it", async () => {
+  const { setToggleLevel } = await import("../src/editor/blocks.tsx");
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, contentType: "markdown", content: "<details open>\n<summary>Outer</summary>\n\n<details open>\n<summary>Inner</summary>\n\nBody\n\n</details>\n\n</details>" });
+  const posOf = (text) => {
+    let at = -1;
+    editor.state.doc.descendants((n, pos) => (at < 0 && n.isText && n.text === text ? ((at = pos + 1), false) : undefined));
+    return at;
+  };
+  const md = () => normalizeMarkdown(editor.getMarkdown());
+  assert.equal(editor.chain().setTextSelection(posOf("Inner")).command(setToggleLevel(2)).run(), true);
+  assert.match(md(), /<summary>Outer<\/summary>[\s\S]*<summary><h2>Inner<\/h2><\/summary>/);
+  // In a toggle's content, not its title: no toggle changes.
+  assert.equal(editor.chain().setTextSelection(posOf("Body")).command(setToggleLevel(1)).run(), false);
+  assert.equal(editor.chain().setTextSelection(posOf("Inner")).command(setToggleLevel(null)).run(), true);
+  assert.match(md(), /<summary>Inner<\/summary>/);
+  editor.destroy();
+});
+
+test("Turn into: a heading becomes an open toggle heading, which switches level or back to a plain toggle", async () => {
+  const { TURN_INTO } = await import("../src/editor/Editor.tsx");
+  const turn = (id) => TURN_INTO.find((t) => t.id === id);
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, contentType: "markdown", content: "## Plan\n\nAfter." });
+  const md = () => normalizeMarkdown(editor.getMarkdown()).trim();
+  editor.commands.setTextSelection(3);
+  assert.equal(turn("toggle-h2").run(editor), true);
+  // Open, so Enter in its title goes inside it (as in Notion).
+  assert.equal(md(), "<details open>\n<summary><h2>Plan</h2></summary>\n\n\n\n</details>\n\nAfter.");
+  assert.equal(turn("toggle-h2").active(editor), true);
+  turn("toggle-h1").run(editor);
+  assert.match(md(), /<summary><h1>Plan<\/h1><\/summary>/);
+  turn("toggle").run(editor);
+  assert.match(md(), /^<details open>\n<summary>Plan<\/summary>/);
+  assert.equal(turn("toggle").active(editor), true);
+  editor.destroy();
+});
+
+const NESTED_TOGGLE_HEADINGS = "<details open>\n<summary><h1>Outer</h1></summary>\n\nPara A.\n\n<details open>\n<summary><h2>Inner</h2></summary>\n\nPara B.\n\n</details>\n\n</details>";
+
+/** An editor on `md` with the cursor at the start of `text` (plus `offset`). */
+function editorAt(md, text, offset = 0) {
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, contentType: "markdown", content: md });
+  let at = -1;
+  editor.state.doc.descendants((n, pos) => (at < 0 && n.isText && n.text === text ? ((at = pos), false) : undefined));
+  editor.commands.setTextSelection(at + offset);
+  return editor;
+}
+const markdownOf = (editor) => normalizeMarkdown(editor.getMarkdown()).trim();
+
+test("Backspace at the start of a nested toggle heading's title leaves a heading of its level, in place", () => {
+  const editor = editorAt(NESTED_TOGGLE_HEADINGS, "Inner");
+  editor.view.someProp("handleKeyDown", (f) => f(editor.view, new KeyboardEvent("keydown", { key: "Backspace" })));
+  assert.equal(markdownOf(editor), "<details open>\n<summary><h1>Outer</h1></summary>\n\nPara A.\n\n## Inner\n\nPara B.\n\n</details>");
+  editor.destroy();
+});
+
+test("Turn into Heading or Text on a nested toggle heading's title unwraps it inside its parent", async () => {
+  const { TURN_INTO } = await import("../src/editor/Editor.tsx");
+  for (const [id, line] of [["h3", "### Inner"], ["text", "Inner"]]) {
+    const editor = editorAt(NESTED_TOGGLE_HEADINGS, "Inner", 2);
+    TURN_INTO.find((t) => t.id === id).run(editor);
+    assert.equal(markdownOf(editor), `<details open>\n<summary><h1>Outer</h1></summary>\n\nPara A.\n\n${line}\n\nPara B.\n\n</details>`);
+    editor.destroy();
+  }
+});
+
+test("pasted HTML toggle headings (GitHub, the web) keep their title and level", () => {
+  const editor = editorAt("Start.", "Start.", 6);
+  editor.commands.insertContent('<details open><summary><h2>Pasted</h2></summary><div data-type="detailsContent"><p>body</p></div></details>');
+  assert.equal(markdownOf(editor), "Start.\n\n<details open>\n<summary><h2>Pasted</h2></summary>\n\nbody\n\n</details>");
+  editor.destroy();
+});
+
 test("columns", () => same('<div class="columns">\n<div class="column">\n\nLeft side\n\n</div>\n<div class="column">\n\n- right\n- list\n\n</div>\n</div>'));
 test("columns keep their widths (Notion's column ratios)", () =>
   same('<div class="columns">\n<div class="column" data-width="0.8">\n\nWide\n\n</div>\n<div class="column" data-width="0.2">\n\nNarrow\n\n</div>\n</div>'));
@@ -156,6 +237,14 @@ test("imported lists, embeds and files", () => {
   exact("![image.png](.assets/notion-0/a-image.png)\n\n[Contract.pdf](.assets/notion-0/a-Contract.pdf)\n\n---\n\nAfter\n");
 });
 
+test("a resized image keeps its width, in Obsidian's ![alt|width] form", () => {
+  exact("![photo|320](.assets/photo.png)\n\n![|240](https://example.com/a.png)\n\n![plain](.assets/b.png)\n");
+  // Obsidian's width x height keeps the width (images keep their aspect ratio).
+  assert.equal(roundTrip("![photo|320x200](.assets/photo.png)").trim(), "![photo|320](.assets/photo.png)");
+  // A pipe that isn't followed by a width is part of the description.
+  exact("![before | after](.assets/c.png)\n");
+});
+
 test("HTML-imported colours, highlights and callout colours", () => {
   exact('Some <span data-color="green">green **bold**</span> text and <span data-bg="red">the plan</span>.\n');
   exact('**<span data-color="green">Desktop</span>** and *<span data-color="red">it</span>*\n');
@@ -165,7 +254,7 @@ test("HTML-imported colours, highlights and callout colours", () => {
 
 test("HTML-imported toggles, columns and tables with breaks", () => {
   exact('<details open>\n<summary>Read <span data-color="gray">more</span></summary>\n\nHidden **text**.\n\n- inside\n\n</details>\n');
-  exact("<details open>\n<summary>**Phase 1 &amp; 2**</summary>\n\n- [x] Init `repo`.\n  - [ ] Sub task\n\n</details>\n");
+  exact("<details open>\n<summary><h3>Phase 1 &amp; 2</h3></summary>\n\n- [x] Init `repo`.\n  - [ ] Sub task\n\n</details>\n");
   exact("<details>\n<summary>Empty</summary>\n\n\n\n</details>\n");
   exact('<div class="columns">\n<div class="column">\n\n![[Tasks]]\n\n</div>\n<div class="column">\n\nSee [[Launch]] and <span data-bg="red">the plan</span>.\n\n</div>\n</div>\n');
   exact(

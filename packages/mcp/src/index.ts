@@ -46,8 +46,10 @@ Conventions:
 - Sibling pages are ordered by the frontmatter number "order" (ascending; pages without it follow, A–Z), as list_notes shows. To reorder, set "order" with update_note, e.g. between 2 and 3 use 2.5.
 - Notes link to each other with [[Title]] or [[Title|label]] wikilinks.
 - The body is GitHub-flavoured Markdown: headings, lists, "- [ ]" task lists, tables, code blocks and quotes.
+- Images are "![description](link)"; "![description|320](link)" shows one 320 pixels wide (Obsidian's syntax).
 - Rich blocks use readable HTML-ish syntax: <span data-color="red" data-bg="yellow">text</span> for colours,
-  "> [!yellow] 💡" callouts, <details><summary>Title</summary> … </details> toggles,
+  "> [!yellow] 💡" callouts, <details><summary>Title</summary> … </details> toggles (a toggle heading's title is a
+  heading: <summary><h2>Title</h2></summary>, levels 1–3),
   <div class="columns"><div class="column"> … </div></div> columns, and "![[Database]]" to embed a database.
 
 Databases:

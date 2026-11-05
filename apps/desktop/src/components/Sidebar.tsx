@@ -10,7 +10,7 @@ import {
   FileText,
   Heart,
   Folder,
-  GitCommitHorizontal,
+  BookDown,
   ExternalLink,
   MoreHorizontal,
   PanelLeft,
@@ -308,7 +308,7 @@ export function Sidebar(p: Props) {
           onClick={p.onCommit}
         >
           <span className="relative">
-            <GitCommitHorizontal size={17} />
+            <BookDown size={17} />
             {changes > 0 && (
               <span className="absolute -top-1.5 -right-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-[var(--c-red-text)] px-0.5 text-[9px] font-semibold text-white">
                 {changes > 9 ? "9+" : changes}

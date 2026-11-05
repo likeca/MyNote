@@ -1331,14 +1331,19 @@ impl<'a> Conv<'a> {
 
     fn toggle(&mut self, e: ElementRef) -> Vec<Block> {
         let summary = e.child_elements().find(|c| c.value().name() == "summary");
+        // A Notion toggle heading: the summary holds an <h1>–<h3>, kept as the toggle heading's level.
+        let mut level = None;
         let title = summary.map_or(String::new(), |s| {
-            let heading = s.child_elements().any(|c| matches!(c.value().name(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6"));
+            level = s.child_elements().find_map(|c| c.value().name().strip_prefix('h').and_then(|n| n.parse::<usize>().ok()).filter(|n| (1..=6).contains(n)));
             let mut atoms = vec![];
-            let mut base = self.base_marks();
-            base.bold = heading; // a toggle heading: bold summary
+            let base = self.base_marks();
             self.inline_children_deep(s, &base, &mut atoms);
             render_inline(atoms, Ctx::Line)
         });
+        let title = match level {
+            Some(n) => format!("<h{0}>{title}</h{0}>", n.min(3)),
+            None => title,
+        };
         let mut body = vec![];
         let mut pending: Vec<Child> = vec![];
         for c in children(e) {
@@ -1846,10 +1851,14 @@ mod tests {
             md(r#"<details open="" class="toggle"><summary>Tips <mark class="highlight-gray">here</mark></summary><div class="indented"><p>Hidden <strong>text</strong>.</p></div></details>"#),
             "<details open>\n<summary>Tips <span data-color=\"gray\">here</span></summary>\n\nHidden **text**.\n\n</details>"
         );
-        // Toggle headings: the heading is the (bold) summary.
+        // Toggle headings keep their heading level (Notion's "Toggle heading 1–3").
         assert_eq!(
             md(r#"<details open=""><summary style="font-weight:600"><h3 style="display:inline-block">Prep 1 &amp; 2</h3></summary><div class="indented"><ul class="to-do-list"><li><input type="checkbox" checked=""/> <span>Feed <code>x</code>.</span></li></ul></div></details>"#),
-            "<details open>\n<summary>**Prep 1 &amp; 2**</summary>\n\n- [x] Feed `x`.\n\n</details>"
+            "<details open>\n<summary><h3>Prep 1 &amp; 2</h3></summary>\n\n- [x] Feed `x`.\n\n</details>"
+        );
+        assert_eq!(
+            md(r#"<details><summary><h1>Big <strong>idea</strong></h1></summary><div class="indented"><p>a</p></div></details>"#),
+            "<details>\n<summary><h1>Big **idea**</h1></summary>\n\na\n\n</details>"
         );
         // Older exports: `ul.toggle > li > details`, children right inside it; empty toggles.
         assert_eq!(md(r#"<ul class="toggle"><li><details><summary>More</summary><p>a</p><p>b</p></details></li></ul>"#), "<details>\n<summary>More</summary>\n\na\n\nb\n\n</details>");

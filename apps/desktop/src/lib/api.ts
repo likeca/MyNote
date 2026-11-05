@@ -75,5 +75,7 @@ export const api = {
     return invoke<number | null>("run_script", { id, language, script, onOutput: channel });
   },
   stopScript: (id: number) => invoke<void>("stop_script", { id }),
+  /** The running app's Dock icon: the dark one for dark themes (macOS desktop only). */
+  setDockIcon: (dark: boolean) => invoke<void>("set_dock_icon", { dark }),
 
 };

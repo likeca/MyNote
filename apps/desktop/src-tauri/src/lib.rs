@@ -677,6 +677,27 @@ fn stop_script(state: State<AppState>, id: u32) {
     script::stop(&state.scripts, id)
 }
 
+/// The Dock icon while MyNote runs: the dark one (icons/dock-dark.png, from brand/block-icon-dark.svg)
+/// for dark themes, else the app's own. Finder, Launchpad and a Dock not running MyNote show the app's
+/// own icon: a per-appearance one needs an asset catalog, which only Xcode's actool can build.
+#[tauri::command]
+fn set_dock_icon(app: AppHandle, dark: bool) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    app.run_on_main_thread(move || {
+        use objc2::{AllocAnyThread, MainThreadMarker};
+        use objc2_app_kit::{NSApplication, NSImage};
+        use objc2_foundation::NSData;
+        let Some(mtm) = MainThreadMarker::new() else { return };
+        let image = dark.then(|| NSImage::initWithData(NSImage::alloc(), &NSData::with_bytes(include_bytes!("../icons/dock-dark.png")))).flatten();
+        // None puts the app's own icon back.
+        unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(image.as_deref()) };
+    })
+    .map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, dark);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let state: AppState = Arc::default();
@@ -757,7 +778,8 @@ pub fn run() {
             plugin_store_index,
             plugin_store_install,
             run_script,
-            stop_script
+            stop_script,
+            set_dock_icon
         ])
         .run(tauri::generate_context!())
         .expect("error while running Betelgeuse");

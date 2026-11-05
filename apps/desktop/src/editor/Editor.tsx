@@ -1,7 +1,7 @@
 import { Extension, type Editor as CoreEditor } from "@tiptap/core";
 import type { NestedOptions } from "@tiptap/extension-drag-handle";
 import DragHandle from "@tiptap/extension-drag-handle-react";
-import { DetailsContent, DetailsSummary } from "@tiptap/extension-details";
+import { DetailsContent } from "@tiptap/extension-details";
 import { NodeRangeSelection } from "@tiptap/extension-node-range";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -9,7 +9,7 @@ import { Focus } from "@tiptap/extensions";
 import { TableKit } from "@tiptap/extension-table";
 import { Markdown } from "@tiptap/markdown";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { NodeSelection } from "@tiptap/pm/state";
+import { NodeSelection, Selection } from "@tiptap/pm/state";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState, type Editor as TiptapEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -57,7 +57,7 @@ import { PageIcon } from "../components/PageIcon";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
 import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
-import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, ImageBlock, Toggle, WidthTable } from "./blocks";
+import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, ImageBlock, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
 import { normalizeMarkdown } from "./markdown";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { WikiLink } from "./WikiLink";
@@ -76,19 +76,32 @@ type TurnInto = { id: string; label: string; icon: ReactNode; active: (e: CoreEd
 
 const inWrapper = (e: CoreEditor) => ["listItem", "taskItem", "blockquote", "callout", "details", "heading"].some((n) => e.isActive(n));
 
+/** Starts a Turn into; on a toggle's title, the toggle is unwrapped first (its title becomes a heading of `level`, or text), its contents following, as in Notion. */
+const turn = (e: CoreEditor, level: 1 | 2 | 3 | null = null) => (toggleLevel(e) === undefined ? e.chain().focus() : e.chain().focus().command(unwrapToggle(level)));
+
 /** Block conversions shared by the block menu, the bubble menu and Cmd+Opt shortcuts. */
 export const TURN_INTO: TurnInto[] = [
-  { id: "text", label: "Text", icon: <Type size={16} />, active: (e) => e.isActive("paragraph") && !inWrapper(e), run: (e) => e.chain().focus().clearNodes().run() },
-  { id: "h1", label: "Heading 1", icon: <Heading1 size={16} />, active: (e) => e.isActive("heading", { level: 1 }), run: (e) => e.chain().focus().clearNodes().setNode("heading", { level: 1 }).run() },
-  { id: "h2", label: "Heading 2", icon: <Heading2 size={16} />, active: (e) => e.isActive("heading", { level: 2 }), run: (e) => e.chain().focus().clearNodes().setNode("heading", { level: 2 }).run() },
-  { id: "h3", label: "Heading 3", icon: <Heading3 size={16} />, active: (e) => e.isActive("heading", { level: 3 }), run: (e) => e.chain().focus().clearNodes().setNode("heading", { level: 3 }).run() },
-  { id: "todo", label: "To-do list", icon: <ListTodo size={16} />, active: (e) => e.isActive("taskList"), run: (e) => e.chain().focus().clearNodes().toggleTaskList().run() },
-  { id: "bullet", label: "Bulleted list", icon: <List size={16} />, active: (e) => e.isActive("bulletList"), run: (e) => e.chain().focus().clearNodes().toggleBulletList().run() },
-  { id: "number", label: "Numbered list", icon: <ListOrdered size={16} />, active: (e) => e.isActive("orderedList"), run: (e) => e.chain().focus().clearNodes().toggleOrderedList().run() },
-  { id: "toggle", label: "Toggle list", icon: <ChevronRight size={16} />, active: (e) => e.isActive("details"), run: (e) => e.chain().focus().clearNodes().setDetails().run() },
-  { id: "code", label: "Code", icon: <SquareCode size={16} />, active: (e) => e.isActive("codeBlock"), run: (e) => e.chain().focus().clearNodes().toggleCodeBlock().run() },
-  { id: "quote", label: "Quote", icon: <Quote size={16} />, active: (e) => e.isActive("blockquote"), run: (e) => e.chain().focus().clearNodes().toggleBlockquote().run() },
-  { id: "callout", label: "Callout", icon: <Lightbulb size={16} />, active: (e) => e.isActive("callout"), run: (e) => e.chain().focus().clearNodes().wrapIn("callout").run() },
+  { id: "text", label: "Text", icon: <Type size={16} />, active: (e) => e.isActive("paragraph") && !inWrapper(e), run: (e) => turn(e).clearNodes().run() },
+  { id: "h1", label: "Heading 1", icon: <Heading1 size={16} />, active: (e) => e.isActive("heading", { level: 1 }), run: (e) => turn(e, 1).clearNodes().setNode("heading", { level: 1 }).run() },
+  { id: "h2", label: "Heading 2", icon: <Heading2 size={16} />, active: (e) => e.isActive("heading", { level: 2 }), run: (e) => turn(e, 2).clearNodes().setNode("heading", { level: 2 }).run() },
+  { id: "h3", label: "Heading 3", icon: <Heading3 size={16} />, active: (e) => e.isActive("heading", { level: 3 }), run: (e) => turn(e, 3).clearNodes().setNode("heading", { level: 3 }).run() },
+  { id: "todo", label: "To-do list", icon: <ListTodo size={16} />, active: (e) => e.isActive("taskList"), run: (e) => turn(e).clearNodes().toggleTaskList().run() },
+  { id: "bullet", label: "Bulleted list", icon: <List size={16} />, active: (e) => e.isActive("bulletList"), run: (e) => turn(e).clearNodes().toggleBulletList().run() },
+  { id: "number", label: "Numbered list", icon: <ListOrdered size={16} />, active: (e) => e.isActive("orderedList"), run: (e) => turn(e).clearNodes().toggleOrderedList().run() },
+  // On a block, these turn it into a toggle (its text becomes the title); on a toggle's title, they
+  // switch it between a plain toggle and a toggle heading in place.
+  ...([null, 1, 2, 3] as const).map(
+    (level): TurnInto => ({
+      id: level ? `toggle-h${level}` : "toggle",
+      label: level ? `Toggle heading ${level}` : "Toggle list",
+      icon: level ? <ToggleHeadingIcon level={level} size={16} /> : <ChevronRight size={16} />,
+      active: (e) => toggleLevel(e) === level,
+      run: (e) => (toggleLevel(e) === undefined ? e.chain().focus().clearNodes() : e.chain().focus()).command(turnIntoToggle(level)).run(),
+    }),
+  ),
+  { id: "code", label: "Code", icon: <SquareCode size={16} />, active: (e) => e.isActive("codeBlock"), run: (e) => turn(e).clearNodes().toggleCodeBlock().run() },
+  { id: "quote", label: "Quote", icon: <Quote size={16} />, active: (e) => e.isActive("blockquote"), run: (e) => turn(e).clearNodes().toggleBlockquote().run() },
+  { id: "callout", label: "Callout", icon: <Lightbulb size={16} />, active: (e) => e.isActive("callout"), run: (e) => turn(e).clearNodes().wrapIn("callout").run() },
 ];
 
 /** Block shortcuts: ⌘⌥0–8 turn into, ⌘D duplicates the current block, ⌘⇧H highlights. */
@@ -135,7 +148,7 @@ export function contentExtensions() {
     ColorMark,
     Callout,
     Toggle,
-    DetailsSummary,
+    ToggleSummary,
     DetailsContent,
     ColumnList,
     Column,
@@ -151,9 +164,12 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       ...contentExtensions(),
       Placeholder.configure({
         includeChildren: true,
-        placeholder: ({ node, editor: e }) => {
+        placeholder: ({ node, pos, editor: e }) => {
           if (node.type.name === "heading") return `Heading ${node.attrs.level}`;
-          if (node.type.name === "detailsSummary") return "Toggle";
+          if (node.type.name === "detailsSummary") {
+            const level = e.state.doc.resolve(pos).parent.attrs.level;
+            return level ? `Toggle heading ${level}` : "Toggle";
+          }
           return e.isEmpty ? "Write something, or press '/' for commands…" : "Press '/' for commands";
         },
       }),
@@ -360,6 +376,12 @@ function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink:
     dom.addEventListener("contextmenu", onContextMenu);
     return () => dom.removeEventListener("contextmenu", onContextMenu);
   }, [editor]);
+  // The pointer's height, for the toggle rule in NESTED (rules don't get coordinates).
+  useEffect(() => {
+    const track = (e: MouseEvent) => void (pointerY = e.clientY);
+    window.addEventListener("mousemove", track, { capture: true, passive: true });
+    return () => window.removeEventListener("mousemove", track, { capture: true });
+  }, []);
   // Nudges the handle beside the block's first line (and left of list markers). Applied straight to
   // the element in the same tick the handle moves; a React state update would land a frame later
   // and make the handle visibly jump twice when moving between blocks.
@@ -411,6 +433,9 @@ function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink:
 
 const HANDLE_HEIGHT = 24;
 
+/** Where the pointer last was, vertically (see BlockHandle). */
+let pointerY = Number.NaN;
+
 const NESTED: NestedOptions = {
   // No edge detection: by default, nearing a block's left edge hands the handle to its parent, so
   // reaching for the handle of a block inside columns jumped it to the whole column row.
@@ -418,6 +443,24 @@ const NESTED: NestedOptions = {
   // A column on its own isn't a block you'd move; its contents are.
   rules: [
     { id: "noBareColumns", evaluate: ({ node }) => (node.type.name === "column" ? 1000 : 0) },
+    // A toggle's title and content are parts of it, not blocks: the toggle is what the handle moves
+    // and its menu changes.
+    { id: "noToggleParts", evaluate: ({ node }) => (node.type.name === "detailsSummary" || node.type.name === "detailsContent" ? 1000 : 0) },
+    // Over a toggle's arrow column the pointer resolves to just before the toggle, which belongs to the
+    // toggle around it: keep the handle where it is rather than jumping to that outer toggle on the
+    // way to the handle of a nested one.
+    { id: "toggleArrowColumn", evaluate: ({ $pos }) => ($pos.nodeAfter?.type.name === "details" ? 1000 : 0) },
+    // A toggle takes the handle only beside its title. Beside its contents (the column under its
+    // arrow, a code block's edges) the pointer resolves to the toggle itself, which pulled the handle
+    // up to the title on the way to the handle of a block inside it; there it stays on that block.
+    {
+      id: "toggleByItsTitle",
+      evaluate: ({ node, pos, view }) => {
+        if (node.type.name !== "details" || Number.isNaN(pointerY)) return 0;
+        const summary = (view.nodeDOM(pos) as HTMLElement | null)?.querySelector(":scope > div > summary");
+        return summary && pointerY > summary.getBoundingClientRect().bottom ? 1000 : 0;
+      },
+    },
     // A table moves as a whole; its rows, cells and the text in them get no handles of their own.
     {
       id: "noTableInsides",
@@ -503,6 +546,8 @@ const NODE_LABELS: Record<string, string> = {
   bulletList: "Bulleted list",
   orderedList: "Numbered list",
   taskList: "To-do list",
+  listItem: "List item",
+  taskItem: "To-do",
   details: "Toggle list",
   codeBlock: "Code",
   blockquote: "Quote",
@@ -517,9 +562,12 @@ const NODE_LABELS: Record<string, string> = {
 export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: MenuAt & { editor: TiptapEditor; onOpenLink: Props["onOpenLink"]; onClose: () => void }) {
   const [sub, setSub] = useState<{ kind: "turn" | "color"; el: HTMLElement } | null>(null);
   const [query, setQuery] = useState("");
+  // The block's text, from its first line to its last: the title of a toggle, the items of a list.
+  // (Positions just inside a toggle or list aren't in any text, and conversions then act on the wrong block.)
   const selectBlock = () => {
-    const from = pos + 1;
-    const to = Math.max(from, pos + node.nodeSize - 1);
+    const { doc } = editor.state;
+    const from = Selection.near(doc.resolve(pos + 1)).from;
+    const to = Math.max(from, Selection.near(doc.resolve(pos + node.nodeSize - 1), -1).to);
     editor.chain().focus().setTextSelection({ from, to }).run();
   };
   const finish = (fn: () => void) => {
@@ -528,7 +576,8 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
   };
   const q = query.toLowerCase();
   const show = (label: string) => label.toLowerCase().includes(q);
-  const label = node.type.name === "heading" ? `Heading ${node.attrs.level}` : NODE_LABELS[node.type.name] ?? node.type.name;
+  const label =
+    node.type.name === "heading" ? `Heading ${node.attrs.level}` : node.type.name === "details" && node.attrs.level ? `Toggle heading ${node.attrs.level}` : (NODE_LABELS[node.type.name] ?? node.type.name);
 
   return (
     <Popover anchor={el} onClose={onClose} className="w-64 p-1">
