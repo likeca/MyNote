@@ -13,7 +13,7 @@ Media Library turns the folders where your files already live (footage, audio, p
 2. Open **Settings → Media Library**, click **Add folder…** and choose where your files live, such as `~/Studio` or an external drive.
 3. **Library** appears in the sidebar. The first scan takes a moment; media details (length, resolution) fill in over the next minutes.
 
-Your files are never moved, copied or uploaded: Betelgeuse only reads them. Tags, ratings and notes you add are saved in the workspace (`.betelgeuse/library.jsonl`); the project folder settings in `.betelgeuse/plugins/media-library/`; thumbnails and the file index are a cache on this computer. Turning the plugin off stops scanning; your data stays for when you turn it back on.
+Your files are never moved, copied or uploaded: MyNote only reads them. Tags, ratings and notes you add are saved in the workspace (`.mynote/library.jsonl`); the project folder settings in `.mynote/plugins/media-library/`; thumbnails and the file index are a cache on this computer. Turning the plugin off stops scanning; your data stays for when you turn it back on.
 
 ## The Library
 
@@ -31,7 +31,7 @@ Video length and resolution need [ffmpeg](https://ffmpeg.org) (`brew install ffm
 Link a database's pages to folders: choose the database in **Settings → Media Library → Project folders** (a videos pipeline, a client list, a projects database), say which property groups them (a channel, say) and where each group's folders go. Then each row's page gets an **Assets** panel:
 
 - **Create project folder** makes `Footage`, `Audio`, `Graphics`, `Project`, `Exports` and `Thumbnail` in the channel's folder (the template is yours to change).
-- Or **link an existing folder**: Betelgeuse suggests folders whose names match the title.
+- Or **link an existing folder**: MyNote suggests folders whose names match the title.
 - The panel lists the folder's files by sub-folder, with **Open project** for the newest Premiere, After Effects, Resolve or Audacity file.
 
 **Import existing projects** creates a page for each project folder that doesn't have one, so work from before you started is in the database too. **Link folders** links pages to folders that clearly match their titles.

@@ -1,6 +1,6 @@
 ---
 title: Testing and publishing
-description: Check your Betelgeuse plugin, share it, and get it into the plugin store.
+description: Check your MyNote plugin, share it, and get it into the plugin store.
 ---
 ## Check it
 
@@ -24,17 +24,17 @@ Plugin code runs in the app's window: open the developer console of a developmen
 
 ## Share it
 
-Zip your plugin's `dist/` folder (`betelgeuse-plugin.json`, `main.js`, `styles.css`). Others install it with **Settings → Plugins → Install from folder…** after unzipping.
+Zip your plugin's `dist/` folder (`mynote-plugin.json`, `main.js`, `styles.css`). Others install it with **Settings → Plugins → Install from folder…** after unzipping.
 
 ## The plugin store
 
-Plugins in the store live in the Betelgeuse repository's `plugins/` folder. To publish yours, open a pull request that adds it there. Once it's merged:
+Plugins in the store live in the MyNote repository's `plugins/` folder. To publish yours, open a pull request that adds it there. Once it's merged:
 
 - it's **reviewed** for what it does and the permissions it asks for;
 - every release, CI **builds** it from source, zips it and **signs** it with the store's key (`npm run plugins` must pass);
 - the release carries `plugins.json` (the store's list) and the zips; the app reads the list from the latest release;
 - the app checks each download's checksum and signature before installing, and refuses anything else;
-- people get your new version **automatically** when you bump `version` in the manifest and it works with their Betelgeuse.
+- people get your new version **automatically** when you bump `version` in the manifest and it works with their MyNote.
 
 To package locally (unsigned unless you pass a key): `node scripts/package-plugins.mjs`. It writes `dist-plugins/`. Set `"private": true` in the manifest to keep a plugin out of the store.
 

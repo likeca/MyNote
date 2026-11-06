@@ -57,7 +57,7 @@ mod tests {
         embedded.sort();
         assert_eq!(embedded, on_disk, "list every file in src-tauri/seed in SEED");
 
-        let dir = std::env::temp_dir().join(format!("bg-seed-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-seed-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         seed(&dir).unwrap();
         assert_eq!(list_notes(&dir).len(), SEED.len());

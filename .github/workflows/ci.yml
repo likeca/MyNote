@@ -18,12 +18,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck -w @betelgeuse/desktop -w @betelgeuse/mobile -w betelgeuse-mcp
+      - run: npm run typecheck -w @mynote/desktop -w @mynote/mobile -w mynote-mcp
       # Every plugin in plugins/ typechecks and builds against the plugin API.
       - run: npm run plugins
       - run: node --import tsx --test tests/*.test.mjs
         working-directory: apps/desktop
-      - run: npm test -w betelgeuse-mcp
+      - run: npm test -w mynote-mcp
 
   lander:
     name: Landing page build
@@ -35,7 +35,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build -w @betelgeuse/lander
+      - run: npm run build -w @mynote/lander
 
   rust:
     name: Rust tests and clippy
@@ -93,4 +93,4 @@ jobs:
       - run: npm ci
       # The same build the release makes, through the wrapper that points OpenSSL at llvm-ranlib.
       - name: Build the APK
-        run: npm run android:build -w @betelgeuse/mobile -- --apk
+        run: npm run android:build -w @mynote/mobile -- --apk

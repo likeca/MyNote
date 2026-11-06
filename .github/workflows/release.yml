@@ -1,4 +1,4 @@
-# Builds Betelgeuse for macOS, Windows and Linux.
+# Builds MyNote for macOS, Windows and Linux.
 #
 #   Release:  npm run version:set 0.2.0 → commit → git tag v0.2.0 → git push --follow-tags
 #             The tests run first; then every platform builds and its installers are attached to a
@@ -112,7 +112,7 @@ jobs:
           args: ${{ matrix.args }} ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && format('--config {0}/apps/desktop/src-tauri/tauri.updater.conf.json', github.workspace) || '' }}
           # A tag makes (or adds to) the draft release; a dry run has no tag and only uploads artifacts.
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Betelgeuse {0}', github.ref_name) || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('MyNote {0}', github.ref_name) || '' }}
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           uploadWorkflowArtifacts: true
@@ -120,22 +120,22 @@ jobs:
             ## Install
 
             **The easiest and safest way is to build it yourself**: it takes one command and avoids every warning below.
-            See [Install from source](https://github.com/devian-labs/betelgeuse#install-from-source).
+            See [Install from source](https://github.com/likeca/MyNote#install-from-source).
 
             These downloads are not signed with an Apple or Microsoft certificate yet (that costs money; [sponsoring](https://github.com/sponsors/devian-labs) helps).
 
-            - **macOS** (`aarch64` for Apple Silicon, `x64` for Intel): open the `.dmg` and drag Betelgeuse to Applications.
+            - **macOS** (`aarch64` for Apple Silicon, `x64` for Intel): open the `.dmg` and drag MyNote to Applications.
               The first time, macOS says it "can't verify the developer". Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
-              Or run once in Terminal: `xattr -dr com.apple.quarantine /Applications/Betelgeuse.app`
+              Or run once in Terminal: `xattr -dr com.apple.quarantine /Applications/MyNote.app`
             - **Windows**: run the `.exe` installer. If SmartScreen appears, click **More info → Run anyway**.
-            - **Linux** (`amd64` or `arm64`): `.AppImage` (make it executable and run it), `.deb` (`sudo apt install ./betelgeuse_*.deb`) or `.rpm`.
+            - **Linux** (`amd64` or `arm64`): `.AppImage` (make it executable and run it), `.deb` (`sudo apt install ./mynote_*.deb`) or `.rpm`.
 
-            - **Android** (preview): install `Betelgeuse_*_android.apk`. Your phone may ask you to allow installs from your browser or files app.
+            - **Android** (preview): install `MyNote_*_android.apk`. Your phone may ask you to allow installs from your browser or files app.
               To have your desktop workspace on it, open **Settings → Sync** and connect the same git repository. Phone plugins, such as Finance, install from **Settings → Plugins**.
 
             The MCP server for AI agents needs **Node.js 20+**.
 
-            Already using Betelgeuse 0.5 or later? It offers this update itself, in the sidebar.
+            Already using MyNote 0.5 or later? It offers this update itself, in the sidebar.
 
   android:
     name: Build (Android)
@@ -170,7 +170,7 @@ jobs:
       - run: npm ci
       # Through the wrapper: it points OpenSSL's build (git sync) at the NDK's llvm-ranlib.
       - name: Build the APK
-        run: npm run android:build -w @betelgeuse/mobile -- --apk
+        run: npm run android:build -w @mynote/mobile -- --apk
       - name: Sign the APK
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -186,16 +186,16 @@ jobs:
             alias="$ANDROID_KEY_ALIAS"; store_pass="$ANDROID_KEYSTORE_PASSWORD"; key_pass="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
           else
             echo "::warning::No ANDROID_KEYSTORE secret: signing with a throwaway key. People will have to uninstall the previous version before installing this one."
-            alias=betelgeuse; store_pass=$(openssl rand -hex 16); key_pass=$store_pass
+            alias=mynote; store_pass=$(openssl rand -hex 16); key_pass=$store_pass
             keytool -genkeypair -keystore "$RUNNER_TEMP/release.keystore" -alias "$alias" -keyalg RSA -keysize 4096 -validity 10000 \
-              -storepass "$store_pass" -keypass "$key_pass" -dname "CN=Betelgeuse, O=Devian Labs" > /dev/null
+              -storepass "$store_pass" -keypass "$key_pass" -dname "CN=MyNote, O=Devian Labs" > /dev/null
           fi
           "$tools/zipalign" -f 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
           mkdir -p dist-mobile
           "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" --ks-key-alias "$alias" \
             --ks-pass "pass:$store_pass" --key-pass "pass:$key_pass" \
-            --out "dist-mobile/Betelgeuse_${version}_android.apk" "$RUNNER_TEMP/aligned.apk"
-          "$tools/apksigner" verify "dist-mobile/Betelgeuse_${version}_android.apk"
+            --out "dist-mobile/MyNote_${version}_android.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" verify "dist-mobile/MyNote_${version}_android.apk"
           rm -f "$RUNNER_TEMP/release.keystore"
       - uses: actions/upload-artifact@v6
         with:
@@ -260,4 +260,4 @@ jobs:
           key: ios
       - run: npm ci
       # Proves the iOS app builds. Distributing it needs an Apple Developer account, so nothing is attached.
-      - run: npm run tauri -w @betelgeuse/mobile -- ios build --target aarch64-sim --debug
+      - run: npm run tauri -w @mynote/mobile -- ios build --target aarch64-sim --debug

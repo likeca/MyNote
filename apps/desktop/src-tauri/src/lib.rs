@@ -1,10 +1,11 @@
 mod importer;
+mod legacy;
 mod library;
 mod script;
 mod seed;
 
 // The workspace engine lives in the shared core crate; these keep `crate::vault` / `crate::git` paths working.
-pub(crate) use betelgeuse_core::{git, plugin_store, plugins, vault};
+pub(crate) use mynote_core::{git, plugin_store, plugins, vault};
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
@@ -94,11 +95,46 @@ fn saved_vault(app: &AppHandle) -> Option<PathBuf> {
     json.get("vault")?.as_str().map(PathBuf::from).filter(|p| p.is_dir())
 }
 
-fn remember_vault(app: &AppHandle, path: &Path) {
+/// How many workspaces the history in the sidebar's workspace menu keeps.
+const RECENT_WORKSPACES: usize = 10;
+
+fn read_config(app: &AppHandle) -> serde_json::Map<String, serde_json::Value> {
+    config_file(app)
+        .and_then(|f| std::fs::read_to_string(f).ok())
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.as_object().cloned())
+        .unwrap_or_default()
+}
+
+fn write_config(app: &AppHandle, config: serde_json::Map<String, serde_json::Value>) {
     if let Some(file) = config_file(app) {
         let _ = std::fs::create_dir_all(file.parent().unwrap());
-        let _ = std::fs::write(file, serde_json::json!({ "vault": path }).to_string());
+        let _ = std::fs::write(file, serde_json::Value::Object(config).to_string());
     }
+}
+
+/// The workspace history, newest first.
+fn recent_paths(config: &serde_json::Map<String, serde_json::Value>) -> Vec<String> {
+    let list = config.get("recent").and_then(|v| v.as_array());
+    list.map(|l| l.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default()
+}
+
+/// `path` moved (or added) to the front of the history, which keeps at most `max` entries.
+fn push_recent(mut list: Vec<String>, path: &str, max: usize) -> Vec<String> {
+    list.retain(|p| p != path);
+    list.insert(0, path.to_string());
+    list.truncate(max);
+    list
+}
+
+/// Opens `path` next time MyNote starts, and puts it first in the workspace history.
+fn remember_vault(app: &AppHandle, path: &Path) {
+    let mut config = read_config(app);
+    let path = path.to_string_lossy().into_owned();
+    let recent = push_recent(recent_paths(&config), &path, RECENT_WORKSPACES);
+    config.insert("vault".into(), path.into());
+    config.insert("recent".into(), recent.into());
+    write_config(app, config);
 }
 
 /// Small bits of per-machine UI state (e.g. Recents) that must survive a quit or a crash. They live in
@@ -146,6 +182,7 @@ fn activate(app: &AppHandle, state: &AppState, path: PathBuf, remember: bool) ->
     if fresh {
         seed::seed(&path)?;
     }
+    vault::migrate_legacy_dir(&path).map_err(|e| format!("couldn't rename the workspace's {} folder: {e}", vault::LEGACY_DIR))?;
     git::ensure_repo(&path)?;
 
     let handle = app.clone();
@@ -185,7 +222,7 @@ fn activate(app: &AppHandle, state: &AppState, path: PathBuf, remember: bool) ->
 }
 
 /// Commits what changed, then pulls and pushes (see `git::sync_merging`): one sync at a time.
-fn run_sync(app: &AppHandle, state: &AppState, path: &Path) -> Result<betelgeuse_core::git_lib::Integrated, String> {
+fn run_sync(app: &AppHandle, state: &AppState, path: &Path) -> Result<mynote_core::git_lib::Integrated, String> {
     let _one = state.sync_lock.lock().unwrap_or_else(|e| e.into_inner());
     state.syncing.store(true, Ordering::SeqCst);
     state.changed_since_sync.store(false, Ordering::SeqCst);
@@ -255,8 +292,10 @@ fn current_vault(app: AppHandle, state: State<AppState>) -> Result<VaultInfo, St
     if let Ok(path) = vault(&state) {
         return Ok(info(&path));
     }
-    // BETELGEUSE_WORKSPACE (also read by the MCP server) overrides the saved workspace for this run only.
-    if let Some(path) = std::env::var_os("BETELGEUSE_WORKSPACE").or_else(|| std::env::var_os("BETELGEUSE_VAULT")) {
+    // MYNOTE_WORKSPACE (also read by the MCP server) overrides the saved workspace for this run only.
+    // Legacy names (before the rename to MyNote): BETELGEUSE_WORKSPACE, BETELGEUSE_VAULT.
+    let env = ["MYNOTE_WORKSPACE", "MYNOTE_VAULT", "BETELGEUSE_WORKSPACE", "BETELGEUSE_VAULT"];
+    if let Some(path) = env.iter().find_map(|k| std::env::var_os(k).filter(|v| !v.is_empty())) {
         return activate(&app, &state, PathBuf::from(path), false);
     }
     let path = saved_vault(&app)
@@ -268,6 +307,42 @@ fn current_vault(app: AppHandle, state: State<AppState>) -> Result<VaultInfo, St
 #[tauri::command]
 fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Result<VaultInfo, String> {
     activate(&app, &state, PathBuf::from(path), true)
+}
+
+#[derive(Serialize)]
+struct RecentWorkspace {
+    path: String,
+    name: String,
+    /// The path with the home folder shortened to `~`, for display.
+    display: String,
+    /// The folder still exists (it may have been moved, deleted, or be on a disconnected drive).
+    exists: bool,
+}
+
+/// The workspace history, newest first (the open workspace included).
+#[tauri::command]
+fn recent_workspaces(app: AppHandle) -> Vec<RecentWorkspace> {
+    let home = dirs::home_dir();
+    recent_paths(&read_config(&app))
+        .into_iter()
+        .map(|path| {
+            let p = Path::new(&path);
+            let display = match home.as_deref().and_then(|h| p.strip_prefix(h).ok()) {
+                Some(rest) => format!("~/{}", rest.to_string_lossy()),
+                None => path.clone(),
+            };
+            RecentWorkspace { name: info(p).name, exists: p.is_dir(), display, path }
+        })
+        .collect()
+}
+
+/// Removes a folder from the workspace history (the folder itself isn't touched).
+#[tauri::command]
+fn forget_workspace(app: AppHandle, path: String) {
+    let mut config = read_config(&app);
+    let recent: Vec<String> = recent_paths(&config).into_iter().filter(|p| *p != path).collect();
+    config.insert("recent".into(), recent.into());
+    write_config(&app, config);
 }
 
 #[tauri::command]
@@ -309,6 +384,68 @@ fn save_asset(state: State<AppState>, name: String, bytes: Vec<u8>) -> Result<St
 #[tauri::command]
 fn read_asset(state: State<AppState>, path: String) -> Result<tauri::ipc::Response, String> {
     vault::read_asset(&vault(&state)?, &path).map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+fn write_asset(state: State<AppState>, path: String, bytes: Vec<u8>) -> Result<(), String> {
+    vault::write_asset(&vault(&state)?, &path, &bytes)
+}
+
+/// Copies a file picked on disk into `.assets/` to attach it to a page; returns its vault path.
+#[tauri::command]
+fn attach_file(state: State<AppState>, path: String) -> Result<String, String> {
+    vault::copy_attachment(&vault(&state)?, Path::new(&path))
+}
+
+/// Saves a dropped or pasted file. Its bytes are the raw request body (a JSON list of numbers would be
+/// slow for big files); its name comes percent-encoded in the `x-file-name` header.
+#[tauri::command]
+fn attach_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected the file's bytes".into());
+    };
+    let name = request.headers().get("x-file-name").and_then(|v| v.to_str().ok()).map(percent_decode).unwrap_or_default();
+    vault::save_attachment(&vault(&state)?, &name, bytes)
+}
+
+/// Decodes `%XX` escapes (what JS's `encodeURIComponent` makes); anything else is kept as is.
+fn percent_decode(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' && i + 2 < b.len() {
+            if let Some(v) = s.get(i + 1..i + 3).and_then(|h| u8::from_str_radix(h, 16).ok()) {
+                out.push(v);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// A workspace file's size in bytes, or nothing when it isn't there.
+#[tauri::command]
+fn file_size(state: State<AppState>, path: String) -> Option<u64> {
+    vault::file_size(&vault(&state).ok()?, &path)
+}
+
+/// Opens an attached file (in `.assets/`) in its default app, or with `reveal`, shows it in Finder.
+#[tauri::command]
+fn open_attachment(app: AppHandle, state: State<AppState>, path: String, reveal: bool) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    if !path.starts_with(".assets/") {
+        return Err("Only attached files can be opened.".into());
+    }
+    let abs = vault::resolve(&vault(&state)?, &path)?;
+    if !abs.is_file() {
+        return Err("This file isn't in the workspace any more.".into());
+    }
+    let opened = if reveal { app.opener().reveal_item_in_dir(abs) } else { app.opener().open_path(abs.to_string_lossy(), None::<String>) };
+    opened.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -475,8 +612,8 @@ async fn import_pages(state: State<'_, AppState>, source: String, path: String) 
 #[tauri::command]
 fn mcp_info(app: AppHandle, state: State<AppState>) -> Result<McpInfo, String> {
     // Installed apps ship the server as a bundled resource; source checkouts can also use packages/mcp/dist.
-    let bundled = app.path().resolve("mcp/betelgeuse-mcp.mjs", tauri::path::BaseDirectory::Resource).ok();
-    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packages/mcp/dist/betelgeuse-mcp.mjs");
+    let bundled = app.path().resolve("mcp/mynote-mcp.mjs", tauri::path::BaseDirectory::Resource).ok();
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packages/mcp/dist/mynote-mcp.mjs");
     let server = bundled.filter(|p| p.exists()).unwrap_or(source);
     let server = server.canonicalize().unwrap_or(server);
     Ok(McpInfo {
@@ -600,7 +737,7 @@ fn library_reveal(app: AppHandle, state: State<AppState>, id: String) -> Result<
 /// Where this app keeps plugins: its data, cache and config folders.
 fn plugin_dirs(app: &AppHandle) -> plugins::Dirs {
     let path = app.path();
-    let or_temp = |r: tauri::Result<PathBuf>| r.unwrap_or_else(|_| std::env::temp_dir().join("betelgeuse"));
+    let or_temp = |r: tauri::Result<PathBuf>| r.unwrap_or_else(|_| std::env::temp_dir().join("mynote"));
     plugins::Dirs { data: or_temp(path.app_data_dir()), cache: or_temp(path.app_cache_dir()), config: or_temp(path.app_config_dir()) }
 }
 
@@ -700,6 +837,8 @@ fn set_dock_icon(app: AppHandle, dark: bool) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // First: the app's folders are named after the bundle identifier, which changed in the rename.
+    legacy::migrate_app_dirs();
     let state: AppState = Arc::default();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -715,6 +854,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             current_vault,
             open_vault,
+            recent_workspaces,
+            forget_workspace,
             list_notes,
             read_note,
             write_note,
@@ -723,6 +864,11 @@ pub fn run() {
             duplicate_note,
             save_asset,
             read_asset,
+            write_asset,
+            attach_file,
+            attach_bytes,
+            file_size,
+            open_attachment,
             rename_note,
             move_note,
             delete_note,
@@ -782,5 +928,34 @@ pub fn run() {
             set_dock_icon
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Betelgeuse");
+        .expect("error while running MyNote");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_history_is_newest_first_without_duplicates_and_capped() {
+        let list = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        // Reopening one moves it to the front instead of listing it twice.
+        assert_eq!(push_recent(list(&["/a", "/b", "/c"]), "/c", 10), list(&["/c", "/a", "/b"]));
+        assert_eq!(push_recent(list(&[]), "/a", 10), list(&["/a"]));
+        // The oldest drop off past the cap.
+        assert_eq!(push_recent(list(&["/a", "/b", "/c"]), "/d", 3), list(&["/d", "/a", "/b"]));
+        // A config from before the history (just "vault") has none; junk entries are skipped.
+        let config = serde_json::json!({ "vault": "/a", "recent": ["/b", 3, "/c"] });
+        assert_eq!(recent_paths(config.as_object().unwrap()), list(&["/b", "/c"]));
+        assert!(recent_paths(serde_json::json!({ "vault": "/a" }).as_object().unwrap()).is_empty());
+    }
+
+    #[test]
+    fn file_names_survive_the_header() {
+        // What `encodeURIComponent` sends for names with spaces, accents and symbols.
+        assert_eq!(percent_decode("Q3%20Report%20(final).pdf"), "Q3 Report (final).pdf");
+        assert_eq!(percent_decode("caf%C3%A9%20menu.pdf"), "café menu.pdf");
+        // Stray or broken escapes are kept as typed.
+        assert_eq!(percent_decode("100%"), "100%");
+        assert_eq!(percent_decode("a%zzb"), "a%zzb");
+    }
 }

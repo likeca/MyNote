@@ -1,13 +1,13 @@
 /**
- * Finance: personal finance in Betelgeuse. Accounts and cards, transactions, monthly budgets,
+ * Finance: personal finance in MyNote. Accounts and cards, transactions, monthly budgets,
  * investments, assets and liabilities, and net worth, with charts.
  *
  * The data lives in ordinary databases under a "Finance" page (see schema.ts), so it syncs, works
  * on the phone and with AI agents, and stays if the plugin goes. The plugin adds the Finance view
  * (dashboard and screens), its sidebar item, a settings section, commands and ⌘K results.
  */
-import { definePlugin, type PluginContext } from "@betelgeuse/plugin-api";
-import { Button, SettingRow } from "@betelgeuse/plugin-api/ui";
+import { definePlugin, type PluginContext } from "@mynote/plugin-api";
+import { Button, SettingRow } from "@mynote/plugin-api/ui";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
 import { money } from "./format";

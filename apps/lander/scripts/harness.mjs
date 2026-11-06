@@ -26,10 +26,10 @@ export const MIN = 60_000;
 export const HOUR = 60 * MIN;
 export const DAY = 24 * HOUR;
 
-export const VAULT = { name: "Betelgeuse", path: "/Users/maya/Betelgeuse" };
+export const VAULT = { name: "MyNote", path: "/Users/maya/MyNote" };
 export const ME = "Maya Patel";
-export const CLAUDE = "Claude Code via Betelgeuse MCP";
-export const CURSOR = "Cursor via Betelgeuse MCP";
+export const CLAUDE = "Claude Code via MyNote MCP";
+export const CURSOR = "Cursor via MyNote MCP";
 
 // ---------- Workspace ----------
 
@@ -154,7 +154,7 @@ export function buildHistory(files) {
     { ago: 3 * DAY, author: ME, subject: "Restore Ideas to 4be1f07" },
     { ago: 6 * DAY, author: CLAUDE, subject: "mcp: Add a reading list" },
     { ago: 9 * DAY, author: ME, subject: "Update Ideas, Welcome and 2 more" },
-    { ago: 21 * DAY, author: "Betelgeuse", subject: "Initialize Betelgeuse workspace" },
+    { ago: 21 * DAY, author: "MyNote", subject: "Initialize MyNote workspace" },
   ];
   return commits(versions, current);
 }
@@ -555,7 +555,7 @@ export async function openApp(browser, { theme, workspace, histories, localStora
     window.Date = ShiftedDate;
   }, NOW);
   const storage = {
-    "betelgeuse-settings": JSON.stringify({ mode: theme, palette: "betelgeuse", accent: "ember", textSize: "default", autocommit: 8 }),
+    "mynote-settings": JSON.stringify({ mode: theme, palette: "mynote", accent: "ember", textSize: "default", autocommit: 8 }),
     sidebar: "shown",
     [`favorites:${VAULT.path}`]: JSON.stringify(["Roadmap.md"]),
     ...extra,
@@ -567,13 +567,13 @@ export async function openApp(browser, { theme, workspace, histories, localStora
     files: workspace,
     histories,
     vault: VAULT,
-    mcp: { server_path: "/Applications/Betelgeuse.app/Contents/Resources/mcp/betelgeuse-mcp.mjs", built: true, node_path: "/opt/homebrew/bin/node" },
+    mcp: { server_path: "/Applications/MyNote.app/Contents/Resources/mcp/mynote-mcp.mjs", built: true, node_path: "/opt/homebrew/bin/node" },
     git: { branch: "main", remote_url: "git@github.com:maya/notes.git", user_name: ME, user_email: "maya@example.com", commits: 214 },
   });
   await page.addInitScript((css) => (window.__shotCss = css), (still ? STILL_CSS : "") + BASE_CSS);
   await page.goto(URL);
   await page.evaluate(addChrome);
-  await page.waitForSelector(".betelgeuse-prose, .database-view", { timeout: 20_000 });
+  await page.waitForSelector(".mynote-prose, .database-view", { timeout: 20_000 });
   await settle(page);
   return { page, context, problems };
 }

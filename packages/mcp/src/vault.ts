@@ -141,13 +141,15 @@ export class Vault {
   }
 
   // ---------- AI visibility ----------
-  // `.betelgeuse/config.json` holds the workspace policy (shared with the desktop app):
+  // `.mynote/config.json` holds the workspace policy (shared with the desktop app):
   //   "all"    every page is visible unless it or a parent page has `ai: false`
   //   "shared" only pages with `ai: true` on themselves or a parent (and no `ai: false`)
 
   async aiPolicy(): Promise<"all" | "shared"> {
     try {
-      const config = JSON.parse(await readFile(path.join(this.root, ".betelgeuse/config.json"), "utf8"));
+      // .betelgeuse is the legacy name (before the rename to MyNote); the app migrates it on open.
+      const dir = existsSync(path.join(this.root, ".mynote")) || !existsSync(path.join(this.root, ".betelgeuse")) ? ".mynote" : ".betelgeuse";
+      const config = JSON.parse(await readFile(path.join(this.root, dir, "config.json"), "utf8"));
       return config?.ai?.policy === "shared" ? "shared" : "all";
     } catch {
       return "all";
@@ -554,7 +556,7 @@ export class Vault {
     paths = paths.filter((_, i) => known[i]);
     if (paths.length === 0) return null;
     const hasIdentity = await this.git(["config", "user.email"]).then((s) => !!s.trim(), () => false);
-    const identity = hasIdentity ? [] : ["-c", "user.name=Betelgeuse", "-c", "user.email=betelgeuse@localhost"];
+    const identity = hasIdentity ? [] : ["-c", "user.name=MyNote", "-c", "user.email=mynote@localhost"];
     for (let attempt = 0; ; attempt++) {
       try {
         await this.git(["add", "-A", "--", ...paths]);
@@ -570,7 +572,7 @@ export class Vault {
           ...identity,
           "commit",
           "--quiet",
-          `--author=${agent} via Betelgeuse MCP <mcp@betelgeuse.local>`,
+          `--author=${agent} via MyNote MCP <mcp@mynote.local>`,
           "-m",
           `mcp: ${message}`,
           "--",

@@ -8,7 +8,7 @@ export type Release = { version: string; date: string; url: string; assets: Asse
 /** `release` is null when there is no release yet, undefined when GitHub couldn't be reached. */
 export type Snapshot = { repo: Repo | null; release: Release | null | undefined; languages: Language[] };
 
-export const API = "https://api.github.com/repos/devian-labs/betelgeuse";
+export const API = "https://api.github.com/repos/likeca/MyNote";
 
 export function parseRepo(d: { stargazers_count: number; forks_count: number; description: string | null; topics?: string[] }): Repo {
   return { stars: d.stargazers_count, forks: d.forks_count, description: d.description, topics: d.topics };

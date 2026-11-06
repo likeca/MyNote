@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">"Betelgeuse"</string>
-    <string name="main_activity_title">"Betelgeuse"</string>
+    <string name="app_name">"MyNote"</string>
+    <string name="main_activity_title">"MyNote"</string>
 </resources>

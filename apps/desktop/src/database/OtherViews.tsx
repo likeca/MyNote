@@ -76,7 +76,7 @@ function Card({
     <div
       draggable={draggable && editing !== row.path}
       onDragStart={(e) => {
-        e.dataTransfer.setData("text/betelgeuse-row", row.path);
+        e.dataTransfer.setData("text/mynote-row", row.path);
         e.dataTransfer.effectAllowed = "move";
       }}
       onClick={(e) => editing !== row.path && openRow(row.path, e)}
@@ -209,7 +209,7 @@ export function BoardView(vp: ViewProps) {
             onDragLeave={() => setOver(null)}
             onDrop={(e) => {
               setOver(null);
-              const path = e.dataTransfer.getData("text/betelgeuse-row");
+              const path = e.dataTransfer.getData("text/mynote-row");
               if (path) move(path, g);
             }}
             // Tinted with the group's colour, as in Notion; stronger while a card is dragged over it.
@@ -402,7 +402,7 @@ export function CalendarView(vp: ViewProps) {
               onDragLeave={() => setOver(null)}
               onDrop={(e) => {
                 setOver(null);
-                const row = rows.find((r) => r.path === e.dataTransfer.getData("text/betelgeuse-row"));
+                const row = rows.find((r) => r.path === e.dataTransfer.getData("text/mynote-row"));
                 if (row) db.setValue(row, dateProp.name, key);
               }}
               className={`group/day relative min-h-28 border-r border-b border-line p-1 ${weekend ? "bg-side/60" : ""} ${over === key ? "bg-[var(--c-blue-bg)]" : ""}`}
@@ -437,7 +437,7 @@ export function CalendarView(vp: ViewProps) {
                   <div
                     key={row.path}
                     draggable={editable}
-                    onDragStart={(e) => e.dataTransfer.setData("text/betelgeuse-row", row.path)}
+                    onDragStart={(e) => e.dataTransfer.setData("text/mynote-row", row.path)}
                     onClick={(e) => openRow(row.path, e)}
                     className="cursor-pointer truncate rounded bg-raised px-1.5 py-1 shadow-card hover:bg-[var(--card-hover)]"
                   >

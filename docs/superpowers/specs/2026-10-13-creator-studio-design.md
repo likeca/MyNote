@@ -9,7 +9,7 @@ Photoshop and Premiere files, thumbnails and exports. Today most creators keep t
 Folders are fine for storing files, but finding the right clip, the latest thumbnail or "the
 project file for that video" means clicking through a dozen of them every time.
 
-Creator Studio is an optional part of Betelgeuse, switched on in Settings. When it's on:
+Creator Studio is an optional part of MyNote, switched on in Settings. When it's on:
 
 1. You point it at the folders where your files already live. Nothing is moved, copied or uploaded.
 2. Every file in them becomes searchable in a **Library**: by name, folder, type, tags, length,
@@ -43,18 +43,18 @@ the order it hurts:
 | See what you have at a glance | Icons; videos must be opened to see them | Thumbnail grid, hover-scrub for video, previews for PSD/RAW/PDF |
 | Know which files belong to which video | Folder names, if consistent | Production ↔ project folder link, plus files linked by hand |
 | Start a video without setup chores | Make folders by hand, every time | "New production" creates the page and the folder from a template |
-| Track where each video stands | Spreadsheet, Notion or memory | Pipeline board and calendar over the productions database (already in Betelgeuse) |
+| Track where each video stands | Spreadsheet, Notion or memory | Pipeline board and calendar over the productions database (already in MyNote) |
 | Reuse assets (logos, intros, music, fonts) | "Brandings" folders per channel | Tags and collections; a Brand Kit collection per channel |
 | Know if music/footage is licensed | Rarely tracked | A source and licence field on any asset |
 | Find text inside things | Not possible | Phase 3: text in images and screenshots, words spoken in videos |
 
 Out of reach for this design: cloud storage and sharing, team permissions, review/approval links
-with timecoded comments, editing media. Betelgeuse stays a local, plain-files app.
+with timecoded comments, editing media. MyNote stays a local, plain-files app.
 
 ## Principles
 
 - **Files stay where they are.** Media is large (the author's `~/Studio` is 38 GB in 4,440 files)
-  and belongs to other apps. Betelgeuse only reads it; it never moves or rewrites a media file,
+  and belongs to other apps. MyNote only reads it; it never moves or rewrites a media file,
   except when you ask it to create a project folder or reveal a file.
 - **The index is a cache.** Everything scanned (file list, metadata, thumbnails, search index) can
   be rebuilt from the folders, so it lives in the app's cache directory, not in the workspace or git.
@@ -101,8 +101,8 @@ Kit). Both show in the Library's sidebar.
 | What | Where | Why |
 |---|---|---|
 | Library folder paths (per machine) | App config (`config.json`, beside the saved vault path) | Paths differ between machines |
-| Settings (toggle, kinds, ignore list, folder template, pipeline database) | `.betelgeuse/studio.json` in the workspace | Same on every machine; agents can read it |
-| Tags, rating, notes, source/licence, collections | `.betelgeuse/library.jsonl`, one sorted line per asset | Small, line-based so git merges cleanly |
+| Settings (toggle, kinds, ignore list, folder template, pipeline database) | `.mynote/studio.json` in the workspace | Same on every machine; agents can read it |
+| Tags, rating, notes, source/licence, collections | `.mynote/library.jsonl`, one sorted line per asset | Small, line-based so git merges cleanly |
 | File index and media details | `index.json` in the app's cache directory, one per workspace, searched in memory | Rebuildable. A 4,000-file library scans in 0.2 s and searches in ~15 ms; move to SQLite FTS5 if libraries reach hundreds of thousands of files |
 | Thumbnails, scrub strips | App cache directory, by content fingerprint | Rebuildable; can be cleared in Settings |
 
@@ -112,7 +112,7 @@ its tags and links move with it, and links in pages are rewritten (as page renam
 
 ## Scanning and metadata
 
-A background scanner (Rust, `crates/betelgeuse-core/src/library/`) walks each library folder,
+A background scanner (Rust, `crates/mynote-core/src/library/`) walks each library folder,
 skipping ignored paths, and records path, kind, size, dates and fingerprint. A file watcher
 (`notify`, already a dependency) keeps it current. Expensive work runs after the walk, at low
 priority, newest files first:
@@ -258,7 +258,7 @@ video already on the channel, with its stats, so the history starts complete rat
 
 **Where the data lives.** Latest numbers are ordinary row properties (`Views`, `Likes`,
 `Comments`, `Watch time`, `Avg view duration`, `Published`), so boards, tables, sorts and filters
-work on them. The daily history is `.betelgeuse/youtube/<channel>.csv` (date, video ID, metrics),
+work on them. The daily history is `.mynote/youtube/<channel>.csv` (date, video ID, metrics),
 one small file per channel; it's in the workspace so it syncs and agents can read it.
 
 **Sync schedule.** Stats refresh when the app opens and every 6 hours while it's open; uploads

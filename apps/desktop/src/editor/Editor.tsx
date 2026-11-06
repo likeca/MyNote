@@ -57,7 +57,7 @@ import { PageIcon } from "../components/PageIcon";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
 import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
-import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, ImageBlock, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
+import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, FileAttachment, ImageBlock, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
 import { normalizeMarkdown } from "./markdown";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { WikiLink } from "./WikiLink";
@@ -144,6 +144,7 @@ export function contentExtensions() {
     TableKit.configure({ table: false }),
     WidthTable.configure({ resizable: true, cellMinWidth: 80, lastColumnResizable: true }),
     ImageBlock,
+    FileAttachment,
     CodeBlock,
     ColorMark,
     Callout,
@@ -184,7 +185,7 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
     contentType: "markdown",
     onUpdate: ({ editor }) => onChange(normalizeMarkdown(editor.getMarkdown())),
     editorProps: {
-      attributes: { class: "betelgeuse-prose", spellcheck: "true" },
+      attributes: { class: "mynote-prose", spellcheck: "true" },
       handleClickOn: (_view, _pos, node, _nodePos, event) => {
         if (node.type.name !== "wikiLink") return false;
         event.preventDefault();

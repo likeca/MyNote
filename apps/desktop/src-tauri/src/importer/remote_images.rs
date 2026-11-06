@@ -130,7 +130,7 @@ pub(super) fn fetch(url: &str) -> Option<Image> {
     static AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
         ureq::Agent::config_builder()
             .timeout_global(Some(TIMEOUT))
-            .user_agent("Betelgeuse (importing a user's own pages)")
+            .user_agent("MyNote (importing a user's own pages)")
             .build()
             .into()
     });
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn downloads_web_images_and_points_pages_at_them() {
-        let dir = std::env::temp_dir().join(format!("bg-remote-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-remote-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("Sub")).unwrap();
         let page = "---\nicon: https://cdn.example.com/i/star.png\ncover: \"https://cdn.example.com/c/sky.jpg?x=1\"\norder: 1\n---\nText ![shot](https://cdn.example.com/i/star.png) and ![gone](https://dead.example.com/x.png).\n\n<img src=\"https://cdn.example.com/c/sky.jpg?x=1\" width=\"200\">\n\n[a link](https://cdn.example.com/c/sky.jpg?x=1)\n";

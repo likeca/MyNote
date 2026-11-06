@@ -1,8 +1,8 @@
 ---
 title: The manifest
-description: betelgeuse-plugin.json — the fields every Betelgeuse plugin declares, and its permissions.
+description: mynote-plugin.json — the fields every MyNote plugin declares, and its permissions.
 ---
-Every plugin has a `betelgeuse-plugin.json` at the top of its folder. The build copies it into `dist/` next to `main.js`. Betelgeuse reads it before loading any code: to list the plugin, check that it can run here, and show its permissions.
+Every plugin has a `mynote-plugin.json` at the top of its folder. The build copies it into `dist/` next to `main.js`. MyNote reads it before loading any code: to list the plugin, check that it can run here, and show its permissions.
 
 ```json
 {
@@ -13,7 +13,7 @@ Every plugin has a `betelgeuse-plugin.json` at the top of its folder. The build 
   "author": "Ada Lovelace",
   "icon": "🎯",
   "homepage": "https://github.com/ada/word-goals",
-  "engines": { "betelgeuse": ">=0.4.0", "api": "1" },
+  "engines": { "mynote": ">=0.4.0", "api": "1" },
   "platforms": ["desktop"],
   "main": "main.js",
   "styles": "styles.css",
@@ -32,7 +32,7 @@ Every plugin has a `betelgeuse-plugin.json` at the top of its folder. The build 
 | `author` | | You or your organisation. |
 | `icon` | | An emoji, shown next to the name. |
 | `homepage` | | Where to learn more or report problems. |
-| `engines.betelgeuse` | yes | The Betelgeuse versions it works with, as a range: `>=0.4.0`, `^0.4.0`, `>=0.4.0 <1.0.0`, `0.4.x`, `*`. |
+| `engines.mynote` | yes | The MyNote versions it works with, as a range: `>=0.4.0`, `^0.4.0`, `>=0.4.0 <1.0.0`, `0.4.x`, `*`. |
 | `engines.api` | yes | The plugin API major version: `"1"`. |
 | `platforms` | | Where it runs: `["desktop"]` (the default), `["desktop", "mobile"]`, or `["mobile"]`. Add `"mobile"` only once it works on a phone's narrow touch screen; elsewhere it's listed as unavailable. `ctx.app.platform` says which one it's running on. |
 | `main` | | The code file; `main.js` by default. |
@@ -40,7 +40,7 @@ Every plugin has a `betelgeuse-plugin.json` at the top of its folder. The build 
 | `permissions` | | What the plugin may do (below). |
 | `private` | | `true` keeps it out of the plugin store (examples, internal tools). |
 
-Betelgeuse won't load a plugin whose `engines` don't match, and says why in Settings → Plugins.
+MyNote won't load a plugin whose `engines` don't match, and says why in Settings → Plugins.
 
 ## Permissions
 

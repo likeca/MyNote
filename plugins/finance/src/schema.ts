@@ -1,9 +1,9 @@
 /**
- * Where Finance keeps its data: ordinary Betelgeuse databases under a "Finance" page, so it can
+ * Where Finance keeps its data: ordinary MyNote databases under a "Finance" page, so it can
  * be read and edited like any page (on the phone too, and by AI agents), synced row by row with
  * git, and kept if the plugin is ever removed. This file defines them, creates them, and finds them.
  */
-import type { PageMeta, PluginContext } from "@betelgeuse/plugin-api";
+import type { PageMeta, PluginContext } from "@mynote/plugin-api";
 import { ACCOUNT_TYPES, ASSET_TYPES, INVESTMENT_TYPES, LIABILITY_TYPES, TX_TYPES } from "./model";
 
 export const DB_KEYS = ["accounts", "transactions", "categories", "holdings", "items", "snapshots"] as const;

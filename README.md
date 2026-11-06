@@ -1,20 +1,20 @@
 <img src="brand/app-icon.png" alt="" width="96" align="right">
 
-# Betelgeuse
+# MyNote
 
 A beautiful workspace for notes, docs and databases that stays yours. Every page is a plain Markdown file on your computer, and your AI agents can read only the pages you share.
 
-[Website](https://betelgeuse.devianlabs.com) · [Download](https://github.com/devian-labs/betelgeuse/releases/latest) · [User guide](apps/desktop/src-tauri/seed/Welcome.md) · [Contributing](CONTRIBUTING.md)
+[User guide](apps/desktop/src-tauri/seed/Welcome.md) · [Contributing](CONTRIBUTING.md)
 
-[![CI](https://github.com/devian-labs/betelgeuse/actions/workflows/ci.yml/badge.svg)](https://github.com/devian-labs/betelgeuse/actions/workflows/ci.yml)
+[![CI](https://github.com/likeca/MyNote/actions/workflows/ci.yml/badge.svg)](https://github.com/likeca/MyNote/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="apps/lander/public/assets/editor-dark-1440.jpg">
-  <img alt="The Betelgeuse editor with the Welcome guide open" src="apps/lander/public/assets/editor-light-1440.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="apps/lander/public/assets/editor-light-1440.jpg">
 </picture>
 
-## Why Betelgeuse
+## Why MyNote
 
 - **Easy to use.** Type `/` for any block: headings, to-dos, callouts, tables, columns and more. Build databases with table, board and calendar views.
 - **Your files, on your disk.** Pages are Markdown files in a folder you own, saved to git as you go. Open them in any editor, any time.
@@ -24,35 +24,29 @@ A beautiful workspace for notes, docs and databases that stays yours. Every page
 
 ## Install
 
-**Download** the latest version for macOS, Windows or Linux from [Releases](https://github.com/devian-labs/betelgeuse/releases/latest).
-The builds aren't code-signed yet, so the first time you open the app, your OS asks you to confirm.
-
-- **macOS:** System Settings → Privacy & Security → **Open Anyway**
-- **Windows:** **More info** → **Run anyway**
-
-**Android** (preview): install `Betelgeuse_*_android.apk` from the same release. Your phone may ask you to allow installs from your browser or files app. Then open **Settings → Sync** to connect the repository your workspace syncs with. The iOS app builds, but isn't distributed yet.
-
-**Or build it yourself.** You need [git](https://git-scm.com), [Node.js 20+](https://nodejs.org) and [Rust](https://rustup.rs). The script checks for anything else it needs.
+MyNote isn't published as a download yet, so build it yourself. You need [git](https://git-scm.com), [Node.js 20+](https://nodejs.org) and [Rust](https://rustup.rs). The script checks for anything else it needs.
 
 ```sh
-git clone https://github.com/devian-labs/betelgeuse && cd betelgeuse
+git clone https://github.com/likeca/MyNote && cd MyNote
 ./scripts/install.sh          # macOS and Linux
 .\scripts\install.ps1         # Windows (PowerShell)
 ```
+
+**Android** (preview): Build it with `npm run android:build -w @mynote/mobile` (setup in [CONTRIBUTING.md](CONTRIBUTING.md)), then open **Settings → Sync** to connect the repository your workspace syncs with. The iOS app builds, but isn't distributed yet.
 
 ## Connect your AI agents
 
 Click **Connect agents** in the sidebar and copy the setup for Claude Code, Claude Desktop, Cursor or any other MCP client. It shows the exact command for your install. From a source checkout, it looks like this:
 
 ```sh
-claude mcp add betelgeuse -- node /path/to/betelgeuse/packages/mcp/dist/index.js --workspace ~/Betelgeuse
+claude mcp add mynote -- node /path/to/MyNote/packages/mcp/dist/index.js --workspace ~/MyNote
 ```
 
 Every change an agent makes is saved as its own git commit, so you can review or undo it. Hide any page from agents in its `•••` menu. [More about agents](apps/desktop/src-tauri/seed/Welcome/Connect%20your%20AI%20agents.md).
 
 ## Learn more
 
-Betelgeuse opens with a Welcome guide that explains every feature. You can also [read it here](apps/desktop/src-tauri/seed/Welcome.md):
+MyNote opens with a Welcome guide that explains every feature. You can also [read it here](apps/desktop/src-tauri/seed/Welcome.md):
 
 [Writing and blocks](apps/desktop/src-tauri/seed/Welcome/Writing%20and%20blocks.md) ·
 [Databases](apps/desktop/src-tauri/seed/Welcome/Databases.md) ·
@@ -65,12 +59,12 @@ Betelgeuse opens with a Welcome guide that explains every feature. You can also 
 
 ## Status
 
-Betelgeuse is an early preview. Search is basic, databases don't have formulas yet, and there's no sharing or comments. [Ideas and bug reports](https://github.com/devian-labs/betelgeuse/issues) are very welcome.
+MyNote is an early preview. Search is basic, databases don't have formulas yet, and there's no sharing or comments. [Ideas and bug reports](https://github.com/likeca/MyNote/issues) are very welcome.
 
 ## Contributing
 
-We'd love your help. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and look for [good first issues](https://github.com/devian-labs/betelgeuse/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+We'd love your help. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE). Built by [Devian Labs](https://devianlabs.com). If Betelgeuse is useful to you, [sponsoring](https://github.com/sponsors/devian-labs) helps fund signed builds.
+[MIT](LICENSE). MyNote is a fork of [Betelgeuse](https://github.com/devian-labs/betelgeuse) by [Devian Labs](https://devianlabs.com).

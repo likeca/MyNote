@@ -1,6 +1,6 @@
-# Builds Betelgeuse from source and runs its installer (Windows).
+# Builds MyNote from source and runs its installer (Windows).
 #
-#   git clone https://github.com/devian-labs/betelgeuse; cd betelgeuse; .\scripts\install.ps1
+#   git clone https://github.com/likeca/MyNote; cd MyNote; .\scripts\install.ps1
 #
 # Prerequisites: Node.js 20+, Rust (https://rustup.rs) and the "Desktop development with C++"
 # workload from Visual Studio Build Tools. WebView2 ships with Windows 10 and 11.
@@ -16,7 +16,7 @@ Need node "Install Node.js 20 or newer from https://nodejs.org"
 Need cargo "Install Rust from https://rustup.rs"
 
 npm ci --no-audit --no-fund
-npm run tauri -w @betelgeuse/desktop -- build --bundles nsis
+npm run tauri -w @mynote/desktop -- build --bundles nsis
 
 $installer = Get-ChildItem "target\release\bundle\nsis\*.exe" | Select-Object -First 1
 if (-not $installer) { Write-Host "Build finished but no installer was found." -ForegroundColor Red; exit 1 }

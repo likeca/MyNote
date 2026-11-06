@@ -1,6 +1,6 @@
 import { FolderOpen, FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Button, SettingRow, Switch } from "@betelgeuse/plugin-api/ui";
+import { Button, SettingRow, Switch } from "@mynote/plugin-api/ui";
 import { library } from "./host";
 import { PipelineSettings } from "./PipelineSettings";
 import { formatBytes, refreshStudio, useStudio } from "./store";
@@ -28,7 +28,7 @@ export function LibrarySettings() {
   return (
     <>
       <p className="-mt-2 mb-5 text-sm text-muted">
-        A searchable library of your footage, audio, photos and project files, and a production pipeline. Your files stay where they are: Betelgeuse
+        A searchable library of your footage, audio, photos and project files, and a production pipeline. Your files stay where they are: MyNote
         only reads them, and nothing is uploaded.
       </p>
 

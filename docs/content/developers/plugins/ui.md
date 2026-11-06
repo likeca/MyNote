@@ -1,15 +1,15 @@
 ---
 title: UI and styling
-description: Use Betelgeuse's own components and design tokens so your plugin looks native in every theme.
+description: Use MyNote's own components and design tokens so your plugin looks native in every theme.
 ---
 Your plugin renders with the app's React and can use the app's components and colours, so it fits in, in light and dark mode and every palette.
 
 ## Components
 
-Import them from `@betelgeuse/plugin-api/ui` (the app provides them; they aren't bundled into your plugin):
+Import them from `@mynote/plugin-api/ui` (the app provides them; they aren't bundled into your plugin):
 
 ```tsx
-import { Button, Switch, TextInput, SettingRow, Popover, MenuItem, MenuDivider, EmptyState } from "@betelgeuse/plugin-api/ui";
+import { Button, Switch, TextInput, SettingRow, Popover, MenuItem, MenuDivider, EmptyState } from "@mynote/plugin-api/ui";
 ```
 
 | Component | Use |
@@ -35,7 +35,7 @@ The example plugin is set up for [Tailwind CSS](https://tailwindcss.com) with th
 ```css
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
-@import "@betelgeuse/plugin-api/theme.css";
+@import "@mynote/plugin-api/theme.css";
 @source "./";
 ```
 

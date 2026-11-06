@@ -2,7 +2,7 @@
  * Finance's live state: the config, the databases' rows (re-read whenever pages change on disk),
  * and the writes the screens make. One shared copy for every Finance screen.
  */
-import type { PluginContext, Workspace } from "@betelgeuse/plugin-api";
+import type { PluginContext, Workspace } from "@mynote/plugin-api";
 import { useSyncExternalStore } from "react";
 import { balances, monthOf, netWorth, parseData, snapshotDue, today, type Data, type TxType } from "./model";
 import { DB_KEYS, defaultCurrency, locate, upgrade, type Config, type DbKey, type Dbs } from "./schema";

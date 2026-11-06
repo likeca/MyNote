@@ -1,5 +1,5 @@
 /** The forms that add and change Finance's records. */
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { ExternalLink, FileUp, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { DateField } from "./calendar";

@@ -1,13 +1,13 @@
 ---
 title: API reference
-description: The Betelgeuse plugin API, version 1 — activate, contribution points, storage, the workspace and more.
+description: The MyNote plugin API, version 1 — activate, contribution points, storage, the workspace and more.
 ---
-Types for everything here are in `@betelgeuse/plugin-api` (`index.d.ts`), so your editor completes and checks them.
+Types for everything here are in `@mynote/plugin-api` (`index.d.ts`), so your editor completes and checks them.
 
 ## activate and deactivate
 
 ```tsx
-import { definePlugin } from "@betelgeuse/plugin-api";
+import { definePlugin } from "@mynote/plugin-api";
 
 export const { activate, deactivate } = definePlugin({
   async activate(ctx) {
@@ -19,7 +19,7 @@ export const { activate, deactivate } = definePlugin({
 });
 ```
 
-Betelgeuse calls `activate` when the plugin is turned on (at startup, or when someone switches it on) and `deactivate` when it's turned off. Everything registered through `ctx` returns a `Disposable` and is removed automatically when the plugin is turned off; you don't need to undo it in `deactivate`. For things you set up yourself, push a disposable to `ctx.subscriptions`:
+MyNote calls `activate` when the plugin is turned on (at startup, or when someone switches it on) and `deactivate` when it's turned off. Everything registered through `ctx` returns a `Disposable` and is removed automatically when the plugin is turned off; you don't need to undo it in `deactivate`. For things you set up yourself, push a disposable to `ctx.subscriptions`:
 
 ```ts
 const timer = setInterval(check, 60_000);
@@ -33,7 +33,7 @@ If `activate` throws, the plugin is marked as failed in Settings → Plugins wit
 | | |
 |---|---|
 | `ctx.manifest` | Your manifest, as read. |
-| `ctx.app` | `{ version, apiVersion, platform }`: the Betelgeuse version (`"0.5.0"`), `1`, and `"desktop"` or `"mobile"` (the phone app). |
+| `ctx.app` | `{ version, apiVersion, platform }`: the MyNote version (`"0.5.0"`), `1`, and `"desktop"` or `"mobile"` (the phone app). |
 | `ctx.log(...)` | Logs to the developer console, prefixed with your plugin's id. |
 
 ## Views
@@ -55,7 +55,7 @@ The view fills the area under the tab bar; make your root element `flex-1` with 
 
 ## Sidebar items
 
-Items in the sidebar's top group. Open one of your views, or run something.
+Items in the sidebar's bottom group, below **Import**. Open one of your views, or run something.
 
 ```tsx
 ctx.sidebar.register({ id: "dashboard", title: "Dashboard", icon: <span>📊</span>, view: "dashboard" });
@@ -130,7 +130,7 @@ Two JSON stores, one per scope:
 
 | | Kept | For |
 |---|---|---|
-| `ctx.storage.workspace` | In the workspace, `.betelgeuse/plugins/<id>/data.json`, synced with the notes | Settings and data that belong to the workspace |
+| `ctx.storage.workspace` | In the workspace, `.mynote/plugins/<id>/data.json`, synced with the notes | Settings and data that belong to the workspace |
 | `ctx.storage.local` | On this computer only, per workspace | Folder paths, API keys, caches of choices |
 
 ```ts
@@ -163,7 +163,7 @@ Pages are Markdown files, and other editors open them too: write content that re
 
 ## Media library
 
-Present with the `library` permission. An index of the folders the person adds (footage, photos, audio, design and project files), kept up to date as files change, with media details (length, resolution, frame rate) and thumbnails. Files are only read. There's one library per workspace, shared by the plugins that use it; it scans and watches only while at least one of them is on. [Media Library](https://github.com/devian-labs/betelgeuse/tree/main/plugins/media-library) is built on it.
+Present with the `library` permission. An index of the folders the person adds (footage, photos, audio, design and project files), kept up to date as files change, with media details (length, resolution, frame rate) and thumbnails. Files are only read. There's one library per workspace, shared by the plugins that use it; it scans and watches only while at least one of them is on. [Media Library](https://github.com/likeca/MyNote/tree/main/plugins/media-library) is built on it.
 
 | | |
 |---|---|
@@ -201,4 +201,4 @@ await ctx.shell!.openUrl("https://example.com/docs");
 
 ## Stability
 
-This is plugin API **1**. Within version 1, Betelgeuse only adds to the API; nothing listed here changes or goes away. Breaking changes would come as API 2, with plugins declaring which they support (`engines.api`).
+This is plugin API **1**. Within version 1, MyNote only adds to the API; nothing listed here changes or goes away. Breaking changes would come as API 2, with plugins declaring which they support (`engines.api`).

@@ -1,7 +1,7 @@
 {
-  "name": "@betelgeuse/plugin-api",
+  "name": "@mynote/plugin-api",
   "version": "1.0.0",
-  "description": "Types, UI components and the build setup for Betelgeuse plugins",
+  "description": "Types, UI components and the build setup for MyNote plugins",
   "license": "MIT",
   "type": "module",
   "types": "./index.d.ts",

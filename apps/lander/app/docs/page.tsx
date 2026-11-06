@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/site";
 import { DocPage } from "./DocPage";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Documentation | Betelgeuse",
+  title: "Documentation | MyNote",
   description: loadDoc("")!.description,
   path: "/docs/",
 });

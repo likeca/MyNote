@@ -14,7 +14,7 @@ MyNote has two parts: the sidebar on the left and the open page on the right.
   - Drag a page up or down to change its place among the pages next to it. A line shows where it will land; press `Esc` to cancel.
 - **Add new**, or the pen icon at the top, creates a page. So does `⌘N`.
 - **Connect agents** sets up AI agents. See [[Connect your AI agents]].
-- **Import**, **Settings** and **Trash** are at the bottom. See [[Import]] and [[Trash]].
+- **Import**, items added by plugins (such as **Library** from Media Library), **Settings** and **Trash** are at the bottom. See [[Import]], [[Plugins]] and [[Trash]].
 - The footer shows the workspace name, the commit button and, once you've added a remote, **Sync**. See [[History and sync]].
 
 Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, hover the left edge of the window to peek at it, then click the button at the top to keep it open.
@@ -34,7 +34,7 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 
 ## Workspaces
 
-A workspace is a folder. To switch, click the workspace name at the bottom of the sidebar and pick another folder. If you pick an empty one, MyNote sets it up with these guide pages and starts a git repository in it. **Settings → Workspace** shows where the current workspace is.
+A workspace is a folder. Click the workspace name at the bottom of the sidebar to switch: the menu lists the workspaces you've opened, newest first, with a tick on the open one. Click one to open it, or **Open another folder…** to pick a different folder. If you pick an empty one, MyNote sets it up with these guide pages and starts a git repository in it. Hover a workspace in the list and click `×` to take it off the list; the folder itself isn't touched. **Settings → Workspace** shows where the current workspace is.
 
 > [!blue] 🗂️
 > Next: [[Pages and sub-pages]] covers icons, covers, tags and the page menu.

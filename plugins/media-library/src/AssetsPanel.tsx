@@ -1,6 +1,6 @@
 import { ChevronRight, Clapperboard, ExternalLink, Folder, FolderOpen, FolderPlus, Layers, Library, Link2, TriangleAlert, Unlink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { Asset, LibraryStatus, PageInfo } from "@betelgeuse/plugin-api";
+import type { Asset, LibraryStatus, PageInfo } from "@mynote/plugin-api";
 import { channelNoise, homeFolder, suggestFolders, usePipeline } from "./pipeline";
 import { formatBytes, formatDuration, showInLibrary, useStudio } from "./store";
 import { library, openLibrary } from "./host";

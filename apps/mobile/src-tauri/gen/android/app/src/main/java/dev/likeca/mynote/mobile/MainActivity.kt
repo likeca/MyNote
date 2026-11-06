@@ -1,4 +1,4 @@
-package dev.devianlabs.betelgeuse.mobile
+package dev.likeca.mynote.mobile
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

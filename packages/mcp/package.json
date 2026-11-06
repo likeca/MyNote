@@ -1,15 +1,15 @@
 {
-  "name": "betelgeuse-mcp",
+  "name": "mynote-mcp",
   "version": "0.5.0",
-  "description": "MCP server that gives AI agents access to a Betelgeuse workspace (Markdown + git)",
+  "description": "MCP server that gives AI agents access to a MyNote workspace (Markdown + git)",
   "type": "module",
   "bin": {
-    "betelgeuse-mcp": "dist/index.js"
+    "mynote-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc && npm run bundle",
     "test": "npm run build && node --test test/*.test.mjs",
-    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --minify --legal-comments=none --outfile=dist/betelgeuse-mcp.mjs --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --minify --legal-comments=none --outfile=dist/mynote-mcp.mjs --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

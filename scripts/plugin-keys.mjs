@@ -3,8 +3,8 @@
 //
 //   node scripts/plugin-keys.mjs [private-key-path]
 //
-// Writes the public key (base64 of the raw 32 bytes) to crates/betelgeuse-core/plugin-signing.pub,
-// which the app is built with, and the private key (PKCS#8 PEM) to ~/.betelgeuse/plugin-signing-key.pem
+// Writes the public key (base64 of the raw 32 bytes) to crates/mynote-core/plugin-signing.pub,
+// which the app is built with, and the private key (PKCS#8 PEM) to ~/.mynote/plugin-signing-key.pem
 // (or the path given). Never commit the private key: add it to the repository's Actions secrets as
 // PLUGIN_SIGNING_KEY. Running this again makes a new pair, and plugins signed with the old key will
 // no longer install in builds with the new public key.
@@ -15,7 +15,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const privatePath = process.argv[2] ?? path.join(homedir(), ".betelgeuse", "plugin-signing-key.pem");
+const newKey = path.join(homedir(), ".mynote", "plugin-signing-key.pem");
+const legacyKey = path.join(homedir(), ".betelgeuse", "plugin-signing-key.pem"); // Legacy path (before the rename to MyNote)
+const privatePath = process.argv[2] ?? (!existsSync(newKey) && existsSync(legacyKey) ? legacyKey : newKey);
 if (existsSync(privatePath)) {
   console.error(`${privatePath} already exists. Move it away first if you really want a new key pair.`);
   process.exit(1);
@@ -23,8 +25,8 @@ if (existsSync(privatePath)) {
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 // The SPKI DER of an Ed25519 key ends with the raw 32-byte key.
 const raw = publicKey.export({ format: "der", type: "spki" }).subarray(-32);
-writeFileSync(path.join(root, "crates/betelgeuse-core/plugin-signing.pub"), raw.toString("base64") + "\n");
+writeFileSync(path.join(root, "crates/mynote-core/plugin-signing.pub"), raw.toString("base64") + "\n");
 mkdirSync(path.dirname(privatePath), { recursive: true });
 writeFileSync(privatePath, privateKey.export({ format: "pem", type: "pkcs8" }), { mode: 0o600 });
-console.log(`Public key → crates/betelgeuse-core/plugin-signing.pub (commit this)`);
+console.log(`Public key → crates/mynote-core/plugin-signing.pub (commit this)`);
 console.log(`Private key → ${privatePath} (add its contents to the PLUGIN_SIGNING_KEY Actions secret; never commit it)`);

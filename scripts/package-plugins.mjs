@@ -5,7 +5,7 @@
 //   plugins.json                the store's index (manifest fields, zip URL, SHA-256, signature)
 //
 //   PLUGIN_SIGNING_KEY="$(cat key.pem)" node scripts/package-plugins.mjs
-//   node scripts/package-plugins.mjs --key ~/.betelgeuse/plugin-signing-key.pem
+//   node scripts/package-plugins.mjs --key ~/.mynote/plugin-signing-key.pem
 //
 // The release workflow runs this and attaches the files to the release; the app reads
 // releases/latest/download/plugins.json. Without a key, packages are unsigned: only development
@@ -30,8 +30,10 @@ mkdirSync(out, { recursive: true });
 const plugins = [];
 for (const name of readdirSync(path.join(root, "plugins"))) {
   const dist = path.join(root, "plugins", name, "dist");
-  if (!existsSync(path.join(dist, "betelgeuse-plugin.json"))) continue;
-  const m = JSON.parse(readFileSync(path.join(dist, "betelgeuse-plugin.json"), "utf8"));
+  // betelgeuse-plugin.json: legacy name (before the rename to MyNote).
+  const manifest = ["mynote-plugin.json", "betelgeuse-plugin.json"].map((f) => path.join(dist, f)).find(existsSync);
+  if (!manifest) continue;
+  const m = JSON.parse(readFileSync(manifest, "utf8"));
   if (m.private) continue; // examples and internal plugins stay out of the store
   const file = `plugin-${m.id}-${m.version}.zip`;
   execFileSync("zip", ["-r", "-X", "-q", path.join(out, file), "."], { cwd: dist });

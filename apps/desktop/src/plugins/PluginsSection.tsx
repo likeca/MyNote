@@ -21,11 +21,11 @@ import {
   type PluginState,
   type StoreEntry,
 } from "./runtime";
-import type { PluginManifest } from "@betelgeuse/plugin-api";
+import type { PluginManifest } from "@mynote/plugin-api";
 import { Switch } from "./ui";
 
-export const PLUGIN_DOCS = "https://betelgeuse.devianlabs.com/docs/plugins/";
-const BUILD_DOCS = "https://betelgeuse.devianlabs.com/docs/developers/plugins/";
+export const PLUGIN_DOCS = "https://github.com/likeca/MyNote/blob/main/docs/content/plugins.md";
+const BUILD_DOCS = "https://github.com/likeca/MyNote/blob/main/docs/content/developers/plugins.md";
 
 /** Asks before installing: what the plugin is and what it may do. */
 async function approve(entry: StoreEntry) {
@@ -60,7 +60,7 @@ export function PluginsSection() {
   };
   const install = (entry: StoreEntry) => run(entry.id, async () => (await approve(entry)) && installFromStore(entry.id));
   const fromFolder = async () => {
-    const dir = await openDialog({ directory: true, title: "Choose a built plugin folder (the one with betelgeuse-plugin.json)" });
+    const dir = await openDialog({ directory: true, title: "Choose a built plugin folder (the one with mynote-plugin.json)" });
     if (typeof dir === "string") await run("folder", () => installFromFolder(dir));
   };
   const updates = plugins.map((p) => [p, updateFor(p, index)] as const).filter((x): x is [PluginState, StoreEntry] => !!x[1]);

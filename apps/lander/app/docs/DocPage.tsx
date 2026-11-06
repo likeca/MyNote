@@ -14,7 +14,7 @@ export function DocPage({ slug }: { slug: string }) {
       <aside className="docs-nav" aria-label="Documentation">
         <a href="/" className="docs-brand">
           <Logo size={18} />
-          Betelgeuse
+          MyNote
           <span className="docs-brand-tag">Docs</span>
         </a>
         {nav.map((s) => (

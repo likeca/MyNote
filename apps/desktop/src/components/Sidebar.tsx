@@ -1,5 +1,6 @@
 import {
   Bot,
+  Check,
   ChevronDown,
   ChevronRight,
   ChevronsRight,
@@ -8,10 +9,13 @@ import {
   Eye,
   EyeOff,
   FileText,
+  Files,
   Heart,
   Folder,
+  FolderOpen,
   BookDown,
   ExternalLink,
+  ListClock,
   MoreHorizontal,
   PanelLeft,
   Plus,
@@ -23,13 +27,14 @@ import {
   StarOff,
   Table2,
   Trash2,
+  X,
 } from "lucide-react";
 import { PageIcon } from "./PageIcon";
 import { UpdateBanner } from "./UpdateBanner";
 import { TrashPanel } from "./TrashPanel";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import type { NoteMeta, RepoStatus, VaultInfo } from "../lib/api";
+import { api, type NoteMeta, type RecentWorkspace, type RepoStatus, type VaultInfo } from "../lib/api";
 import type { TreeNode } from "../lib/tree";
 import { aiAccess } from "../lib/ai";
 import { LINKS, open as openLink } from "../lib/links";
@@ -38,7 +43,7 @@ import { useSettings } from "../lib/settings";
 import { PluginSidebarItems } from "../plugins/slots";
 import { useVault } from "../lib/vault";
 import { Logo } from "./Logo";
-import { MenuDivider, MenuItem, Popover } from "./Popover";
+import { MenuDivider, MenuItem, MenuSection, Popover } from "./Popover";
 
 type Props = {
   vault: VaultInfo;
@@ -67,7 +72,10 @@ type Props = {
    */
   onMove: (path: string, dest: string, siblings: string[], gap: number | null) => void;
   onSearch: () => void;
+  /** Picks a folder to open (or create) as the workspace. */
   onSwitchVault: () => void;
+  /** Opens a workspace from the history. */
+  onOpenWorkspace: (path: string) => void;
   onCommit: () => void;
   onSync: () => void;
   onAgents: () => void;
@@ -99,6 +107,7 @@ export function Sidebar(p: Props) {
   const [resizing, setResizing] = useState(false);
   const [menu, setMenu] = useState<{ note: NoteMeta; el: HTMLElement | DOMRect } | null>(null);
   const [trash, setTrash] = useState<HTMLElement | null>(null);
+  const [workspaces, setWorkspaces] = useState<HTMLElement | null>(null);
   const changes = p.status?.changes.length ?? 0;
   const byPath = new Map(p.notes.map((n) => [n.path, n]));
   const favorites = p.favorites.map((f) => byPath.get(f)).filter((n): n is NoteMeta => !!n);
@@ -150,6 +159,7 @@ export function Sidebar(p: Props) {
       className={`relative h-full shrink-0 ${resizing ? "" : "transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0,0,1)]"}`}
     >
     <aside
+      data-sidebar
       style={{ width }}
       onMouseEnter={() => (hovering.current = true)}
       onMouseLeave={() => {
@@ -193,14 +203,11 @@ export function Sidebar(p: Props) {
         </button>
       </div>
 
-      <div className="px-2">
-        <PluginSidebarItems activePath={p.openPath ?? undefined} onOpenView={p.onOpenPluginView} />
-      </div>
       <div ref={scroller} className="relative mt-3 min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {/* While dragging, rows ignore the pointer so nothing but the drop line reacts to it. */}
         <div className={drag.state ? "pointer-events-none" : ""}>
           {recents.length > 0 && (
-            <Section label="Recents" id="recents">
+            <Section label="Recents" icon={<ListClock size={16} />} id="recents">
               {/* Just the last few (Settings → Appearance), with no scrolling of their own. */}
               <div>
                 {recents.slice(0, settings.recentRows).map((n) => (
@@ -216,7 +223,7 @@ export function Sidebar(p: Props) {
               ))}
             </Section>
           )}
-          <Section label="Pages" id="pages" onAdd={() => p.onCreate(null)}>
+          <Section label="Pages" icon={<Files size={16} />} id="pages" onAdd={() => p.onCreate(null)}>
             {p.tree.map((node) => (
               <TreeRow key={node.key} node={node} depth={0} parent="" {...rowProps} />
             ))}
@@ -267,19 +274,21 @@ export function Sidebar(p: Props) {
       )}
 
       <div className="px-2 pb-1.5">
-        <button onClick={p.onImport} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted hover:bg-hover">
+        <button onClick={p.onImport} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted/80 hover:bg-hover hover:text-muted">
           <span className="grid size-6 place-items-center text-faint">
             <Download size={16} />
           </span>
           Import
         </button>
-        <button onClick={p.onSettings} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted hover:bg-hover">
+        {/* Plugin items, e.g. the Media Library's "Library". */}
+        <PluginSidebarItems activePath={p.openPath ?? undefined} onOpenView={p.onOpenPluginView} />
+        <button onClick={p.onSettings} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted/80 hover:bg-hover hover:text-muted">
           <span className="grid size-6 place-items-center text-faint">
             <Settings size={16} />
           </span>
           Settings
         </button>
-        <button onClick={(e) => setTrash(e.currentTarget)} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted hover:bg-hover">
+        <button onClick={(e) => setTrash(e.currentTarget)} className="flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm text-muted/80 hover:bg-hover hover:text-muted">
           <span className="grid size-6 place-items-center text-faint">
             <Trash2 size={16} />
           </span>
@@ -292,14 +301,23 @@ export function Sidebar(p: Props) {
 
       <div className="flex h-12 shrink-0 items-center gap-1 border-t border-line px-2">
         <button
-          onClick={p.onSwitchVault}
-          title={`${p.vault.path}\nOpen another workspace`}
-          className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left hover:bg-hover"
+          onClick={(e) => setWorkspaces(e.currentTarget)}
+          title={`${p.vault.path}\nSwitch workspace`}
+          className="mr-auto flex h-8 min-w-0 items-center gap-2 rounded-md px-1.5 text-left hover:bg-hover"
         >
           <Logo className="size-5 shrink-0" />
           <span className="min-w-0 truncate text-sm font-medium text-ink">{p.vault.name}</span>
           <ChevronDown size={14} className="shrink-0 text-faint" />
         </button>
+        {workspaces && (
+          <WorkspaceMenu
+            anchor={workspaces}
+            current={p.vault.path}
+            onOpen={(path) => (setWorkspaces(null), p.onOpenWorkspace(path))}
+            onPickFolder={() => (setWorkspaces(null), p.onSwitchVault())}
+            onClose={() => setWorkspaces(null)}
+          />
+        )}
         <IconButton title="Support MyNote" onClick={() => openLink(LINKS.sponsor)}>
           <Heart size={15} />
         </IconButton>
@@ -347,8 +365,8 @@ export function Sidebar(p: Props) {
   );
 }
 
-/** A sidebar group; a labelled one folds, and remembers that by `id`. */
-function Section({ label, id, children, onAdd }: { label?: string; id?: string; children: ReactNode; onAdd?: () => void }) {
+/** A sidebar group; a labelled one folds, and remembers that by `id`. `icon` shows before the label. */
+function Section({ label, icon, id, children, onAdd }: { label?: string; icon?: ReactNode; id?: string; children: ReactNode; onAdd?: () => void }) {
   const key = `section-closed:${id}`;
   const [open, setOpenState] = useState(() => {
     try {
@@ -371,7 +389,8 @@ function Section({ label, id, children, onAdd }: { label?: string; id?: string; 
   return (
     <div className="mb-3">
       <div className="group/sec flex h-7 items-center rounded-md px-2 hover:bg-hover">
-        <button onClick={() => setOpen((o) => !o)} className="flex-1 text-left text-xs font-medium text-faint">
+        <button onClick={() => setOpen((o) => !o)} className="flex flex-1 items-center gap-1.5 text-left text-sm font-medium text-faint">
+          {icon}
           {label}
         </button>
         {onAdd && (
@@ -397,6 +416,66 @@ function AiMenuItem({ path, onDone }: { path: string; onDone: () => void }) {
       label={aiPolicy === "shared" ? (access.visible ? "Stop sharing with AI" : "Share with AI agents") : access.visible ? "Hide from AI agents" : "Show to AI agents"}
       onClick={() => (setPageAi(path, !access.visible), onDone())}
     />
+  );
+}
+
+/** The workspace history (newest first) to switch with one click, and "Open another folder…". */
+function WorkspaceMenu({
+  anchor,
+  current,
+  onOpen,
+  onPickFolder,
+  onClose,
+}: {
+  anchor: HTMLElement;
+  current: string;
+  onOpen: (path: string) => void;
+  onPickFolder: () => void;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState<RecentWorkspace[] | null>(null);
+  useEffect(() => {
+    api.recentWorkspaces().then(setList, () => setList([]));
+  }, []);
+  const forget = (path: string) => api.forgetWorkspace(path).then(() => setList((l) => l && l.filter((w) => w.path !== path)));
+  return (
+    <Popover anchor={anchor} onClose={onClose} className="w-72 p-1">
+      {list && list.length > 0 && (
+        <>
+          <MenuSection label="Workspaces" />
+          {list.map((w) => {
+            const open = w.path === current;
+            return (
+              <div key={w.path} className="group/ws flex items-center rounded-md hover:bg-hover">
+                <button
+                  disabled={!w.exists}
+                  title={w.exists ? w.path : `${w.path}\nThis folder can't be found: it may have been moved, or be on a disconnected drive.`}
+                  onClick={() => (open ? onClose() : onOpen(w.path))}
+                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left disabled:opacity-50"
+                >
+                  <span className="grid w-5 shrink-0 place-items-center text-muted">{open ? <Check size={15} /> : <Folder size={15} />}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate text-sm text-ink ${open ? "font-medium" : ""}`}>{w.name}</span>
+                    <span className="block truncate text-xs text-faint">{w.exists ? w.display : `Not found · ${w.display}`}</span>
+                  </span>
+                </button>
+                {!open && (
+                  <button
+                    title="Remove from this list (the folder isn't touched)"
+                    onClick={() => void forget(w.path)}
+                    className="mr-1 grid size-6 shrink-0 place-items-center rounded text-faint opacity-0 group-hover/ws:opacity-100 hover:bg-hover hover:text-ink"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <MenuDivider />
+        </>
+      )}
+      <MenuItem icon={<FolderOpen size={15} />} label="Open another folder…" onClick={onPickFolder} />
+    </Popover>
   );
 }
 

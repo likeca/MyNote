@@ -6,8 +6,9 @@
  *   toggle heading  <details><summary><h2>…</h2></summary> … </details>
  *   columns    <div class="columns"><div class="column"> … </div></div>
  *   database   ![[Tasks]]               (Obsidian embed syntax)
+ *   image      ![alt|320](src)          (Obsidian's width; a draw.io diagram is a `.drawio.svg` image, see drawio.tsx)
  */
-import { PageIcon, assetUrl } from "../components/PageIcon";
+import { ASSET_CHANGED, PageIcon, assetChanged, assetUrl } from "../components/PageIcon";
 import { Extension, Mark, Node, mergeAttributes, type Editor as TiptapEditor, type JSONContent, type NodeViewRendererProps } from "@tiptap/core";
 import { CodeBlock as TiptapCodeBlock } from "@tiptap/extension-code-block";
 import { Details, DetailsSummary } from "@tiptap/extension-details";
@@ -17,8 +18,37 @@ import { Fragment, type Node as PMNode } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, FilePlay, FileTerminal, FileText, Heading1, Heading2, Heading3, Image as ImageIcon, LoaderCircle, Maximize2, Square, Trash2, WrapText, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Copy,
+  File as FileGeneric,
+  FileArchive,
+  FileCode,
+  FileImage,
+  FileMusic,
+  FilePlay,
+  FileSpreadsheet,
+  FileTerminal,
+  FileText,
+  FileVideoCamera,
+  Heading1,
+  Heading2,
+  Heading3,
+  Image as ImageIcon,
+  LoaderCircle,
+  Maximize2,
+  Pencil,
+  Presentation,
+  Square,
+  Trash2,
+  WrapText,
+  X,
+} from "lucide-react";
 import { createPortal } from "react-dom";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IconPicker } from "../components/LazyIconPicker";
 import { MenuItem, Popover } from "../components/Popover";
@@ -29,6 +59,7 @@ import { resolveWikiLink } from "../lib/tree";
 import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
 import { codeHighlight } from "./highlight";
+import { isEditableDiagram, openDiagramEditor } from "./drawio";
 
 const isColor = (c: unknown): c is string => typeof c === "string" && (COLORS as readonly string[]).includes(c);
 
@@ -1065,20 +1096,21 @@ export const ImageBlock = Image.extend({
       new Plugin({
         key: new PluginKey("imageFiles"),
         props: {
-          // Image files dropped (e.g. from Finder) or pasted are copied into `.assets/` and embedded.
+          // Files dropped (e.g. from Finder) or pasted are copied into `.assets/`: images are embedded,
+          // anything else is attached (see FileAttachment).
           handleDrop: (view, event, _slice, moved) => {
-            const files = imageFiles(event.dataTransfer);
+            const files = Array.from(event.dataTransfer?.files ?? []);
             if (moved || !files.length) return false;
             event.preventDefault();
             const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            insertImages(view, files, at ? at.pos : view.state.selection.from);
+            void insertFiles(view, files, at ? at.pos : view.state.selection.from);
             return true;
           },
           handlePaste: (view, event) => {
-            const files = imageFiles(event.clipboardData);
+            const files = Array.from(event.clipboardData?.files ?? []);
             if (!files.length) return false;
             event.preventDefault();
-            insertImages(view, files, view.state.selection.from);
+            void insertFiles(view, files, view.state.selection.from);
             return true;
           },
         },
@@ -1087,27 +1119,151 @@ export const ImageBlock = Image.extend({
   },
 });
 
-function imageFiles(data: DataTransfer | null) {
-  return Array.from(data?.files ?? []).filter((f) => f.type.startsWith("image/"));
-}
-
-async function insertImages(view: EditorView, files: File[], pos: number) {
+/** Saves each file into `.assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
+async function insertFiles(view: EditorView, files: File[], pos: number) {
   for (const file of files) {
-    let src: string;
+    const { schema } = view.state;
+    let node;
     try {
-      src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(await file.arrayBuffer())]);
+      const bytes = await file.arrayBuffer();
+      if (file.type.startsWith("image/")) {
+        const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)]);
+        node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
+      } else {
+        const name = file.name || "file";
+        const src = await api.attachBytes(name, bytes);
+        node = schema.nodes.paragraph.create(null, schema.nodes.fileAttachment.create({ src, name }));
+      }
     } catch (e) {
-      console.error("Couldn't save the image", e);
+      console.error(`Couldn't save ${file.name}`, e);
       continue;
     }
     if (view.isDestroyed) return;
-    const { state } = view;
-    const at = Math.min(pos, state.doc.content.size);
-    const tr = state.tr.replaceRangeWith(at, at, state.schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") }));
+    const at = Math.min(pos, view.state.doc.content.size);
+    const tr = view.state.tr.replaceRangeWith(at, at, node);
     view.dispatch(tr);
-    // The next image goes right after this one.
+    // The next file goes right after this one.
     pos = tr.mapping.map(at);
   }
+}
+
+/** The `/File` command: asks for files to attach and puts them at the cursor, each on its own line. */
+export async function pickAttachments(editor: TiptapEditor) {
+  const picked = await openDialog({ multiple: true, title: "Attach files" });
+  const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
+  const lines: JSONContent[] = [];
+  for (const path of paths) {
+    try {
+      const src = await api.attachFile(path);
+      lines.push({ type: "paragraph", content: [{ type: "fileAttachment", attrs: { src, name: path.split(/[\\/]/).pop() } }] });
+    } catch (e) {
+      console.error(`Couldn't attach ${path}`, e);
+    }
+  }
+  if (lines.length && !editor.isDestroyed) editor.chain().focus().insertContent(lines).run();
+}
+
+// ---------- file attachment ----------
+
+/**
+ * `[Report.pdf](.assets/Report-123.pdf)`: a link to a file in the workspace's `.assets/` folder, shown
+ * as a chip that opens the file. Plain Markdown, the same form imports write attachments in, so other
+ * apps see an ordinary link.
+ */
+const ATTACHMENT = /^\[((?:\\.|[^\]\\\n])*)\]\((\.assets\/[^)\s]+)\)/;
+
+export const FileAttachment = Node.create({
+  name: "fileAttachment",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { src: { default: "" }, name: { default: "" } };
+  },
+  parseHTML() {
+    // Ahead of the link mark, which also matches `a[href]`.
+    return [{ tag: "a[data-attachment]", priority: 60, getAttrs: (el) => ({ src: el.getAttribute("href"), name: el.textContent }) }];
+  },
+  renderHTML({ node }) {
+    return ["a", { href: node.attrs.src, "data-attachment": "" }, node.attrs.name];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(AttachmentView);
+  },
+  markdownTokenizer: {
+    name: "fileAttachment",
+    level: "inline",
+    // Never right after "!": that's an image.
+    start: (src: string) => src.search(/(?<!!)\[(?:\\.|[^\]\\\n])*\]\(\.assets\//),
+    tokenize(src) {
+      const m = ATTACHMENT.exec(src);
+      return m ? { type: "fileAttachment", raw: m[0], name: m[1].replace(/\\(.)/g, "$1"), src: m[2] } : undefined;
+    },
+  },
+  parseMarkdown: (token) => ({ type: "fileAttachment", attrs: { src: token.src, name: token.name } }),
+  renderMarkdown: (node) => `[${String(node.attrs?.name ?? "").replace(/[\\[\]]/g, "\\$&")}](${node.attrs?.src})`,
+});
+
+const ATTACHMENT_ICONS: [RegExp, typeof FileText][] = [
+  [/\.(pdf|docx?|odt|rtf|txt|md|pages)$/i, FileText],
+  [/\.(xlsx?|ods|csv|tsv|numbers)$/i, FileSpreadsheet],
+  [/\.(pptx?|odp|key)$/i, Presentation],
+  [/\.(zip|gz|tgz|bz2|xz|7z|rar|tar|dmg)$/i, FileArchive],
+  [/\.(mp3|wav|m4a|aac|flac|ogg|aiff?)$/i, FileMusic],
+  [/\.(mp4|mov|m4v|mkv|avi|webm)$/i, FileVideoCamera],
+  [/\.(png|jpe?g|gif|webp|heic|tiff?|bmp|svg|psd)$/i, FileImage],
+  [/\.(json|ya?ml|xml|html?|css|js|ts|tsx|py|rb|go|rs|java|c|cpp|h|sh|sql)$/i, FileCode],
+];
+
+export function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let n = bytes / 1024;
+  let u = 0;
+  while (n >= 1024 && u < units.length - 1) (n /= 1024), u++;
+  return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[u]}`;
+}
+
+/** An attached file: its icon, name and size. Click opens it; ⌘-click shows it in Finder. */
+function AttachmentView({ node, selected }: NodeViewProps) {
+  const { src, name } = node.attrs as { src: string; name: string };
+  // undefined: not known (yet, or this app can't tell); null: the file isn't there.
+  const [size, setSize] = useState<number | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    api.fileSize(src).then(
+      (s) => alive && setSize(s),
+      () => alive && setSize(undefined),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  const missing = size === null;
+  const Icon = ATTACHMENT_ICONS.find(([re]) => re.test(name) || re.test(src))?.[1] ?? FileGeneric;
+  const open = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!missing) void api.openAttachment(src, e.metaKey).catch(() => setSize(null));
+  };
+  return (
+    <NodeViewWrapper
+      as="span"
+      contentEditable={false}
+      data-attachment
+      onClick={open}
+      title={missing ? `${src}\nThis file isn't in the workspace` : `${name}\nClick to open · ⌘-click to show in Finder`}
+      className={`mx-px inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-line bg-side px-2 py-0.5 align-middle text-[0.9em] leading-normal hover:bg-hover ${
+        selected ? "ring-2 ring-[var(--blue)]/50" : ""
+      } ${missing ? "opacity-60" : ""}`}
+    >
+      <Icon size={15} className="shrink-0 text-muted" />
+      <span className={`min-w-0 truncate text-ink ${missing ? "line-through" : ""}`}>{name || src.split("/").pop()}</span>
+      {size != null && <span className="shrink-0 text-xs text-faint">{formatFileSize(size)}</span>}
+      {missing && <span className="shrink-0 text-xs text-faint">missing</span>}
+    </NodeViewWrapper>
+  );
 }
 
 function ImageView({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
@@ -1213,14 +1369,24 @@ function ImageBlockView({
     window.addEventListener("mouseup", up);
   };
   const shown = dragWidth ?? width;
+  const diagram = isEditableDiagram(src);
+  const editDiagram = () =>
+    api.readAsset(src).then(
+      (buf) =>
+        openDiagramEditor({
+          svg: new Uint8Array(buf),
+          onSave: (bytes) => api.writeAsset(src, [...bytes]).then(() => assetChanged(src)),
+        }),
+      (e) => console.error("Couldn't open the diagram", e),
+    );
   return (
     <NodeViewWrapper className={`group/img relative my-1 w-fit max-w-full ${selected ? "rounded ring-2 ring-[var(--blue)]/50" : ""}`}>
       {url ? (
         <>
           <img ref={img} src={url} alt={alt} style={shown ? { width: shown } : undefined} className="block max-w-full rounded-sm" draggable={false} />
           {/* Covers the photo so WebKit's Live Text can't pick out words in it: a click selects the
-              image block, a double-click views it full size. */}
-          <div className="absolute inset-0" onDoubleClick={() => setViewing(true)} />
+              image block, a double-click views it full size (or edits it, for a draw.io diagram). */}
+          <div className="absolute inset-0" onDoubleClick={() => (diagram ? void editDiagram() : setViewing(true))} />
           {([-1, 1] as const).map((side) => (
             <button
               key={side}
@@ -1242,6 +1408,11 @@ function ImageBlockView({
           contentEditable={false}
           className="absolute top-2 right-2 flex items-center gap-0.5 rounded-md border border-line bg-raised/95 p-0.5 opacity-0 shadow-pop transition-opacity group-hover/img:opacity-100"
         >
+          {diagram && (
+            <ImgButton title="Edit diagram" onMouseDown={act(() => void editDiagram())}>
+              <Pencil size={14} />
+            </ImgButton>
+          )}
           <ImgButton title="View full size" onMouseDown={act(() => setViewing(true))}>
             <Maximize2 size={14} />
           </ImgButton>
@@ -1317,6 +1488,14 @@ async function copyImage(url: string) {
 function useAssetUrl(src: string) {
   const local = src.startsWith(".assets/");
   const [url, setUrl] = useState<string | null>(local ? null : src);
+  // Bumped when the file is rewritten (an edited diagram), to load it again.
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    if (!local) return;
+    const onChange = (e: Event) => (e as CustomEvent<string>).detail === src && setVersion((v) => v + 1);
+    window.addEventListener(ASSET_CHANGED, onChange);
+    return () => window.removeEventListener(ASSET_CHANGED, onChange);
+  }, [src, local]);
   useEffect(() => {
     if (!local) return setUrl(src);
     let alive = true;
@@ -1324,6 +1503,6 @@ function useAssetUrl(src: string) {
     return () => {
       alive = false;
     };
-  }, [src, local]);
+  }, [src, local, version]);
   return url;
 }

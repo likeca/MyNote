@@ -4,7 +4,7 @@
  */
 import { Component, type ReactNode } from "react";
 import { Puzzle, TriangleAlert } from "lucide-react";
-import type { PageInfo } from "@betelgeuse/plugin-api";
+import type { PageInfo } from "@mynote/plugin-api";
 import { parseViewPath, reportCrash, useContributions, usePlugins } from "./runtime";
 
 class Boundary extends Component<{ pluginId: string; children: ReactNode; compact?: boolean }, { error: Error | null }> {
@@ -106,7 +106,7 @@ const withWrite = (page: Parameters<typeof PluginPagePanels>[0]["page"], permiss
   },
 });
 
-/** Plugin items in the sidebar's top group. */
+/** Plugin items in the sidebar's bottom group, below Import; rows match Import, Settings and Trash. */
 export function PluginSidebarItems({ activePath, onOpenView }: { activePath?: string; onOpenView: (pluginId: string, viewId: string, e: React.MouseEvent) => void }) {
   const { sidebar } = useContributions();
   if (!sidebar.length) return null;
@@ -119,9 +119,9 @@ export function PluginSidebarItems({ activePath, onOpenView }: { activePath?: st
           <button
             key={`${item.pluginId}:${item.id}`}
             onClick={(e) => (item.view ? onOpenView(item.pluginId, item.view, e) : item.onClick?.())}
-            className={`flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm ${on ? "bg-hover font-medium text-ink" : "text-muted hover:bg-hover"}`}
+            className={`flex h-[30px] w-full items-center gap-1 rounded-md pl-1 text-sm ${on ? "bg-hover font-medium text-ink" : "text-muted/80 hover:bg-hover hover:text-muted"}`}
           >
-            <span className={`grid w-4 shrink-0 place-items-center ${on ? "text-[var(--accent)]" : "text-faint"}`}>{item.icon ?? <Puzzle size={15} />}</span>
+            <span className={`grid size-6 shrink-0 place-items-center ${on ? "text-[var(--accent)]" : "text-faint"}`}>{item.icon ?? <Puzzle size={16} />}</span>
             <span className="flex-1 truncate text-left">{item.title}</span>
           </button>
         );

@@ -1,4 +1,4 @@
-//! Betelgeuse for iOS and Android. The workspace engine is the shared core crate; this is the thin
+//! MyNote for iOS and Android. The workspace engine is the shared core crate; this is the thin
 //! layer that hands it to the interface, under the same command names the desktop app uses, so the
 //! shared React code (editor, databases) works unchanged.
 //!
@@ -6,7 +6,7 @@
 mod plugin_host;
 mod sync;
 
-use betelgeuse_core::vault;
+use mynote_core::vault;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -46,11 +46,15 @@ const WELCOME: &[(&str, &str)] = &[("Welcome.md", include_str!("../welcome/Welco
 fn workspace_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("Workspace");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    // Moves a legacy `.betelgeuse/` folder (before the rename to MyNote) to `.mynote/`.
+    vault::migrate_legacy_dir(&dir).map_err(|e| e.to_string())?;
     Ok(dir)
 }
 
 /// Welcome pages earlier versions of the app wrote, which still count as untouched.
-const PREVIOUS_WELCOME: &[(&str, &str)] = &[("Welcome.md", include_str!("../welcome/previous/Welcome.md"))];
+/// Welcome-v2.md is the page as written before the rename to MyNote (legacy Betelgeuse wording).
+const PREVIOUS_WELCOME: &[(&str, &str)] =
+    &[("Welcome.md", include_str!("../welcome/previous/Welcome.md")), ("Welcome.md", include_str!("../welcome/previous/Welcome-v2.md"))];
 
 /// A welcome page as this app wrote it, with nothing inside it: not worth keeping when the phone
 /// connects to a repository that already has pages.
@@ -71,7 +75,7 @@ fn seed_if_empty(dir: &Path) -> Result<(), String> {
 
 #[tauri::command]
 fn current_vault(state: State<AppState>) -> VaultInfo {
-    VaultInfo { path: state.workspace.to_string_lossy().into_owned(), name: "Betelgeuse".into() }
+    VaultInfo { path: state.workspace.to_string_lossy().into_owned(), name: "MyNote".into() }
 }
 
 #[tauri::command]
@@ -257,7 +261,7 @@ pub fn run() {
             plugin_host::plugin_store_install,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Betelgeuse");
+        .expect("error while running MyNote");
 }
 
 #[cfg(test)]

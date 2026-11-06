@@ -12,7 +12,7 @@ use std::sync::LazyLock;
 
 // ---------------------------------------------------------------- colours and icons
 
-/// Notion colour name -> Betelgeuse colour. Notion calls green "teal" in its HTML classes.
+/// Notion colour name -> MyNote colour. Notion calls green "teal" in its HTML classes.
 pub(super) fn notion_color(c: &str) -> Option<&'static str> {
     Some(match c {
         "gray" | "lightgray" | "grey" => "gray",
@@ -1681,7 +1681,7 @@ pub(super) fn property_hints(props: &[&HtmlProp]) -> HashMap<String, (String, Ha
     hints
 }
 
-/// The Betelgeuse property type for a Notion property type; `None` = work it out from the values.
+/// The MyNote property type for a Notion property type; `None` = work it out from the values.
 pub(super) fn property_type(notion: &str) -> Option<&'static str> {
     Some(match notion {
         // A relation becomes one when its links all lead to rows of one imported database; else text.

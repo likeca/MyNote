@@ -33,8 +33,8 @@ import {
 import { createPortal } from "react-dom";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useViewport, visibleRows } from "./virtual";
-import { MenuDivider, MenuItem, Popover } from "@betelgeuse/plugin-api/ui";
-import type { Asset, AssetKind, LibraryQuery, LibraryResult, MetaPatch } from "@betelgeuse/plugin-api";
+import { MenuDivider, MenuItem, Popover } from "@mynote/plugin-api/ui";
+import type { Asset, AssetKind, LibraryQuery, LibraryResult, MetaPatch } from "@mynote/plugin-api";
 import { library, openPage } from "./host";
 import { labelColor, tagColor } from "./colors";
 import { KIND_LABELS, KIND_ORDER, formatBytes, formatDuration, formatResolution, useLibraryRequest, useStudio } from "./store";
@@ -242,7 +242,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     return (
       <Empty icon={<FolderPlus size={28} />} title="Add your first library folder">
         Point the Library at the folders where your media already lives, like your footage drive or ~/Studio. Files stay where they are;
-        Betelgeuse only reads them.
+        MyNote only reads them.
         <button onClick={addFolder} className="mt-4 rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white">
           Add folder…
         </button>

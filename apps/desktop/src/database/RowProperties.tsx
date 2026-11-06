@@ -100,7 +100,7 @@ export function RowProperties({
           <span
             draggable
             onDragStart={(e) => {
-              e.dataTransfer.setData("text/betelgeuse-property", p.name);
+              e.dataTransfer.setData("text/mynote-property", p.name);
               e.dataTransfer.effectAllowed = "move";
               setDragging(p.name);
             }}

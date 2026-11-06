@@ -21,10 +21,12 @@ test("version ranges", () => {
 });
 
 test("plugins that can't run say why", () => {
-  const ok = { id: "x", name: "X", version: "1.0.0", engines: { betelgeuse: ">=0.3.0", api: "1" } };
+  const ok = { id: "x", name: "X", version: "1.0.0", engines: { mynote: ">=0.3.0", api: "1" } };
   assert.equal(incompatibility(ok, "0.3.0"), null);
+  assert.match(incompatibility({ ...ok, engines: { mynote: ">=0.9.0", api: "1" } }, "0.3.0"), />=0\.9\.0.*0\.3\.0/);
+  assert.match(incompatibility({ ...ok, engines: { mynote: "*", api: "2" } }, "0.3.0"), /plugin API 2/);
+  // Legacy manifest key (before the rename to MyNote) is still honoured.
   assert.match(incompatibility({ ...ok, engines: { betelgeuse: ">=0.9.0", api: "1" } }, "0.3.0"), />=0\.9\.0.*0\.3\.0/);
-  assert.match(incompatibility({ ...ok, engines: { betelgeuse: "*", api: "2" } }, "0.3.0"), /plugin API 2/);
   assert.match(incompatibility({ ...ok, platforms: ["mobile"] }, "0.3.0"), /desktop/);
   assert.match(incompatibility({ ...ok, id: "" }, "0.3.0"), /missing/);
 });

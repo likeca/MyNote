@@ -1,6 +1,6 @@
 import { FolderInput, Link2, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { PageMeta } from "@betelgeuse/plugin-api";
+import type { PageMeta } from "@mynote/plugin-api";
 import { library, usePagesVersion, workspace } from "./host";
 import { channelNoise, homeFolder, loadProductions, savePipeline, suggestFolders, usePipeline, type Pipeline } from "./pipeline";
 import { useStudio } from "./store";

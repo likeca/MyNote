@@ -1,4 +1,4 @@
-/* The Betelgeuse palette from the app (src/index.css): warm, ember-tinted neutrals. */
+/* The MyNote palette from the app (src/index.css): warm, ember-tinted neutrals. */
 :root {
   /* The app's own type: the system font (SF on Apple devices, Segoe on Windows). */
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial,
@@ -1938,7 +1938,7 @@ a.oss-card:hover {
 }
 /* ---------- Documentation (/docs): laid out and set like the app itself ---------- */
 
-/* The app's "Betelgeuse" palette and fonts, so the docs read like a page in the app. */
+/* The app's "MyNote" palette and fonts, so the docs read like a page in the app. */
 .docs {
   --d-surface: #fffdfb;
   --d-side: #f7f3ef;

@@ -36,7 +36,7 @@ function loadRepo() {
       // GitHub limits anonymous API calls; shields.io serves the same counts from its cache.
       try {
         const [stars, forks] = await Promise.all(
-          ["stars", "forks"].map((k) => fetch(`https://img.shields.io/github/${k}/devian-labs/betelgeuse.json`).then((r) => r.json())),
+          ["stars", "forks"].map((k) => fetch(`https://img.shields.io/github/${k}/likeca/MyNote.json`).then((r) => r.json())),
         );
         const n = (v: { value: string }) => Number.parseInt(v.value, 10);
         if (Number.isFinite(n(stars)) && Number.isFinite(n(forks))) repo = { stars: n(stars), forks: n(forks) };
@@ -159,7 +159,7 @@ export function RepoCard({ children }: { children?: React.ReactNode }) {
         <img src="/app-icon.png" alt="" width={44} height={44} />
         <div>
           <a href={REPO} className="repo-name">
-            devian-labs / <strong>betelgeuse</strong>
+            likeca / <strong>MyNote</strong>
           </a>
           <span className="repo-public">Public</span>
         </div>

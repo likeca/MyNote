@@ -1,4 +1,4 @@
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { CircleAlert, Pencil, Plus, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Meter, meterState } from "../charts";

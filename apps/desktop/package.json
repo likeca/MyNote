@@ -1,8 +1,8 @@
 {
-  "name": "@betelgeuse/desktop",
+  "name": "@mynote/desktop",
   "private": true,
   "version": "0.5.0",
-  "description": "The Betelgeuse desktop app (Tauri + React)",
+  "description": "The MyNote desktop app (Tauri + React)",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "build": "node scripts/notices.mjs && tsc --noEmit && vite build",
     "tauri": "tauri",
     "app": "npm run mcp:build && tauri dev",
-    "mcp:build": "npm run build -w betelgeuse-mcp",
+    "mcp:build": "npm run build -w mynote-mcp",
     "test": "node --import tsx --test tests/*.test.mjs && cargo test --manifest-path src-tauri/Cargo.toml --workspace",
     "build:app": "tauri build",
     "typecheck": "tsc --noEmit",
@@ -52,7 +52,7 @@
     "yjs": "^13.6.33"
   },
   "devDependencies": {
-    "@betelgeuse/plugin-api": "*",
+    "@mynote/plugin-api": "*",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.12.1",
     "@types/react": "^19.3.0",

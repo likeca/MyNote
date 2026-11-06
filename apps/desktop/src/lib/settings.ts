@@ -3,7 +3,7 @@ import { api } from "./api";
 
 /** "black" is dark mode with true-black surfaces. */
 export type Mode = "system" | "light" | "dark" | "black";
-export type Palette = "betelgeuse" | "graphite" | "midnight";
+export type Palette = "mynote" | "graphite" | "midnight";
 export type TextSize = "small" | "default" | "large";
 
 export type Settings = {
@@ -37,21 +37,33 @@ export const ACCENTS: { id: string; label: string; color: string }[] = [
 ];
 
 export const PALETTES: { id: Palette; label: string; hint: string; swatch: [string, string, string] }[] = [
-  { id: "betelgeuse", label: "Betelgeuse", hint: "Warm ember neutrals", swatch: ["#1b1715", "#221d1a", "#e2582b"] },
+  { id: "mynote", label: "MyNote", hint: "Warm ember neutrals", swatch: ["#1b1715", "#221d1a", "#e2582b"] },
   { id: "graphite", label: "Graphite", hint: "Neutral greys", swatch: ["#191919", "#202020", "#9b9b9b"] },
   { id: "midnight", label: "Midnight", hint: "Cool blue slate", swatch: ["#13161d", "#191d26", "#5b7cfa"] },
 ];
 
-const DEFAULTS: Settings = { mode: "system", palette: "betelgeuse", accent: "ember", textSize: "default", textZoom: 1, fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
+const DEFAULTS: Settings = { mode: "system", palette: "mynote", accent: "ember", textSize: "default", textZoom: 1, fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
 
 /** The steps ⌘+ and ⌘− move through, like a browser's zoom. */
 const TEXT_ZOOMS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
-const KEY = "betelgeuse-settings";
+const KEY = "mynote-settings";
+// Legacy name (before the rename to MyNote): read once if the new key is absent.
+const LEGACY_KEY = "betelgeuse-settings";
 
 function load(): Settings {
   try {
-    const s: Settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    const saved = localStorage.getItem(KEY);
+    const s: Settings = { ...DEFAULTS, ...JSON.parse(saved ?? localStorage.getItem(LEGACY_KEY) ?? "{}") };
+    // Legacy palette id (before the rename to MyNote).
+    if ((s.palette as string) === "betelgeuse") s.palette = "mynote";
     if (!(typeof s.textZoom === "number" && s.textZoom >= TEXT_ZOOMS[0] && s.textZoom <= TEXT_ZOOMS.at(-1)!)) s.textZoom = 1;
+    if (saved === null) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(s));
+      } catch {
+        /* fine: re-read next launch */
+      }
+    }
     return s;
   } catch {
     return DEFAULTS;

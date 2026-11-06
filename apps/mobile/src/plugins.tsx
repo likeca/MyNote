@@ -34,7 +34,7 @@ import {
   type StoreEntry,
 } from "@desktop/plugins/runtime";
 import { PluginSettingsSection, PluginView } from "@desktop/plugins/slots";
-import type { PluginManifest } from "@betelgeuse/plugin-api";
+import type { PluginManifest } from "@mynote/plugin-api";
 import { useMobile, type Route } from "./mobile";
 import { Confirm, Switch, TopBar } from "./ui";
 
@@ -163,7 +163,7 @@ export function PluginsScreen() {
       />
       <main className="safe-bottom min-h-0 flex-1 overflow-y-auto px-4 pb-10">
         <p className="px-1 pt-3 text-[13px] leading-relaxed text-muted">
-          Plugins add features to Betelgeuse. Those made for the phone install from the store here; new plugins and updates arrive without updating the app.
+          Plugins add features to MyNote. Those made for the phone install from the store here; new plugins and updates arrive without updating the app.
         </p>
 
         <Group label="On this phone">

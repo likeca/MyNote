@@ -1,21 +1,21 @@
 [package]
-name = "betelgeuse"
+name = "mynote"
 version = "0.5.0"
 description = "Block-based notes on plain Markdown + git, open to AI agents over MCP"
 authors = ["Devian Labs and contributors"]
 license = "MIT"
-repository = "https://github.com/devian-labs/betelgeuse"
+repository = "https://github.com/likeca/MyNote"
 edition = "2021"
 
 [lib]
-name = "betelgeuse_lib"
+name = "mynote_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-betelgeuse-core = { path = "../../../crates/betelgeuse-core", features = ["plugins", "libgit2"] }
+mynote-core = { path = "../../../crates/mynote-core", features = ["plugins", "libgit2"] }
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }

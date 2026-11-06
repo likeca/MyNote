@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Betelgeuse MCP server: gives AI agents structured access to a Betelgeuse workspace
+ * MyNote MCP server: gives AI agents structured access to a MyNote workspace
  * (a folder of Markdown notes tracked in git).
  *
- *   betelgeuse-mcp --workspace ~/MyNote                     # stdio
- *   betelgeuse-mcp --workspace ~/MyNote --http 3917         # Streamable HTTP on 127.0.0.1:3917/mcp
- *   betelgeuse-mcp --workspace ~/MyNote --read-only         # no write tools
+ *   mynote-mcp --workspace ~/MyNote                     # stdio
+ *   mynote-mcp --workspace ~/MyNote --http 3917         # Streamable HTTP on 127.0.0.1:3917/mcp
+ *   mynote-mcp --workspace ~/MyNote --read-only         # no write tools
  */
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -29,15 +29,15 @@ const { values: args } = parseArgs({
 });
 
 const expandHome = (p: string) => (p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p);
-const root = path.resolve(expandHome(args.workspace ?? args.vault ?? process.env.BETELGEUSE_WORKSPACE ?? process.env.BETELGEUSE_VAULT ?? "~/MyNote"));
+const root = path.resolve(expandHome(args.workspace ?? args.vault ?? process.env.MYNOTE_WORKSPACE ?? process.env.BETELGEUSE_WORKSPACE ?? process.env.BETELGEUSE_VAULT ?? "~/MyNote")); // BETELGEUSE_*: legacy names (before the rename to MyNote)
 if (!existsSync(root) || !statSync(root).isDirectory()) {
-  console.error(`betelgeuse-mcp: workspace folder not found: ${root}\nPass --workspace <path> or set BETELGEUSE_WORKSPACE.`);
+  console.error(`mynote-mcp: workspace folder not found: ${root}\nPass --workspace <path> or set MYNOTE_WORKSPACE.`);
   process.exit(1);
 }
 const vault = new Vault(root);
 const readOnly = args["read-only"];
 
-const INSTRUCTIONS = `Betelgeuse is the user's personal knowledge base: a folder of Markdown notes tracked in git.
+const INSTRUCTIONS = `MyNote is the user's personal knowledge base: a folder of Markdown notes tracked in git.
 
 Conventions:
 - A note's title is its file name. Paths are workspace-relative, e.g. "Projects/Launch plan.md".
@@ -47,6 +47,7 @@ Conventions:
 - Notes link to each other with [[Title]] or [[Title|label]] wikilinks.
 - The body is GitHub-flavoured Markdown: headings, lists, "- [ ]" task lists, tables, code blocks and quotes.
 - Images are "![description](link)"; "![description|320](link)" shows one 320 pixels wide (Obsidian's syntax).
+- Files attached to a page are links into the workspace's ".assets/" folder, e.g. "[Report.pdf](.assets/Report-1.pdf)".
 - Rich blocks use readable HTML-ish syntax: <span data-color="red" data-bg="yellow">text</span> for colours,
   "> [!yellow] 💡" callouts, <details><summary>Title</summary> … </details> toggles (a toggle heading's title is a
   heading: <summary><h2>Title</h2></summary>, levels 1–3),
@@ -91,7 +92,7 @@ const frontmatterSchema = z
   .describe('Frontmatter keys to set, e.g. {"icon": "🚀", "tags": ["project"], "Status": "Done", "Estimate": 3}. Set a key to null to remove it.');
 
 function buildServer(): McpServer {
-  const server = new McpServer({ name: "betelgeuse", version: "0.5.0" }, { instructions: INSTRUCTIONS });
+  const server = new McpServer({ name: "mynote", version: "0.5.0" }, { instructions: INSTRUCTIONS });
   const agent = () => server.server.getClientVersion()?.name ?? "agent";
   const commit = (paths: string[], message: string) => vault.commit(paths, message, agent());
 
@@ -240,17 +241,17 @@ function buildServer(): McpServer {
 
   server.registerResource(
     "note",
-    new ResourceTemplate("betelgeuse://note/{+path}", {
+    new ResourceTemplate("mynote://note/{+path}", {
       list: async () => ({
         resources: (await vault.list()).map((n) => ({
-          uri: `betelgeuse://note/${n.path.split("/").map(encodeURIComponent).join("/")}`,
+          uri: `mynote://note/${n.path.split("/").map(encodeURIComponent).join("/")}`,
           name: n.title,
           description: n.path,
           mimeType: "text/markdown",
         })),
       }),
     }),
-    { title: "Betelgeuse note", description: "A note in the workspace as raw Markdown", mimeType: "text/markdown" },
+    { title: "MyNote note", description: "A note in the workspace as raw Markdown", mimeType: "text/markdown" },
     async (uri, { path: p }) => {
       const rel = await vault.find(decodeURIComponent(String(p)));
       const n = await vault.read(rel);
@@ -381,9 +382,9 @@ if (args.http) {
     await server.connect(transport);
     await transport.handleRequest(req, res);
   }).listen(port, args.host, () => {
-    console.error(`betelgeuse-mcp: serving workspace ${root} at http://${args.host}:${port}/mcp${readOnly ? " (read-only)" : ""}`);
+    console.error(`mynote-mcp: serving workspace ${root} at http://${args.host}:${port}/mcp${readOnly ? " (read-only)" : ""}`);
   });
 } else {
   await buildServer().connect(new StdioServerTransport());
-  console.error(`betelgeuse-mcp: serving workspace ${root} over stdio${readOnly ? " (read-only)" : ""}`);
+  console.error(`mynote-mcp: serving workspace ${root} over stdio${readOnly ? " (read-only)" : ""}`);
 }

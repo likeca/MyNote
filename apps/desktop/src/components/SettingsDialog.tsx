@@ -571,7 +571,7 @@ function AgentsSection({ onOpenAgents, policy, onPolicy }: { onOpenAgents: () =>
       </div>
       <p className="mt-3 flex gap-1.5 text-xs leading-relaxed text-faint">
         <Info size={13} className="mt-0.5 shrink-0" />
-        This applies to agents using the Betelgeuse MCP server. An agent you give direct access to the workspace folder can still read the files.
+        This applies to agents using the MyNote MCP server. An agent you give direct access to the workspace folder can still read the files.
       </p>
     </>
   );

@@ -1,8 +1,8 @@
 /**
- * Media Library's link to Betelgeuse: the plugin context, and the few helpers the screens use,
+ * Media Library's link to MyNote: the plugin context, and the few helpers the screens use,
  * all on top of the public plugin API.
  */
-import type { MediaLibrary, PluginContext, Workspace } from "@betelgeuse/plugin-api";
+import type { MediaLibrary, PluginContext, Workspace } from "@mynote/plugin-api";
 import { useEffect, useState } from "react";
 
 let current: PluginContext | null = null;

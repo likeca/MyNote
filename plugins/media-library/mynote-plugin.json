@@ -5,9 +5,9 @@
   "description": "Browse and search your footage, audio, photos, design and project files in place, and link project folders to pages.",
   "author": "Devian Labs",
   "icon": "🎞️",
-  "homepage": "https://betelgeuse.devianlabs.com/docs/plugins/media-library/",
+  "homepage": "https://github.com/likeca/MyNote/blob/main/docs/content/plugins/media-library.md",
   "engines": {
-    "betelgeuse": ">=0.3.0",
+    "mynote": ">=0.3.0",
     "api": "1"
   },
   "platforms": [

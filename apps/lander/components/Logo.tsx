@@ -1,4 +1,4 @@
-/** Betelgeuse: a red supergiant with a four-point glint (brand/mark.png). */
+/** MyNote: a red supergiant with a four-point glint (brand/mark.png). */
 export function Logo({ size = 28 }: { size?: number }) {
   // The glow runs past the star, so draw it a little larger than its layout box.
   return (

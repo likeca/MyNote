@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 
-const vault = mkdtempSync(path.join(os.tmpdir(), "betelgeuse-test-"));
+const vault = mkdtempSync(path.join(os.tmpdir(), "mynote-test-"));
 const git = (...a) => execFileSync("git", ["-C", vault, ...a], { encoding: "utf8" });
 let client;
 
@@ -72,7 +72,7 @@ test("writes are committed as the agent", async () => {
   await call("update_note", { note: "Roadmap", body: "Q2: scale", summary: "add Q2 to roadmap" });
   const file = readFileSync(path.join(vault, "Projects/Roadmap.md"), "utf8");
   assert.equal(file, "---\ntags: [plan]\n---\nQ1: [[Launch]]\n\nQ2: scale\n");
-  assert.match(git("log", "-1", "--format=%an|%s"), /^test-agent via Betelgeuse MCP\|mcp: add Q2 to roadmap/);
+  assert.match(git("log", "-1", "--format=%an|%s"), /^test-agent via MyNote MCP\|mcp: add Q2 to roadmap/);
   assert.equal(git("status", "--porcelain"), "");
 });
 
@@ -154,8 +154,8 @@ test("pages hidden from AI are invisible and untouchable", async () => {
 });
 
 test("in shared-only mode agents see just shared pages, and pages they create are shared", async () => {
-  mkdirSync(path.join(vault, ".betelgeuse"), { recursive: true });
-  writeFileSync(path.join(vault, ".betelgeuse/config.json"), JSON.stringify({ ai: { policy: "shared" } }));
+  mkdirSync(path.join(vault, ".mynote"), { recursive: true });
+  writeFileSync(path.join(vault, ".mynote/config.json"), JSON.stringify({ ai: { policy: "shared" } }));
   writeFileSync(path.join(vault, "Public.md"), "---\nai: true\n---\nhello\n");
   const listing = await call("list_notes");
   assert.match(listing, /Public/);
@@ -163,7 +163,7 @@ test("in shared-only mode agents see just shared pages, and pages they create ar
   const created = JSON.parse(await call("create_note", { title: "Agent notes", body: "hi" }));
   assert.match(readFileSync(path.join(vault, created.path), "utf8"), /^---\nai: true\n---/);
   assert.match(await call("list_notes"), /Agent notes/);
-  writeFileSync(path.join(vault, ".betelgeuse/config.json"), JSON.stringify({ ai: { policy: "all" } }));
+  writeFileSync(path.join(vault, ".mynote/config.json"), JSON.stringify({ ai: { policy: "all" } }));
 });
 
 test("deleting moves a page to the Trash with its sub-pages", async () => {

@@ -2,7 +2,7 @@
 //!
 //! Everything is imported under one new top-level page so the rest of the workspace is
 //! untouched. Pages become Markdown files, images go to `.assets/`, and Notion databases
-//! (CSV files) become Betelgeuse databases with typed properties. Both Notion formats share
+//! (CSV files) become MyNote databases with typed properties. Both Notion formats share
 //! one pipeline; only reading a page differs (`notion_html` converts the HTML export's pages).
 
 mod notion_html;
@@ -146,14 +146,14 @@ fn callout_style(kind: &str) -> (&'static str, &'static str) {
     }
 }
 
-const BETELGEUSE_COLORS: &[&str] = &["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"];
+const MYNOTE_COLORS: &[&str] = &["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"];
 
 fn convert_callouts(text: &str) -> String {
     CALLOUT
         .replace_all(text, |c: &regex::Captures| {
             let (prefix, kind, title) = (&c[1], &c[2], c[3].trim());
-            if BETELGEUSE_COLORS.contains(&kind) {
-                return c[0].to_string(); // already Betelgeuse syntax
+            if MYNOTE_COLORS.contains(&kind) {
+                return c[0].to_string(); // already MyNote syntax
             }
             let (color, icon) = callout_style(kind);
             if title.is_empty() {
@@ -211,7 +211,7 @@ pub fn import_obsidian(vault: &Path, src: &Path) -> Result<ImportReport, String>
                 match by_name.get(&file).or_else(|| by_rel.get(&target.to_lowercase())) {
                     Some(asset) if is_image => format!("![{}]({asset})", file),
                     Some(_) => format!("[[{target}]]"),
-                    None => c[0].to_string(), // a note embed: Betelgeuse renders ![[Note]] as a card
+                    None => c[0].to_string(), // a note embed: MyNote renders ![[Note]] as a card
                 }
             })
             .into_owned();
@@ -861,7 +861,7 @@ fn quote_lines(text: &str) -> String {
     text.split('\n').map(|l| if l.is_empty() { ">".to_string() } else { format!("> {l}") }).collect::<Vec<_>>().join("\n")
 }
 
-/// `<aside>` content -> a Betelgeuse callout. The leading emoji becomes the callout's icon;
+/// `<aside>` content -> a MyNote callout. The leading emoji becomes the callout's icon;
 /// Notion's built-in icon images set its colour (`…/icons/egg_yellow.svg` -> yellow).
 fn callout_from_aside(inner: &str) -> String {
     let inner = tidy_markdown(inner);
@@ -869,7 +869,7 @@ fn callout_from_aside(inner: &str) -> String {
     let (mut color, mut icon, mut body) = ("gray", "💡".to_string(), inner.clone());
     if let Some(img) = ICON_IMG.captures(first.trim()) {
         let name = img[1].rsplit('/').next().unwrap_or("").trim_end_matches(".svg");
-        if let Some(c) = name.rsplit_once('_').map(|(_, c)| c).and_then(|c| BETELGEUSE_COLORS.iter().find(|&&k| k == c && k != "default")) {
+        if let Some(c) = name.rsplit_once('_').map(|(_, c)| c).and_then(|c| MYNOTE_COLORS.iter().find(|&&k| k == c && k != "default")) {
             color = c;
         }
         body = rest.to_string();
@@ -1339,7 +1339,7 @@ pub fn import_notion(vault: &Path, src: &Path) -> Result<ImportReport, String> {
 
 /// `import_notion`, with web images fetched by `fetch` (None leaves them on the web).
 fn import_notion_with(vault: &Path, src: &Path, fetch: Option<&Fetch>) -> Result<ImportReport, String> {
-    let temp = std::env::temp_dir().join(format!("betelgeuse-notion-{}", stamp()));
+    let temp = std::env::temp_dir().join(format!("mynote-notion-{}", stamp()));
     let export = if src.is_file() {
         extract_zip(src, &temp)?;
         temp.clone()
@@ -1973,7 +1973,7 @@ mod tests {
 
     #[test]
     fn imports_an_obsidian_vault_end_to_end() {
-        let base = std::env::temp_dir().join(format!("bg-obsidian-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-obsidian-{}", stamp()));
         let src = base.join("My Vault");
         let ws = base.join("ws");
         fs::create_dir_all(src.join(".obsidian")).unwrap();
@@ -2144,7 +2144,7 @@ mod tests {
 
     #[test]
     fn caps_long_asset_names() {
-        let base = std::env::temp_dir().join(format!("bg-asset-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-asset-{}", stamp()));
         fs::create_dir_all(&base).unwrap();
         let src = base.join("a.pdf");
         fs::write(&src, "pdf").unwrap();
@@ -2211,7 +2211,7 @@ mod tests {
     }
 
     fn import_synthetic(name: &str) -> (PathBuf, PathBuf, ImportReport) {
-        let base = std::env::temp_dir().join(format!("bg-notion-{name}-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-{name}-{}", stamp()));
         let export = base.join("export");
         let ws = base.join("ws");
         fs::create_dir_all(&ws).unwrap();
@@ -2274,7 +2274,7 @@ mod tests {
     /// to it, with `[[Title]]` links as values; one that leads to plain pages stays text.
     #[test]
     fn imports_relations_between_databases() {
-        let base = std::env::temp_dir().join(format!("bg-notion-relations-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-relations-{}", stamp()));
         let (export, ws) = (base.join("export"), base.join("ws"));
         let team = export.join("Team");
         for dir in [team.join("Products"), team.join("Tasks"), ws.clone()] {
@@ -2494,7 +2494,7 @@ if (a &lt; 2) {}</code></pre>"#,
     }
 
     fn import_synthetic_html(name: &str) -> (PathBuf, PathBuf, ImportReport) {
-        let base = std::env::temp_dir().join(format!("bg-notion-html-{name}-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-html-{name}-{}", stamp()));
         let export = base.join("export");
         let ws = base.join("ws");
         fs::create_dir_all(&ws).unwrap();
@@ -2506,7 +2506,7 @@ if (a &lt; 2) {}</code></pre>"#,
     /// Web images (here HQ's Notion-gallery cover) are downloaded into the import's assets folder.
     #[test]
     fn downloads_web_images_into_the_workspace() {
-        let base = std::env::temp_dir().join(format!("bg-notion-web-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-web-{}", stamp()));
         let (export, ws) = (base.join("export"), base.join("ws"));
         fs::create_dir_all(&ws).unwrap();
         synthetic_html_export(&export);
@@ -2593,7 +2593,7 @@ if (a &lt; 2) {}</code></pre>"#,
 
     #[test]
     fn markdown_exports_still_win_when_html_files_are_attachments() {
-        let base = std::env::temp_dir().join(format!("bg-notion-mixed-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-mixed-{}", stamp()));
         let export = base.join("export");
         let ws = base.join("ws");
         fs::create_dir_all(export.join("Page")).unwrap();
@@ -2611,7 +2611,7 @@ if (a &lt; 2) {}</code></pre>"#,
     /// else by the rows' property tables.
     #[test]
     fn rebuilds_databases_missing_from_the_export() {
-        let base = std::env::temp_dir().join(format!("bg-notion-orphans-{}", stamp()));
+        let base = std::env::temp_dir().join(format!("mynote-notion-orphans-{}", stamp()));
         let (export, ws) = (base.join("export"), base.join("ws"));
         let id = |n: u32| format!("{n:032x}");
         let w = |rel: String, text: String| {
@@ -2659,7 +2659,7 @@ if (a &lt; 2) {}</code></pre>"#,
     #[ignore]
     fn real_notion_export() {
         let src = PathBuf::from(std::env::var("NOTION_EXPORT").expect("set NOTION_EXPORT"));
-        let ws = std::env::temp_dir().join(format!("bg-notion-real-{}", stamp()));
+        let ws = std::env::temp_dir().join(format!("mynote-notion-real-{}", stamp()));
         fs::create_dir_all(&ws).unwrap();
         let report = import_notion(&ws, &src).unwrap();
         println!("workspace: {}", ws.display());

@@ -1,5 +1,5 @@
 /**
- * Unsplash photo search for page covers. Release builds include Betelgeuse's Access Key (from the
+ * Unsplash photo search for page covers. Release builds include MyNote's Access Key (from the
  * VITE_UNSPLASH_ACCESS_KEY build variable: `.env.local` locally, a CI secret for releases). Anyone
  * can use their own key instead; it overrides the built-in one and stays on their computer.
  * API guidelines followed: photos are hotlinked from Unsplash, the photographer is credited, and
@@ -41,7 +41,7 @@ export async function searchUnsplash(key: string, query: string, page = 1): Prom
   if (res.status === 403 || res.status === 429) throw new UnsplashError("The hourly Unsplash search limit is used up. Try again in a while, or use your own key.");
   if (!res.ok) throw new UnsplashError(`Unsplash search failed (${res.status}).`);
   const data: { results: ApiPhoto[]; total_pages: number } = await res.json();
-  const ref = "utm_source=betelgeuse&utm_medium=referral";
+  const ref = "utm_source=mynote&utm_medium=referral";
   return {
     pages: data.total_pages,
     photos: data.results.map((p) => ({
@@ -65,4 +65,4 @@ export function reportDownload(key: string, photo: UnsplashPhoto) {
 
 /** Unsplash asks for "Photo by <name> on Unsplash" wherever its photos are shown. */
 export type Credit = { name: string; url: string };
-export const UNSPLASH_HOME = "https://unsplash.com/?utm_source=betelgeuse&utm_medium=referral";
+export const UNSPLASH_HOME = "https://unsplash.com/?utm_source=mynote&utm_medium=referral";

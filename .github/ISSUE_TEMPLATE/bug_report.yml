@@ -18,7 +18,7 @@ body:
   - type: input
     attributes:
       label: Version and OS
-      placeholder: Betelgeuse 0.1.0, macOS 15.3 (Apple Silicon)
+      placeholder: MyNote 0.1.0, macOS 15.3 (Apple Silicon)
     validations:
       required: true
   - type: dropdown

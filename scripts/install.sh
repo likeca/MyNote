@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds MyNote from source and installs it (macOS and Linux).
 #
-#   git clone https://github.com/devian-labs/betelgeuse && cd betelgeuse && ./scripts/install.sh
+#   git clone https://github.com/likeca/MyNote && cd MyNote && ./scripts/install.sh
 #
 # Options:
 #   --build-only   build the app but don't install it
@@ -47,7 +47,7 @@ npm ci --no-audit --no-fund
 
 bold "Building MyNote (the first build takes a few minutes)"
 if [[ "$OS" == "Darwin" ]]; then
-  npm run tauri -w @betelgeuse/desktop -- build --bundles app
+  npm run tauri -w @mynote/desktop -- build --bundles app
   APP="target/release/bundle/macos/MyNote.app"
   [[ -d "$APP" ]] || fail "Build finished but $APP was not found."
   ok "Built $APP"
@@ -57,15 +57,15 @@ if [[ "$OS" == "Darwin" ]]; then
   DEST="/Applications"
   [[ -w "$DEST" ]] || DEST="$HOME/Applications"
   mkdir -p "$DEST"
-  # The app was called Betelgeuse before; the same app under its old name goes too.
-  rm -rf "$DEST/MyNote.app" "$DEST/Betelgeuse.app"
+  # The app was called MyNote before; the same app under its old name goes too.
+  rm -rf "$DEST/MyNote.app" "$DEST/Betelgeuse.app" # Legacy name (before the rename to MyNote)
   cp -R "$APP" "$DEST/"
   xattr -dr com.apple.quarantine "$DEST/MyNote.app" 2>/dev/null || true
   ok "Installed to $DEST/MyNote.app"
   echo
   bold "Done. Open MyNote from Launchpad or Spotlight, or run: open \"$DEST/MyNote.app\""
 else
-  npm run tauri -w @betelgeuse/desktop -- build --bundles appimage,deb
+  npm run tauri -w @mynote/desktop -- build --bundles appimage,deb
   BUNDLE="target/release/bundle"
   APPIMAGE="$(ls "$BUNDLE"/appimage/*.AppImage 2>/dev/null | head -1 || true)"
   DEB="$(ls "$BUNDLE"/deb/*.deb 2>/dev/null | head -1 || true)"
@@ -76,10 +76,10 @@ else
   bold "Installing"
   if [[ -n "$DEB" ]] && command -v apt >/dev/null; then
     sudo apt install -y "./$DEB"
-    ok "Installed the .deb package. Find Betelgeuse in your applications menu."
+    ok "Installed the .deb package. Find MyNote in your applications menu."
   elif [[ -n "$APPIMAGE" ]]; then
     mkdir -p "$HOME/.local/bin"
-    install -m 755 "$APPIMAGE" "$HOME/.local/bin/betelgeuse"
-    ok "Installed to ~/.local/bin/betelgeuse"
+    install -m 755 "$APPIMAGE" "$HOME/.local/bin/mynote"
+    ok "Installed to ~/.local/bin/mynote"
   fi
 fi

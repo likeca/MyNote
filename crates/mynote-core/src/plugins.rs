@@ -1,18 +1,21 @@
 //! Plugins: JavaScript bundles installed per machine and turned on per workspace.
 //!
-//! An installed plugin is a folder `<app data>/plugins/<id>/` holding `betelgeuse-plugin.json` (the
-//! manifest), `main.js` and optionally `styles.css`. Development builds also load the plugins built
-//! in this repository (`plugins/*/dist`), so plugin authors see changes without installing.
+//! An installed plugin is a folder `<app data>/plugins/<id>/` holding `mynote-plugin.json` (the
+//! manifest; plugins built before the rename to MyNote ship `betelgeuse-plugin.json`, still read),
+//! `main.js` and optionally `styles.css`. Development builds also load the plugins built in this
+//! repository (`plugins/*/dist`), so plugin authors see changes without installing.
 //!
-//! Which plugins a workspace uses is saved in the workspace (`.betelgeuse/plugins.json`), so another
+//! Which plugins a workspace uses is saved in the workspace (`.mynote/plugins.json`), so another
 //! machine syncing it knows what to offer. A plugin's own data lives in the workspace too
-//! (`.betelgeuse/plugins/<id>/data.json`); per-machine data (folder paths, keys) in the app's config.
+//! (`.mynote/plugins/<id>/data.json`); per-machine data (folder paths, keys) in the app's config.
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-pub const MANIFEST: &str = "betelgeuse-plugin.json";
-const ENABLED_FILE: &str = ".betelgeuse/plugins.json";
+pub const MANIFEST: &str = "mynote-plugin.json";
+/// Legacy name (before the rename to MyNote): store plugins built upstream still ship this manifest.
+pub const LEGACY_MANIFEST: &str = "betelgeuse-plugin.json";
+const ENABLED_FILE: &str = ".mynote/plugins.json";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,8 +60,20 @@ pub fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') && !id.starts_with('-')
 }
 
+/// A plugin folder's manifest file: `mynote-plugin.json`, or the legacy `betelgeuse-plugin.json`
+/// when only that one is there.
+pub fn manifest_file(dir: &Path) -> PathBuf {
+    let file = dir.join(MANIFEST);
+    let legacy = dir.join(LEGACY_MANIFEST);
+    if !file.is_file() && legacy.is_file() {
+        legacy
+    } else {
+        file
+    }
+}
+
 fn read_manifest(dir: &Path) -> Option<serde_json::Value> {
-    serde_json::from_str(&std::fs::read_to_string(dir.join(MANIFEST)).ok()?).ok()
+    serde_json::from_str(&std::fs::read_to_string(manifest_file(dir)).ok()?).ok()
 }
 
 fn info(dir: &Path, source: &str) -> Option<PluginInfo> {
@@ -107,7 +122,7 @@ pub fn read_file(dirs: &Dirs, id: &str, file: &str) -> Result<String, String> {
 
 /// Installs a built plugin from a folder (its manifest at the top), replacing an older copy.
 pub fn install_folder(dirs: &Dirs, src: &Path) -> Result<String, String> {
-    let p = info(src, "installed").ok_or("That folder has no valid betelgeuse-plugin.json.")?;
+    let p = info(src, "installed").ok_or("That folder has no valid mynote-plugin.json.")?;
     let main = p.manifest.get("main").and_then(|m| m.as_str()).unwrap_or("main.js");
     if !src.join(main).is_file() {
         return Err(format!("The plugin's {main} is missing. Build it first."));
@@ -175,7 +190,7 @@ fn data_file(dirs: &Dirs, ws: &Path, id: &str, scope: &str) -> Result<PathBuf, S
         return Err("bad plugin id".into());
     }
     match scope {
-        "workspace" => Ok(ws.join(".betelgeuse/plugins").join(id).join("data.json")),
+        "workspace" => Ok(ws.join(".mynote/plugins").join(id).join("data.json")),
         "local" => {
             let mut h = std::collections::hash_map::DefaultHasher::new();
             std::hash::Hash::hash(ws, &mut h);
@@ -214,12 +229,24 @@ mod tests {
 
     #[test]
     fn enabled_round_trip() {
-        let ws = std::env::temp_dir().join(format!("betelgeuse-plugins-{}", std::process::id()));
+        let ws = std::env::temp_dir().join(format!("mynote-plugins-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&ws);
         std::fs::create_dir_all(&ws).unwrap();
         assert!(enabled(&ws).is_empty());
         set_enabled(&ws, vec!["b".into(), "a".into(), "a".into(), "../x".into()]).unwrap();
         assert_eq!(enabled(&ws), ["a", "b"]);
         let _ = std::fs::remove_dir_all(&ws);
+    }
+
+    #[test]
+    fn reads_legacy_manifest() {
+        let dir = std::env::temp_dir().join(format!("mynote-manifest-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(LEGACY_MANIFEST), r#"{"id":"old"}"#).unwrap();
+        assert_eq!(info(&dir, "installed").unwrap().id, "old");
+        std::fs::write(dir.join(MANIFEST), r#"{"id":"new"}"#).unwrap();
+        assert_eq!(info(&dir, "installed").unwrap().id, "new");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

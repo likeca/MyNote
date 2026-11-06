@@ -1,6 +1,6 @@
 /**
  * Productions: rows of a pipeline database, each with a project folder in the library. The pipeline
- * settings are the plugin's workspace data (`.betelgeuse/plugins/media-library/data.json`).
+ * settings are the plugin's workspace data (`.mynote/plugins/media-library/data.json`).
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ctx, usePagesVersion, workspace } from "./host";

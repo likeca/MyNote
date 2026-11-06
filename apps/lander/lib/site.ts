@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-export const REPO = "https://github.com/devian-labs/betelgeuse";
+export const REPO = "https://github.com/likeca/MyNote";
 export const RELEASES = `${REPO}/releases/latest`;
 
 /** The production origin: metadataBase, canonical URLs, the sitemap and structured data all build on it. */
-export const SITE_URL = "https://betelgeuse.devianlabs.com";
-export const SITE_NAME = "Betelgeuse";
+export const SITE_URL = "https://github.com/likeca/MyNote";
+export const SITE_NAME = "MyNote";
 export const ORG = { name: "Devian Labs", url: "https://devianlabs.com", github: "https://github.com/devian-labs" };
 
 /** Serialise JSON-LD for a <script> tag, escaping `<` so no string can close the tag. */
@@ -23,7 +23,7 @@ const shareImage = {
   width: 1200,
   height: 630,
   type: "image/jpeg",
-  alt: "The Betelgeuse editor showing the Welcome page: a block-based notebook that stores everything as Markdown files in a git repository",
+  alt: "The MyNote editor showing the Welcome page: a block-based notebook that stores everything as Markdown files in a git repository",
 };
 
 export function pageMetadata({ title, description, path }: { title: string; description: string; path: string }): Metadata {

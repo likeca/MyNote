@@ -4,7 +4,7 @@
 //! Files are only read, never moved or copied into the workspace. What's derived from them (the file
 //! list, media details, thumbnails) is a cache in the app's cache folder and can always be rebuilt.
 //! What the user writes about them (tags, rating, notes) is saved in the workspace, in
-//! `.betelgeuse/library.jsonl`, so it syncs with git and agents can read it.
+//! `.mynote/library.jsonl`, so it syncs with git and agents can read it.
 //!
 //! Assets are identified by `<folder name>/<path inside the folder>`, so the same id means the same
 //! file on every machine even when the library folder lives at a different path.
@@ -19,10 +19,10 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
-/// Workspace settings (shared by every machine): `.betelgeuse/studio.json`.
-const SETTINGS_FILE: &str = ".betelgeuse/studio.json";
-/// Tags, ratings and notes, one asset per line: `.betelgeuse/library.jsonl`.
-const META_FILE: &str = ".betelgeuse/library.jsonl";
+/// Workspace settings (shared by every machine): `.mynote/studio.json`.
+const SETTINGS_FILE: &str = ".mynote/studio.json";
+/// Tags, ratings and notes, one asset per line: `.mynote/library.jsonl`.
+const META_FILE: &str = ".mynote/library.jsonl";
 /// Thumbnails are generated a few at a time, so scrolling a big grid doesn't start hundreds of processes.
 const THUMB_WORKERS: usize = 3;
 const THUMB_SIZE: u32 = 480;
@@ -1350,7 +1350,7 @@ mod tests {
         assert_eq!(f.duration, Some((">".into(), 90.0)));
     }
 
-    /// Scans the real ~/Studio when there is one: `cargo test -p betelgeuse studio_scan -- --ignored --nocapture`.
+    /// Scans the real ~/Studio when there is one: `cargo test -p mynote studio_scan -- --ignored --nocapture`.
     #[test]
     #[ignore]
     fn studio_scan() {
@@ -1376,7 +1376,7 @@ mod tests {
 
     #[test]
     fn follows_moved_files() {
-        let dir = std::env::temp_dir().join(format!("betelgeuse-lib-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-lib-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("a")).unwrap();
         std::fs::create_dir_all(dir.join("b")).unwrap();

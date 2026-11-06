@@ -1,7 +1,7 @@
 ---
 icon: 👋
 ---
-This is your Betelgeuse workspace on this phone. Every page is a Markdown file, the same as on the desktop app.
+This is your MyNote workspace on this phone. Every page is a Markdown file, the same as on the desktop app.
 
 - Tap **+** to write a new page. It goes into [[Inbox]], ready to sort later.
 - Type `[[` to link to another page, and `/` for headings, lists, to-dos, callouts and more.

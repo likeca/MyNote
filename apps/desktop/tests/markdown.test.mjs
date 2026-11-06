@@ -245,6 +245,29 @@ test("a resized image keeps its width, in Obsidian's ![alt|width] form", () => {
   exact("![before | after](.assets/c.png)\n");
 });
 
+test("links to files in .assets/ are attachments; images and other links stay as they are", () => {
+  const kinds = (md) => {
+    const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+    const editor = new Editor({ extensions, content: md, contentType: "markdown" });
+    const found = [];
+    editor.state.doc.descendants((n) => {
+      if (n.type.name === "fileAttachment") found.push(`file:${n.attrs.name}→${n.attrs.src}`);
+      if (n.type.name === "image") found.push(`image:${n.attrs.src}`);
+      if (n.isText && n.marks.some((m) => m.type.name === "link")) found.push(`link:${n.text}`);
+    });
+    editor.destroy();
+    return found;
+  };
+  const md = "[Q3 Report.pdf](.assets/Q3Report-1.pdf)\n\nSee [the brief](.assets/notion-0/a-Brief.docx) and [the site](https://example.com).\n\n![chart](.assets/chart.png)\n";
+  exact(md);
+  assert.deepEqual(kinds(md), ["file:Q3 Report.pdf→.assets/Q3Report-1.pdf", "file:the brief→.assets/notion-0/a-Brief.docx", "link:the site", "image:.assets/chart.png"]);
+  // Brackets in a file's name are escaped, and come back unescaped.
+  exact("[Notes \\[final\\].txt](.assets/Notesfinal-2.txt)\n");
+  assert.deepEqual(kinds("[Notes \\[final\\].txt](.assets/Notesfinal-2.txt)"), ["file:Notes [final].txt→.assets/Notesfinal-2.txt"]);
+  // Attachments inside lists and quotes keep their place.
+  exact("- [a.zip](.assets/a-3.zip)\n\n> [b.csv](.assets/b-4.csv)\n");
+});
+
 test("HTML-imported colours, highlights and callout colours", () => {
   exact('Some <span data-color="green">green **bold**</span> text and <span data-bg="red">the plan</span>.\n');
   exact('**<span data-color="green">Desktop</span>** and *<span data-color="red">it</span>*\n');

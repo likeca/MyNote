@@ -32,7 +32,7 @@ import type {
   Store,
   ViewDefinition,
   Workspace,
-} from "@betelgeuse/plugin-api";
+} from "@mynote/plugin-api";
 import { api } from "../lib/api";
 import { joinNote, patchFrontmatter, readFrontmatter, splitNote } from "../lib/frontmatter";
 import { parseSchema } from "../database/model";
@@ -165,7 +165,10 @@ export function satisfies(version: string, range: string): boolean {
 export function incompatibility(m: PluginManifest, version = appVersion): string | null {
   if (!m.id || !m.name || !m.version) return "Its manifest is missing an id, name or version.";
   if (String(m.engines?.api ?? "") !== String(API_VERSION)) return `It's made for plugin API ${m.engines?.api ?? "?"}; this app has API ${API_VERSION}.`;
-  if (m.engines?.betelgeuse && !satisfies(version, m.engines.betelgeuse)) return `It needs MyNote ${m.engines.betelgeuse}; this is ${version}.`;
+  // `engines.betelgeuse`: legacy key (before the rename to MyNote), still honoured.
+  const engines = m.engines as { mynote?: string; betelgeuse?: string } | undefined;
+  const range = engines?.mynote ?? engines?.betelgeuse;
+  if (range && !satisfies(version, range)) return `It needs MyNote ${range}; this is ${version}.`;
   if (!(m.platforms ?? ["desktop"]).includes(platform)) return platform === "mobile" ? "It's for the desktop app only." : "It isn't made for the desktop app.";
   return null;
 }
@@ -179,9 +182,12 @@ const SHARED: Record<string, unknown> = {
   "react-dom": ReactDOM,
   "react-dom/client": ReactDOMClient,
   "react/jsx-runtime": JSXRuntime,
-  "@betelgeuse/plugin-api": { API_VERSION, definePlugin: <T,>(p: T) => p },
-  "@betelgeuse/plugin-api/ui": kit,
+  "@mynote/plugin-api": { API_VERSION, definePlugin: <T,>(p: T) => p },
+  "@mynote/plugin-api/ui": kit,
 };
+// Legacy names (before the rename to MyNote): installed store plugins built before the rename require these.
+SHARED["@betelgeuse/plugin-api"] = SHARED["@mynote/plugin-api"];
+SHARED["@betelgeuse/plugin-api/ui"] = kit;
 
 /** Loads the plugins for a workspace (after opening or switching it). */
 export async function loadWorkspace(path: string) {
@@ -200,7 +206,7 @@ const OLD_ID = "creator-studio";
 
 /**
  * One-time moves for the media library:
- * - from the built-in feature (switched on in `.betelgeuse/studio.json`) to the plugin, carrying
+ * - from the built-in feature (switched on in `.mynote/studio.json`) to the plugin, carrying
  *   its pipeline settings into the plugin's data;
  * - from the plugin's first name (creator-studio) to media-library: the workspace's plugin list,
  *   its data, and the old installed copy.
@@ -386,7 +392,7 @@ export async function activate(id: string) {
       if (name in SHARED) return SHARED[name];
       throw new Error(`requires "${name}", which MyNote doesn't provide: bundle it into the plugin`);
     };
-    new Function("require", "module", "exports", `${code}\n//# sourceURL=betelgeuse-plugin://${id}/${main}`)(require, module, module.exports);
+    new Function("require", "module", "exports", `${code}\n//# sourceURL=mynote-plugin://${id}/${main}`)(require, module, module.exports);
     const exp = (module.exports.activate ? module.exports : module.exports.default) as { activate?: (ctx: PluginContext) => unknown; deactivate?: () => unknown } | undefined;
     if (typeof exp?.activate !== "function") throw new Error("main.js doesn't export activate(ctx)");
 

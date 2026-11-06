@@ -3,8 +3,8 @@ import { PlainPage } from "@/components/PlainPage";
 import { ORG, REPO, SITE_NAME, SITE_URL, jsonLd, pageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Privacy Policy: No Telemetry, No Cookies | Betelgeuse",
-  description: "What the Betelgeuse website and app do with your data: the app collects nothing; the website keeps no cookies or analytics.",
+  title: "Privacy Policy: No Telemetry, No Cookies | MyNote",
+  description: "What the MyNote website and app do with your data: the app collects nothing; the website keeps no cookies or analytics.",
   path: "/privacy/",
 });
 
@@ -27,7 +27,7 @@ export default function Privacy() {
 
       <h2>The app</h2>
       <p>
-        Betelgeuse collects nothing. There is no account, no telemetry and no analytics. Your workspace is a folder of Markdown files on your
+        MyNote collects nothing. There is no account, no telemetry and no analytics. Your workspace is a folder of Markdown files on your
         computer, and it stays there.
       </p>
       <p>The app connects to the internet only for these:</p>
@@ -51,7 +51,7 @@ export default function Privacy() {
       <p>
         <strong>AI agents.</strong> When you connect an AI agent (Claude Code, Cursor and others) to your workspace, the agent reads and writes the
         pages it can see and may send them to its AI provider. That is between you and the agent&apos;s provider, under their terms. Pages you hide
-        from AI stay out of the agent&apos;s reach through Betelgeuse; an agent you give direct access to the folder can still read them.
+        from AI stay out of the agent&apos;s reach through MyNote; an agent you give direct access to the folder can still read them.
       </p>
 
       <h2>This website</h2>
@@ -70,7 +70,7 @@ export default function Privacy() {
 
       <h2>Contact</h2>
       <p>
-        Betelgeuse is made by <a href={ORG.url}>Devian Labs</a>. Ask about privacy in{" "}
+        MyNote is made by <a href={ORG.url}>Devian Labs</a>. Ask about privacy in{" "}
         <a href={`${REPO}/discussions`}>GitHub Discussions</a>, or privately through a{" "}
         <a href={`${REPO}/security/advisories/new`}>security advisory</a>.
       </p>

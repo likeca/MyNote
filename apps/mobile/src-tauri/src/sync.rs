@@ -2,8 +2,8 @@
 //! have no `git` program. The repository is reached over HTTPS with an access token, which is kept
 //! in the app's private storage, outside the workspace (so it is never committed).
 use crate::AppState;
-use betelgeuse_core::git::{Commit, GitSettings};
-use betelgeuse_core::git_lib::{self as git, Auth, OnProgress};
+use mynote_core::git::{Commit, GitSettings};
+use mynote_core::git_lib::{self as git, Auth, OnProgress};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

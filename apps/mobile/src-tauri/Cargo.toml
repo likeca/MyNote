@@ -1,23 +1,23 @@
 [package]
-name = "betelgeuse-mobile"
+name = "mynote-mobile"
 version = "0.5.0"
-description = "Betelgeuse for iOS and Android: your notes as Markdown, on your phone"
+description = "MyNote for iOS and Android: your notes as Markdown, on your phone"
 authors = ["Devian Labs and contributors"]
 license = "MIT"
-repository = "https://github.com/devian-labs/betelgeuse"
+repository = "https://github.com/likeca/MyNote"
 edition = "2021"
 publish = false
 
 [lib]
 # staticlib for iOS, cdylib for Android, rlib for `tauri dev` on the desktop.
-name = "betelgeuse_mobile_lib"
+name = "mynote_mobile_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-betelgeuse-core = { path = "../../../crates/betelgeuse-core", features = ["libgit2-https", "plugins"] }
+mynote-core = { path = "../../../crates/mynote-core", features = ["libgit2-https", "plugins"] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"

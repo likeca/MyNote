@@ -10,12 +10,12 @@ Plugins add features to MyNote: new screens in the sidebar, panels on pages, set
 2. Each plugin says what it does and what it may do. Click **Install**.
 3. It's downloaded, checked and turned on for this workspace straight away.
 
-Plugins in the store are built and **signed** by Betelgeuse's release pipeline, and the app refuses anything whose signature doesn't match. They update on their own.
+Plugins in the store are built and **signed** by MyNote's release pipeline, and the app refuses anything whose signature doesn't match. They update on their own.
 
-## Plugins from Betelgeuse
+## Plugins from MyNote
 
-- **Finance**: accounts and credit cards, transactions, monthly budgets, investments and your net worth, with charts. Also on your phone. [Read more](https://betelgeuse.devianlabs.com/docs/plugins/finance/)
-- **Media Library**: browse and search your footage, audio, photos and project files where they already are, and link project folders to pages. [Read more](https://betelgeuse.devianlabs.com/docs/plugins/media-library/)
+- **Finance**: accounts and credit cards, transactions, monthly budgets, investments and your net worth, with charts. Also on your phone. [Read more](https://github.com/likeca/MyNote/blob/main/docs/content/plugins/finance.md)
+- **Media Library**: browse and search your footage, audio, photos and project files where they already are, and link project folders to pages. [Read more](https://github.com/likeca/MyNote/blob/main/docs/content/plugins/media-library.md)
 
 ## Your data stays yours
 
@@ -26,4 +26,4 @@ Plugins in the store are built and **signed** by Betelgeuse's release pipeline, 
 - **Permissions.** Every plugin lists what it may do (read pages, change them, talk to one website) and gets nothing else. Click **N permissions** under a plugin in Settings to see its list.
 - **Off means off.** Turning a plugin off removes everything it added, right away.
 
-Want to make your own? Plugins are TypeScript and React: start with [Build a plugin](https://betelgeuse.devianlabs.com/docs/developers/plugins/).
+Want to make your own? Plugins are TypeScript and React: start with [Build a plugin](https://github.com/likeca/MyNote/blob/main/docs/content/developers/plugins.md).

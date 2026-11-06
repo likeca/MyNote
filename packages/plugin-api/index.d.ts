@@ -1,9 +1,9 @@
 /**
- * The Betelgeuse plugin API, version 1.
+ * The MyNote plugin API, version 1.
  *
  * A plugin is a CommonJS bundle (`main.js`) that exports `activate(ctx)` (and optionally
- * `deactivate()`), plus a manifest, `betelgeuse-plugin.json`. Build it with the preset in
- * `@betelgeuse/plugin-api/vite`. React, ReactDOM and this package are provided by the app at run
+ * `deactivate()`), plus a manifest, `mynote-plugin.json`. Build it with the preset in
+ * `@mynote/plugin-api/vite`. React, ReactDOM and this package are provided by the app at run
  * time, so plugins don't bundle them.
  *
  * Everything a plugin registers returns a `Disposable`. Things registered through `ctx` are
@@ -25,7 +25,7 @@ export interface Plugin {
 // ------------------------------------------------------------------------------------------------
 // Manifest
 
-/** `betelgeuse-plugin.json`. */
+/** `mynote-plugin.json`. */
 export interface PluginManifest {
   /** Lowercase letters, digits and dashes; unique in the registry. */
   id: string;
@@ -38,8 +38,10 @@ export interface PluginManifest {
   icon?: string;
   homepage?: string;
   engines: {
-    /** Semver range of Betelgeuse versions, e.g. ">=0.4.0 <1.0.0". */
-    betelgeuse: string;
+    /** Semver range of MyNote versions, e.g. ">=0.4.0 <1.0.0". */
+    mynote: string;
+    /** Legacy name (before the rename to MyNote) of `mynote`; still honoured when `mynote` is absent. */
+    betelgeuse?: string;
     /** Plugin API major version: "1". */
     api: string;
   };
@@ -80,7 +82,7 @@ export interface PluginContext {
 
   /** Tab views: full-height screens opened in tabs, like pages. */
   readonly views: Views;
-  /** Items in the sidebar's top group. */
+  /** Items in the sidebar's bottom group, below Import. */
   readonly sidebar: Sidebar;
   /** A section in Settings. */
   readonly settings: SettingsSections;
@@ -112,7 +114,7 @@ export interface PluginContext {
 }
 
 export interface AppInfo {
-  /** Betelgeuse's version, e.g. "0.4.0". */
+  /** MyNote's version, e.g. "0.4.0". */
   version: string;
   apiVersion: 1;
   platform: "desktop" | "mobile";
@@ -271,11 +273,11 @@ export interface Workspace {
   writePage(path: string, body: string): Promise<void>;
   setProperties(path: string, patch: Record<string, unknown>): Promise<void>;
   /**
-   * Renames a page (links to it follow); returns its path, which may change. Since Betelgeuse
+   * Renames a page (links to it follow); returns its path, which may change. Since MyNote
    * 0.4.1: check it exists before calling it from a plugin that supports older versions.
    */
   renamePage?(path: string, title: string): Promise<string>;
-  /** Moves a page (and its sub-pages) to the Trash, where it can be restored. Since Betelgeuse 0.4.1. */
+  /** Moves a page (and its sub-pages) to the Trash, where it can be restored. Since MyNote 0.4.1. */
   deletePage?(path: string): Promise<void>;
 }
 

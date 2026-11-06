@@ -1,20 +1,20 @@
 # Contributing
 
-Thanks for helping! Bug reports, ideas, docs and code are all welcome. For bigger changes, open an issue or a [discussion](https://github.com/devian-labs/betelgeuse/discussions) first so we can agree on the approach.
+Thanks for helping! Bug reports, ideas, docs and code are all welcome. For bigger changes, open an issue or a [discussion](https://github.com/likeca/MyNote/discussions) first so we can agree on the approach.
 
 ## Set up
 
 You need [Node.js 20+](https://nodejs.org), [Rust](https://rustup.rs) and git. On macOS, also run `xcode-select --install`. On Linux, install the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/#linux).
 
 ```sh
-git clone https://github.com/devian-labs/betelgeuse && cd betelgeuse
+git clone https://github.com/likeca/MyNote && cd MyNote
 npm install      # installs every app and package (npm workspaces)
 npm run app      # start the desktop app with hot reload
 npm run lander   # start the website
 npm test         # run all tests
 ```
 
-To try things without touching your own notes, use a throwaway workspace: `BETELGEUSE_WORKSPACE=/tmp/bg-dev npm run app`.
+To try things without touching your own notes, use a throwaway workspace: `MYNOTE_WORKSPACE=/tmp/bg-dev npm run app`.
 
 ### The mobile app
 
@@ -23,14 +23,14 @@ The mobile app keeps its workspace in the app's own storage on the phone (no syn
 ```sh
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 
-npm run ios -w @betelgeuse/mobile        # iOS simulator (or a connected iPhone) with hot reload
+npm run ios -w @mynote/mobile        # iOS simulator (or a connected iPhone) with hot reload
 
 export ANDROID_HOME=~/Library/Android/sdk NDK_HOME=$ANDROID_HOME/ndk/<version>
 export JAVA_HOME=<a JDK 17>
-npm run android -w @betelgeuse/mobile    # Android emulator (or a connected phone) with hot reload
+npm run android -w @mynote/mobile    # Android emulator (or a connected phone) with hot reload
 ```
 
-`npm run dev -w @betelgeuse/mobile` runs the mobile interface in a browser at http://localhost:1430, but pages only load inside the app. If `pod install` fails with a `gem list` error under rbenv, run the iOS commands with `RBENV_VERSION=system`.
+`npm run dev -w @mynote/mobile` runs the mobile interface in a browser at http://localhost:1430, but pages only load inside the app. If `pod install` fails with a `gem list` error under rbenv, run the iOS commands with `RBENV_VERSION=system`.
 
 ## Where things are
 
@@ -42,16 +42,16 @@ npm run android -w @betelgeuse/mobile    # Android emulator (or a connected phon
 | `apps/desktop/src-tauri/seed/` | The Welcome guide every new workspace starts with. |
 | `apps/desktop/tests/` | Editor and database tests. |
 | `apps/mobile/` | The iOS and Android app (Tauri). Its interface reuses the desktop editor and databases (`@desktop/…` imports); `src-tauri/gen/` holds the Xcode and Android Studio projects. |
-| `apps/lander/` | The website ([betelgeuse.devianlabs.com](https://betelgeuse.devianlabs.com)). Run it with `npm run lander`. |
-| `crates/betelgeuse-core/` | The workspace engine every app shares (Rust): pages, frontmatter, databases, links, trash and git. |
+| `apps/lander/` | The website ([github.com/likeca/MyNote](https://github.com/likeca/MyNote)). Run it with `npm run lander`. |
+| `crates/mynote-core/` | The workspace engine every app shares (Rust): pages, frontmatter, databases, links, trash and git. |
 | `packages/mcp/` | The MCP server that AI agents connect to. The desktop app bundles it. |
 | `brand/`, `scripts/` | Logos, and the install-from-source scripts. |
 
-New clients (mobile, browser extension) go in `apps/`. Code shared between them goes in `packages/` (TypeScript) or `crates/` (Rust). All Rust crates form one Cargo workspace at the repo root, so `cargo test --workspace` tests them all and builds land in `target/`. Run a script in one workspace with `npm run <script> -w <name>`, e.g. `npm run typecheck -w @betelgeuse/desktop`.
+New clients (mobile, browser extension) go in `apps/`. Code shared between them goes in `packages/` (TypeScript) or `crates/` (Rust). All Rust crates form one Cargo workspace at the repo root, so `cargo test --workspace` tests them all and builds land in `target/`. Run a script in one workspace with `npm run <script> -w <name>`, e.g. `npm run typecheck -w @mynote/desktop`.
 
 ## A few rules
 
-- **Keep files readable.** Everything Betelgeuse saves must be plain Markdown that a person could edit by hand. A new block needs a Markdown form and a test in `apps/desktop/tests/markdown.test.mjs`.
+- **Keep files readable.** Everything MyNote saves must be plain Markdown that a person could edit by hand. A new block needs a Markdown form and a test in `apps/desktop/tests/markdown.test.mjs`.
 - **Keep the app and the MCP server in sync.** Changes to how pages, links or AI visibility work go in both `apps/desktop/src-tauri/src/vault.rs` and `packages/mcp/src/vault.ts`.
 - **Agents never see hidden pages.** New MCP tools must read pages through `Vault.files()` or `Vault.find()`.
 - **Keep pull requests small**, and add light and dark screenshots for UI changes.
@@ -87,8 +87,8 @@ The release also packages every plugin in `plugins/` for the plugin store: `plug
 
 ## Plugins
 
-Plugins live in `plugins/<id>/` and build against `packages/plugin-api`. `npm run plugins` typechecks and builds them all (CI runs it); a development build of the app (`npm run app`) loads them from their `dist/` folders. See the [plugin docs](https://betelgeuse.devianlabs.com/docs/developers/plugins/).
+Plugins live in `plugins/<id>/` and build against `packages/plugin-api`. `npm run plugins` typechecks and builds them all (CI runs it); a development build of the app (`npm run app`) loads them from their `dist/` folders. See the [plugin docs](https://github.com/likeca/MyNote/blob/main/docs/content/developers/plugins.md).
 
 ## Updating the screenshots
 
-`npm run screenshots -w @betelgeuse/lander` captures the app in light and dark for the README and website.
+`npm run screenshots -w @mynote/lander` captures the app in light and dark for the README and website.

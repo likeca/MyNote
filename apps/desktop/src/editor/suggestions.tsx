@@ -27,6 +27,8 @@ import {
   Type,
   Database,
   Link2,
+  Paperclip,
+  Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { NoteMeta } from "../lib/api";
@@ -34,7 +36,8 @@ import { visibleBottom } from "../lib/viewport";
 import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { searchCommands } from "./commandSearch";
 import { SuggestionMenu, type MenuHandle, type MenuItem } from "./SuggestionMenu";
-import { ToggleHeadingIcon, turnIntoToggle } from "./blocks";
+import { ToggleHeadingIcon, pickAttachments, turnIntoToggle } from "./blocks";
+import { newDiagram } from "./drawio";
 
 type Action = {
   id: string;
@@ -117,9 +120,9 @@ export type PageActions = {
 };
 
 /** Dispatched on the editor's DOM by "/page"; the editor answers with a page-name prompt. */
-export const NEW_SUBPAGE = "betelgeuse:new-subpage";
+export const NEW_SUBPAGE = "mynote:new-subpage";
 /** Dispatched by "/linked database"; the editor answers with a picker of existing databases. */
-export const LINK_DATABASE = "betelgeuse:link-database";
+export const LINK_DATABASE = "mynote:link-database";
 
 const section = (name: string, items: Action[]): Action[] => items.map((a) => ({ ...a, section: name }));
 
@@ -221,6 +224,28 @@ function blocks(page: PageActions): Action[] {
       icon: <Image size={18} />,
       keywords: "picture photo",
       action: (e, r) => run(e, r).insertContent({ type: "image", attrs: { src: "" } }).run(),
+    },
+    {
+      id: "file",
+      title: "File",
+      hint: "Attach a file from your computer",
+      icon: <Paperclip size={18} />,
+      keywords: "attachment attach upload pdf document",
+      action: (e, r) => {
+        run(e, r).run();
+        void pickAttachments(e);
+      },
+    },
+    {
+      id: "drawio",
+      title: "Draw.io diagram",
+      hint: "Draw a diagram in draw.io (needs the internet)",
+      icon: <Workflow size={18} />,
+      keywords: "drawio diagram flowchart chart",
+      action: (e, r) => {
+        run(e, r).run();
+        newDiagram(e);
+      },
     },
     { id: "code", title: "Code", icon: <SquareCode size={18} />, keywords: "snippet pre", shortcut: "```", action: (e, r) => run(e, r).toggleCodeBlock().run() },
   ]);

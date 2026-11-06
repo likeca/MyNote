@@ -1,5 +1,5 @@
 /**
- * The app's own components, for plugin UIs that look and behave like the rest of Betelgeuse.
+ * The app's own components, for plugin UIs that look and behave like the rest of MyNote.
  * Provided by the app at run time.
  */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";

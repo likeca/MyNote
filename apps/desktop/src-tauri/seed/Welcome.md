@@ -1,6 +1,6 @@
 ---
 icon: ✨
-tags: [betelgeuse, guide]
+tags: [mynote, guide]
 ---
 MyNote is a block-based notebook. Every page is a plain **Markdown file** in a **git repository** on your computer, and AI agents can read and write it through an open **MCP server**.
 

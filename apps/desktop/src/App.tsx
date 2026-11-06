@@ -547,6 +547,7 @@ export default function App() {
               const dir = await openDialog({ directory: true, title: "Open or create a workspace folder" });
               if (typeof dir === "string") await openVault(await api.openVault(dir));
             }}
+            onOpenWorkspace={async (path) => openVault(await api.openVault(path))}
             onCommit={() => run("Committing…", () => api.gitCommit())}
             onSync={() => run("Syncing…", () => api.gitSync())}
             onAgents={() => setAgents(true)}

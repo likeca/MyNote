@@ -4,9 +4,9 @@
  *
  * Adds a Library view (and its sidebar item), a settings section, an Assets panel on productions
  * (rows of the pipeline database), file results in ⌘K and a few commands. The files themselves are
- * indexed by Betelgeuse's media library service (`ctx.library`), which this plugin turns on.
+ * indexed by MyNote's media library service (`ctx.library`), which this plugin turns on.
  */
-import { definePlugin, type Asset, type PluginContext } from "@betelgeuse/plugin-api";
+import { definePlugin, type Asset, type PluginContext } from "@mynote/plugin-api";
 import { Library, RefreshCw } from "lucide-react";
 import { AssetsPanel } from "./AssetsPanel";
 import { setContext } from "./host";

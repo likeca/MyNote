@@ -1,8 +1,8 @@
 ---
-title: Betelgeuse documentation
-description: How to use Betelgeuse, connect AI agents, add plugins, and build your own plugins.
+title: MyNote documentation
+description: How to use MyNote, connect AI agents, add plugins, and build your own plugins.
 ---
-Betelgeuse is a workspace for notes, docs and databases that stays yours. Every page is a plain Markdown file in a folder on your computer, saved to git as you go and synced to your other computers and phone, and AI agents can read and write only the pages you share with them. Plugins add the rest, such as personal finance, when you want it.
+MyNote is a workspace for notes, docs and databases that stays yours. Every page is a plain Markdown file in a folder on your computer, saved to git as you go and synced to your other computers and phone, and AI agents can read and write only the pages you share with them. Plugins add the rest, such as personal finance, when you want it.
 
 These docs cover:
 
@@ -11,7 +11,7 @@ These docs cover:
 
 ### Use it
 
-- [Install Betelgeuse](/docs/install/)
+- [Install MyNote](/docs/install/)
 - [Move from Notion](/docs/migrate/notion/)
 - [Move from Obsidian](/docs/migrate/obsidian/)
 - [Writing and blocks](/docs/guide/writing-and-blocks/)
@@ -47,9 +47,9 @@ These docs cover:
 - **Every change is saved to git**, so a page's history is one click away and nothing is ever lost.
 - **Connect a git repository** and your computers and phone sync on their own.
 
-The **Using Betelgeuse** pages here are the same guide the app opens with in every new workspace, so you can read them in the app too.
+The **Using MyNote** pages here are the same guide the app opens with in every new workspace, so you can read them in the app too.
 
 ## Get help
 
-- [Report a bug or suggest an idea](https://github.com/devian-labs/betelgeuse/issues)
-- [Read the source](https://github.com/devian-labs/betelgeuse) (MIT licensed)
+- [Report a bug or suggest an idea](https://github.com/likeca/MyNote/issues)
+- [Read the source](https://github.com/likeca/MyNote) (MIT licensed)

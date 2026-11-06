@@ -1,10 +1,10 @@
 [package]
-name = "betelgeuse-core"
+name = "mynote-core"
 version = "0.1.0"
-description = "The workspace engine shared by the Betelgeuse apps: Markdown pages, frontmatter, databases, links, trash and git"
+description = "The workspace engine shared by the MyNote apps: Markdown pages, frontmatter, databases, links, trash and git"
 authors = ["Devian Labs and contributors"]
 license = "MIT"
-repository = "https://github.com/devian-labs/betelgeuse"
+repository = "https://github.com/likeca/MyNote"
 edition = "2021"
 publish = false
 

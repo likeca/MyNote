@@ -2,8 +2,8 @@
  * The documentation site (/docs): Markdown files rendered at build time.
  *
  * Two sources, one site:
- * - "Using Betelgeuse" is the app's own Welcome guide (apps/desktop/src-tauri/seed), so the docs and
- *   the guide every new workspace starts with can never disagree. Its Betelgeuse-flavoured Markdown
+ * - "Using MyNote" is the app's own Welcome guide (apps/desktop/src-tauri/seed), so the docs and
+ *   the guide every new workspace starts with can never disagree. Its MyNote-flavoured Markdown
  *   (`[[links]]`, `> [!color] 💡` callouts, column layouts) is translated for the web here.
  * - Everything else (plugins, building plugins) is in docs/content/.
  *
@@ -30,11 +30,11 @@ export const NAV: Section[] = [
     pages: [{ slug: "", file: path.join(CONTENT, "index.md") }, content("install"), { slug: "guide", file: path.join(GUIDE, "Welcome.md"), title: "The Welcome guide" }],
   },
   {
-    title: "Move to Betelgeuse",
+    title: "Move to MyNote",
     pages: [content("migrate/notion"), content("migrate/obsidian")],
   },
   {
-    title: "Using Betelgeuse",
+    title: "Using MyNote",
     pages: [
       guide("writing-and-blocks", "Writing and blocks"),
       guide("formatting-and-colours", "Formatting and colours"),
@@ -110,7 +110,7 @@ function wikiTarget(target: string) {
 
 const CALLOUT_COLORS = new Set(["gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"]);
 
-/** Betelgeuse Markdown → web Markdown/HTML. Code (fenced or inline) is left exactly as written. */
+/** MyNote Markdown → web Markdown/HTML. Code (fenced or inline) is left exactly as written. */
 function translate(source: string) {
   const code: string[] = [];
   const body = source.replace(/```[\s\S]*?```|`[^`\n]*`/g, (m) => `\u0000${code.push(m) - 1}\u0000`);

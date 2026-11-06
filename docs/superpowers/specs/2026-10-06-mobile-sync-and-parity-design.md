@@ -30,7 +30,7 @@ handling in the desktop's sync (the desktop pulls conflict copies like any other
 
 ## Background: what exists today
 
-- `crates/betelgeuse-core` holds the workspace engine shared by both apps. `git.rs` shells out to the
+- `crates/mynote-core` holds the workspace engine shared by both apps. `git.rs` shells out to the
   `git` program for status, commit, log, show, pull/push and remote settings.
 - The desktop (`apps/desktop/src-tauri`) registers 35 commands, including git, Trash, import, AI
   policy, auto-commit (a background thread commits after 8 s idle) and a file watcher.
@@ -40,7 +40,7 @@ handling in the desktop's sync (the desktop pulls conflict copies like any other
 
 ## Part 1: Git engine with two backends
 
-`crates/betelgeuse-core/src/git.rs` becomes a module, `git/`, with one public API and two backends
+`crates/mynote-core/src/git.rs` becomes a module, `git/`, with one public API and two backends
 selected by Cargo feature:
 
 | File | Feature | Used by | Notes |
@@ -92,17 +92,17 @@ exactly today's (the user's SSH keys and credential helpers). The CLI backend's 
 local bare repositories as remotes: init, commit, log/show, clone, fast-forward, clean merge,
 conflict copy (text and asset), delete-vs-modify, rejected push then retry, and a check that no file
 under the workspace or `.git/` contains the token. CI runs it twice:
-`cargo test -p betelgeuse-core` and `cargo test -p betelgeuse-core --no-default-features --features libgit2`.
+`cargo test -p mynote-core` and `cargo test -p mynote-core --no-default-features --features libgit2`.
 
 ## Part 2: GitHub sign-in (both apps)
 
-**GitHub App, device flow.** Betelgeuse signs in as a GitHub App (not an OAuth App) using the device
+**GitHub App, device flow.** MyNote signs in as a GitHub App (not an OAuth App) using the device
 flow, so tokens reach only the repositories the user installs the app on, and no client secret
 ships in the apps. Per GitHub's docs, device-flow user tokens can be refreshed without a client
 secret; access tokens last 8 hours and refresh tokens 6 months.
 
 **Client ID.** Public by design and committed in source:
-`option_env!("BETELGEUSE_GITHUB_CLIENT_ID").unwrap_or(DEVIAN_LABS_CLIENT_ID)`. Every build (releases,
+`option_env!("MYNOTE_GITHUB_CLIENT_ID").unwrap_or(DEVIAN_LABS_CLIENT_ID)`. Every build (releases,
 source builds, forks) uses the Devian Labs app; a fork may set the variable at build time to use its
 own. Until the app is registered, `DEVIAN_LABS_CLIENT_ID` is empty and the sign-in button is hidden
 (the manual options below still work).
@@ -133,8 +133,8 @@ readable only by the app.
 1. **Sign in with GitHub** opens a small dialog: the 8-character code with **Copy code & open GitHub**
    (opens `verification_uri`), and a spinner while polling. Cancel stops polling.
 2. Signed in: "Signed in as @login · Sign out", then a repository picker listing the repositories
-   from step `repositories`, **Create a private repository** (default name `betelgeuse-notes`), and
-   **Choose which repositories Betelgeuse can use** (opens `github.com/apps/<slug>/installations/new`).
+   from step `repositories`, **Create a private repository** (default name `mynote-notes`), and
+   **Choose which repositories MyNote can use** (opens `github.com/apps/<slug>/installations/new`).
 3. Picking a repository sets `origin` to its HTTPS URL, sets the commit identity if none is set, and
    publishes. Sync then uses the stored token for `github.com` remotes.
 4. The existing manual remote field stays below for GitLab and other hosts, and for people who prefer
@@ -180,7 +180,7 @@ the desktop has the same command, so shared interface code calls one `api`.
 
 - **Trash screen** (from Home and Settings): deleted pages with **Restore** and **Delete forever**, and
   **Empty Trash**. Uses the core's existing `list_trash`, `restore_trash`, `purge_trash`.
-- **Settings screen**: Appearance (theme: System, Light, Dark, Black; palette: Betelgeuse, Graphite,
+- **Settings screen**: Appearance (theme: System, Light, Dark, Black; palette: MyNote, Graphite,
   Midnight, using the desktop's settings store), Sync (Part 3), Trash, and About (version, licence,
   website, source code).
 - **Page menu** (•••): Icon (the desktop's `IconPicker` in a bottom sheet), New sub-page, Duplicate,
@@ -192,8 +192,8 @@ the desktop has the same command, so shared interface code calls one `api`.
 
 At `https://github.com/organizations/devian-labs/settings/apps/new`:
 
-- **Name:** Betelgeuse · **Homepage URL:** `https://betelgeuse.devianlabs.com`
-- **Callback URL:** `https://betelgeuse.devianlabs.com` (not used by the device flow, but GitHub may ask)
+- **Name:** MyNote · **Homepage URL:** `https://github.com/likeca/MyNote`
+- **Callback URL:** `https://github.com/likeca/MyNote` (not used by the device flow, but GitHub may ask)
 - **Expire user authorization tokens:** on · **Request user authorization during installation:** off
 - **Enable Device Flow:** on
 - **Webhook:** Active off

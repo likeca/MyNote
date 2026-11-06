@@ -47,7 +47,7 @@ fn commit(vault: &Path, message: &str) -> Result<(), String> {
     let has_identity = run(vault, &["config", "user.email"]).is_ok_and(|s| !s.trim().is_empty());
     let mut args = vec![];
     if !has_identity {
-        args.extend(["-c", "user.name=Betelgeuse", "-c", "user.email=betelgeuse@localhost"]);
+        args.extend(["-c", "user.name=MyNote", "-c", "user.email=mynote@localhost"]);
     }
     args.extend(["commit", "--quiet", "-m", message]);
     run(vault, &args).map(|_| ())
@@ -60,7 +60,7 @@ pub fn ensure_repo(vault: &Path) -> Result<(), String> {
     }
     ensure_ignored(vault, IGNORED)?;
     if fresh {
-        commit_all(vault, "Initialize Betelgeuse workspace")?;
+        commit_all(vault, "Initialize MyNote workspace")?;
     }
     Ok(())
 }
@@ -282,7 +282,7 @@ mod sync_tests {
 
     #[test]
     fn sync_merging_never_stops_half_way() {
-        let root = std::env::temp_dir().join(format!("bg-sync-merging-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("mynote-sync-merging-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let (remote, a, b) = (root.join("remote.git"), root.join("a"), root.join("b"));
         std::fs::create_dir_all(&remote).unwrap();

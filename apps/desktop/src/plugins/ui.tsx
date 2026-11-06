@@ -1,6 +1,6 @@
 /**
- * The UI kit plugins get as `@betelgeuse/plugin-api/ui`: the app's own components, so plugin
- * screens look and behave like the rest of Betelgeuse. Keep these props stable: they're public API.
+ * The UI kit plugins get as `@mynote/plugin-api/ui`: the app's own components, so plugin
+ * screens look and behave like the rest of MyNote. Keep these props stable: they're public API.
  */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { MenuDivider, MenuItem, Popover } from "../components/Popover";

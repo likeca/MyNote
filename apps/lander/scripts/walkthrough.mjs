@@ -37,7 +37,7 @@ function roadmapHistory(files) {
       { ago: 3 * HOUR, author: CURSOR, subject: "mcp: Set due dates from the planning notes" },
       { ago: 26 * HOUR, author: CLAUDE, subject: "mcp: Mark Page history and restore as done" },
       { ago: 2 * DAY, author: ME, subject: "Add a Calendar view to Roadmap" },
-      { ago: 21 * DAY, author: "Betelgeuse", subject: "Initialize Betelgeuse workspace" },
+      { ago: 21 * DAY, author: "MyNote", subject: "Initialize MyNote workspace" },
     ],
     current,
     0x2545f491,
@@ -225,7 +225,7 @@ async function story(page, act, mark) {
   await act.press("Enter", 120);
   await act.type("Tag the release");
   await sleep(350);
-  await act.click(page.locator('.betelgeuse-prose ul[data-type="taskList"] input[type="checkbox"]').first());
+  await act.click(page.locator('.mynote-prose ul[data-type="taskList"] input[type="checkbox"]').first());
   await sleep(500);
 
   // 3. The Roadmap database: table, then board, then a card dragged to Done.
@@ -284,7 +284,7 @@ const workspace = buildWorkspace();
 const histories = { "Ideas.md": buildHistory(workspace), "Roadmap.md": roadmapHistory(workspace) };
 const server = await startVite();
 const browser = await chromium.launch({ channel: "chrome" });
-const dir = mkdtempSync(join(tmpdir(), "betelgeuse-walkthrough-"));
+const dir = mkdtempSync(join(tmpdir(), "mynote-walkthrough-"));
 const frames = [];
 const marks = [];
 let failed = false;

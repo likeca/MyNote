@@ -36,13 +36,13 @@ Choose a policy in **Settings → AI agents**:
 </div>
 </div>
 
-The same screen lists every hidden page (or every shared page), with a button to unhide or unshare each one. The policy is saved in `.betelgeuse/config.json` in the workspace.
+The same screen lists every hidden page (or every shared page), with a button to unhide or unshare each one. The policy is saved in `.mynote/config.json` in the workspace.
 
 ## What hiding does
 
 The MCP server checks visibility on every tool. Hidden pages are left out of listings, search, links, backlinks, history, database rows and resources. Reading, editing or creating pages under a hidden page fails as if it didn't exist. Automatic commit messages say "private page" instead of naming a hidden page, because agents can read the git log.
 
 > [!red] ⚠️
-> This applies to agents that use the Betelgeuse MCP server. An agent that you give direct access to the workspace folder can still read the files.
+> This applies to agents that use the MyNote MCP server. An agent that you give direct access to the workspace folder can still read the files.
 
 See [[Connect your AI agents]] to set up an agent.

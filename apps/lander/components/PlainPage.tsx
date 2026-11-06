@@ -10,7 +10,7 @@ export function PlainPage({ title, children }: { title: string; children: ReactN
         <div className="docs-topbar">
           <a href="/" className="docs-brand">
             <Logo size={18} />
-            Betelgeuse
+            MyNote
           </a>
           <span aria-hidden>/</span>
           <span className="docs-topbar-page">{title}</span>

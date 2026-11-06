@@ -1,7 +1,7 @@
 /**
  * Stand-in for @tiptap/y-tiptap (Yjs collaboration bindings, ~550 KB with yjs and lib0). The block
  * drag handle imports it only to keep positions stable during real-time collaboration: it asks the
- * sync plugin for its state and, finding none, never calls the rest. Betelgeuse has no live
+ * sync plugin for its state and, finding none, never calls the rest. MyNote has no live
  * collaboration (git merges instead), so this keeps Yjs out of the app. Aliased in vite.config.ts.
  */
 import { PluginKey } from "@tiptap/pm/state";
@@ -9,7 +9,7 @@ import { PluginKey } from "@tiptap/pm/state";
 export const ySyncPluginKey = new PluginKey("y-sync");
 
 const unused = () => {
-  throw new Error("Real-time collaboration isn't part of Betelgeuse");
+  throw new Error("Real-time collaboration isn't part of MyNote");
 };
 export const absolutePositionToRelativePosition = unused;
 export const relativePositionToAbsolutePosition = unused;

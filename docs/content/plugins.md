@@ -1,10 +1,10 @@
 ---
 title: Plugins
-description: Add features to Betelgeuse with plugins, and decide what each one may do.
+description: Add features to MyNote with plugins, and decide what each one may do.
 ---
-Plugins add features to Betelgeuse: new screens, panels on pages, settings, commands and search results. The core app stays small and focused; you add only what you need.
+Plugins add features to MyNote: new screens, panels on pages, settings, commands and search results. The core app stays small and focused; you add only what you need.
 
-## Plugins from Betelgeuse
+## Plugins from MyNote
 
 | Plugin | What it does | Where |
 |---|---|---|
@@ -15,8 +15,8 @@ Plugins add features to Betelgeuse: new screens, panels on pages, settings, comm
 ## Where plugins live
 
 - **Installed per device.** A plugin's code goes in the app's data folder, never in your workspace, so it never ends up in your notes' git history.
-- **Turned on per workspace.** Each workspace remembers which plugins it uses (in `.betelgeuse/plugins.json`). Sync the workspace to another computer or your phone and it knows which plugins to offer.
-- **Their data stays with you.** Settings a plugin saves for a workspace go in `.betelgeuse/plugins/<plugin>/`, inside the workspace, synced with your notes. Things that only make sense on one computer (folder paths, keys) stay on that computer.
+- **Turned on per workspace.** Each workspace remembers which plugins it uses (in `.mynote/plugins.json`). Sync the workspace to another computer or your phone and it knows which plugins to offer.
+- **Their data stays with you.** Settings a plugin saves for a workspace go in `.mynote/plugins/<plugin>/`, inside the workspace, synced with your notes. Things that only make sense on one computer (folder paths, keys) stay on that computer.
 
 ## Manage plugins
 
@@ -30,9 +30,9 @@ Plugins with their own settings get their own entry in the Settings sidebar.
 2. Each plugin shows what it does and what it may do. Click **Install**, and confirm.
 3. It's downloaded, checked and turned on for this workspace straight away.
 
-Store plugins are built from source by Betelgeuse's release pipeline and **signed**; the app checks the signature and refuses anything that doesn't match, so what you install is exactly what was published.
+Store plugins are built from source by MyNote's release pipeline and **signed**; the app checks the signature and refuses anything that doesn't match, so what you install is exactly what was published.
 
-**Updates** install automatically when a new version works with your Betelgeuse (switch this off with **Update automatically** under the Installed tab, then use **Update to …** on each plugin). **Check for updates** looks right away.
+**Updates** install automatically when a new version works with your MyNote (switch this off with **Update automatically** under the Installed tab, then use **Update to …** on each plugin). **Check for updates** looks right away.
 
 If you open a workspace that uses a plugin this computer doesn't have (say, after syncing it from another machine), Settings → Plugins offers to install it.
 
@@ -44,15 +44,15 @@ The phone app runs plugins made for phones, such as Finance. Open **Settings →
 
 For plugins that aren't in the store, such as one you're building or one a friend shared:
 
-1. Get the plugin's built folder: the one with `betelgeuse-plugin.json`, `main.js` and maybe `styles.css`.
+1. Get the plugin's built folder: the one with `mynote-plugin.json`, `main.js` and maybe `styles.css`.
 2. In **Settings → Plugins**, click **Install from folder…** and choose it.
-3. The plugin is copied into Betelgeuse, turned on for this workspace, and starts immediately.
+3. The plugin is copied into MyNote, turned on for this workspace, and starts immediately.
 
 To update, install the newer folder the same way. To remove a plugin, click **Uninstall**: its code and cached data are deleted; what it saved in your workspace stays, in case you install it again.
 
 ## Permissions
 
-Every plugin lists what it may do, and Betelgeuse holds it to that:
+Every plugin lists what it may do, and MyNote holds it to that:
 
 | Permission | Means |
 |---|---|
@@ -69,7 +69,7 @@ A plugin without a permission doesn't get the part of the API that needs it. Cli
 
 ## When a plugin can't run
 
-Settings → Plugins explains why: it needs a newer Betelgeuse, it was made for a different plugin API version, it's for the phone app only, or it ran into an error (with the message). A plugin that crashes only takes down its own panel or view, which shows the error and a **Try again** button; the rest of the app keeps working.
+Settings → Plugins explains why: it needs a newer MyNote, it was made for a different plugin API version, it's for the phone app only, or it ran into an error (with the message). A plugin that crashes only takes down its own panel or view, which shows the error and a **Try again** button; the rest of the app keeps working.
 
 ## Make your own
 

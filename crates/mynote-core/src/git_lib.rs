@@ -49,8 +49,8 @@ pub struct Integrated {
     pub conflicts: Vec<String>,
 }
 
-const FALLBACK_NAME: &str = "Betelgeuse";
-const FALLBACK_EMAIL: &str = "betelgeuse@localhost";
+const FALLBACK_NAME: &str = "MyNote";
+const FALLBACK_EMAIL: &str = "mynote@localhost";
 
 fn err(e: git2::Error) -> String {
     e.message().to_string()
@@ -153,7 +153,7 @@ pub fn ensure_repo(vault: &Path) -> Result<(), String> {
     }
     crate::git::ensure_ignored(vault, crate::git::IGNORED)?;
     if fresh {
-        commit_all(vault, "Initialize Betelgeuse workspace")?;
+        commit_all(vault, "Initialize MyNote workspace")?;
     }
     Ok(())
 }
@@ -565,7 +565,7 @@ mod tests {
     use super::*;
 
     fn temp(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("bg-gitlib-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-gitlib-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir

@@ -1,4 +1,4 @@
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { ChartLine, CreditCard, Landmark, PiggyBank, Scale, Wallet } from "lucide-react";
 import { useState } from "react";
 import { CURRENCIES, defaultCurrency, setUp } from "../schema";

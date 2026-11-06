@@ -1,5 +1,5 @@
-import { definePlugin, type PluginContext } from "@betelgeuse/plugin-api";
-import { Button, EmptyState, SettingRow, TextInput } from "@betelgeuse/plugin-api/ui";
+import { definePlugin, type PluginContext } from "@mynote/plugin-api";
+import { Button, EmptyState, SettingRow, TextInput } from "@mynote/plugin-api/ui";
 import { useEffect, useState } from "react";
 import "./styles.css";
 

@@ -4,7 +4,7 @@ Date: 2026-10-14 · Status: steps 1–4 built (runtime and API 1, media library 
 
 ## Goal
 
-Make Betelgeuse extensible with plugins that are installed only by the people who want them, so
+Make MyNote extensible with plugins that are installed only by the people who want them, so
 the core app stays small and focused, and features like Creator Studio don't weigh on everyone.
 
 Success looks like:
@@ -73,7 +73,7 @@ for plugin authors.
 
 **5. Installed per machine, enabled per workspace.** Plugin code is installed into the app's data
 folder (not the workspace, so it never lands in the notes' git history). Which plugins a workspace
-uses, and their settings, live in the workspace (`.betelgeuse/plugins.json`), so a second machine
+uses, and their settings, live in the workspace (`.mynote/plugins.json`), so a second machine
 syncing the workspace offers to install the same plugins.
 
 ## As built (step 1)
@@ -83,7 +83,7 @@ syncing the workspace offers to install the same plugins.
 | Discovery, files, install/uninstall, per-workspace enablement, plugin data | `apps/desktop/src-tauri/src/plugins.rs` (commands `plugins_list`, `plugin_file`, `plugin_install_folder`, `plugin_uninstall`, `plugins_enabled`, `plugins_set_enabled`, `plugin_data_get/set`) |
 | Runtime: loading, version checks, permissions, the context, contributions | `apps/desktop/src/plugins/runtime.ts` |
 | Slots: tab views (`@plugin/<id>/<view>`), page panels, sidebar items, settings sections, error boundaries | `apps/desktop/src/plugins/slots.tsx`; ⌘K in `CommandPalette.tsx` |
-| UI kit (`@betelgeuse/plugin-api/ui`) | `apps/desktop/src/plugins/ui.tsx` |
+| UI kit (`@mynote/plugin-api/ui`) | `apps/desktop/src/plugins/ui.tsx` |
 | Settings → Plugins | `apps/desktop/src/plugins/PluginsSection.tsx` |
 | API types, runtime stub, theme tokens, Vite preset | `packages/plugin-api` |
 | Example plugin using every contribution point | `plugins/hello-world` |
@@ -103,13 +103,13 @@ sidebar, settings, page panels, commands, search. Activation is at startup for e
 
 - **Media library service** (`ctx.library`, permission `library`): the former Creator Studio engine
   (`library.rs`) runs only while a plugin using it is active (`library_set_active`). Its data stays
-  where it was (`.betelgeuse/studio.json` for options, `.betelgeuse/library.jsonl` for tags).
+  where it was (`.mynote/studio.json` for options, `.mynote/library.jsonl` for tags).
 - **Creator Studio** is `plugins/creator-studio` (66 KB of JS); the core has no Creator Studio code.
   Its pipeline settings moved into the plugin's data. A one-time migration turns the plugin on for
   workspaces that had the built-in feature switched on, and old `@library` tabs open the plugin's view.
 - **Store**: `scripts/package-plugins.mjs` zips and Ed25519-signs each non-private plugin and writes
   `plugins.json`; the Release workflow's `plugins` job attaches them to the release. The app reads
-  `releases/latest/download/plugins.json` (or `BETELGEUSE_PLUGIN_INDEX`), checks SHA-256 and the
+  `releases/latest/download/plugins.json` (or `MYNOTE_PLUGIN_INDEX`), checks SHA-256 and the
   signature against `plugin-signing.pub`, unpacks with path checks and verifies the manifest matches
   (`plugin_store.rs`). Settings → Plugins has Installed and Browse, update badges, automatic updates
   (on by default) and installs for plugins a workspace uses but the computer lacks.
@@ -119,7 +119,7 @@ sidebar, settings, page panels, commands, search. Activation is at startup for e
 ```
 plugins/
   creator-studio/
-    betelgeuse-plugin.json     manifest (below)
+    mynote-plugin.json     manifest (below)
     package.json               a workspace package: build, test, typecheck
     src/
       main.tsx                 activate(ctx): registers its views, panels, settings…
@@ -128,8 +128,8 @@ plugins/
     tests/
   unsplash-covers/             candidate: cover photo search as its own plugin
 packages/
-  plugin-api/                  @betelgeuse/plugin-api: the types and the runtime bridge plugins import
-  plugin-kit/                  @betelgeuse/plugin-kit: shared UI pieces (Popover, Menu, Switch…) and the Vite preset
+  plugin-api/                  @mynote/plugin-api: the types and the runtime bridge plugins import
+  plugin-kit/                  @mynote/plugin-kit: shared UI pieces (Popover, Menu, Switch…) and the Vite preset
   mcp/
 apps/desktop/                  the host
 ```
@@ -138,7 +138,7 @@ The root `package.json` adds `"plugins/*"` to `workspaces`.
 
 ## The manifest
 
-`betelgeuse-plugin.json`:
+`mynote-plugin.json`:
 
 ```json
 {
@@ -148,7 +148,7 @@ The root `package.json` adds `"plugins/*"` to `workspaces`.
   "description": "A searchable library of your footage, audio, photos and project files, and a production pipeline.",
   "author": "Devian Labs",
   "icon": "clapperboard",
-  "engines": { "betelgeuse": ">=0.4.0 <0.6.0", "api": "1" },
+  "engines": { "mynote": ">=0.4.0 <0.6.0", "api": "1" },
   "platforms": ["desktop"],
   "main": "main.js",
   "styles": "styles.css",
@@ -176,7 +176,7 @@ The root `package.json` adds `"plugins/*"` to `workspaces`.
 ```
 
 - **engines**: the app versions and plugin-API major it works with. The app refuses incompatible
-  plugins and says why ("needs Betelgeuse 0.5 or newer").
+  plugins and says why ("needs MyNote 0.5 or newer").
 - **platforms**: `desktop`, `mobile`. Mobile is out of scope at first (see Mobile).
 - **activation**: when the plugin's code is loaded. Contributions in the manifest (sidebar item,
   settings section) show without loading code; the code loads when first needed. Creator Studio
@@ -184,7 +184,7 @@ The root `package.json` adds `"plugins/*"` to `workspaces`.
 - **permissions**: shown at install. Enforced by the host (see Security).
 - **contributes**: static, so the app can show the plugin's places before loading it.
 
-## The plugin API (`@betelgeuse/plugin-api`, version 1)
+## The plugin API (`@mynote/plugin-api`, version 1)
 
 A plugin exports `activate(ctx)` and optionally `deactivate()`. Everything `ctx` registers returns a
 `Disposable`; disabling the plugin disposes them all, so turning a plugin off removes every trace
@@ -203,7 +203,7 @@ export function activate(ctx: PluginContext) {
 | Area | What plugins can do | Permission |
 |---|---|---|
 | `ctx.workspace` | List pages, read and write pages and frontmatter, read database rows, listen for changes, open a page | `workspace:read` / `workspace:write` |
-| `ctx.storage` | Plugin settings and data in `.betelgeuse/plugins/<id>/` (synced with the workspace) and a per-machine store (folder paths, keys) | always |
+| `ctx.storage` | Plugin settings and data in `.mynote/plugins/<id>/` (synced with the workspace) and a per-machine store (folder paths, keys) | always |
 | `ctx.cache` | A per-machine cache folder for derived data (indexes, thumbnails) | always |
 | `ctx.views` | Tab views: opened in tabs like pages (`@plugin/<id>/<view>`), restored with tabs | — |
 | `ctx.sidebar` | Items in the sidebar's top group | — |
@@ -218,15 +218,15 @@ export function activate(ctx: PluginContext) {
 | `ctx.host.media` | Media details (ffprobe/EXIF), thumbnails (Quick Look / ffmpeg), stream local files into `<video>`/`<img>` | `media:probe`, `media:thumbnail` |
 | `ctx.host.shell` | Open a file or folder in its app, reveal it in Finder/Explorer | `shell:open` |
 | `ctx.host.http` | `fetch` to the hosts the manifest lists | `network:<host>` |
-| `ctx.ui` | Toasts, confirm dialogs, the app's theme tokens; shared components come from `@betelgeuse/plugin-kit` | — |
+| `ctx.ui` | Toasts, confirm dialogs, the app's theme tokens; shared components come from `@mynote/plugin-kit` | — |
 
-**Shared libraries.** React, ReactDOM and `@betelgeuse/plugin-kit` are provided by the app, not
+**Shared libraries.** React, ReactDOM and `@mynote/plugin-kit` are provided by the app, not
 bundled into each plugin (a plugin build marks them external; the app maps them to its own copies).
 Plugins are small, and their UI matches the app because they use the same components and CSS
 variables. The kit is versioned with the API.
 
 **Content stays readable without the plugin.** Anything a plugin writes into pages must be plain
-Markdown that other editors (and Betelgeuse without the plugin) show sensibly: frontmatter
+Markdown that other editors (and MyNote without the plugin) show sensibly: frontmatter
 properties, links, fenced blocks with a language tag, HTML comments. A missing plugin's block shows
 as a placeholder ("Needs the Creator Studio plugin · Install"), never as broken or lost content.
 
@@ -267,9 +267,9 @@ compatible plugins in the background (or asks, per a setting). A plugin incompat
 version is disabled with a notice until an update arrives.
 
 **Uninstall.** Deactivates it, deletes its code and cache, and asks whether to keep its workspace
-data (`.betelgeuse/plugins/<id>/`) for later.
+data (`.mynote/plugins/<id>/`) for later.
 
-**Development.** `npm run dev -w @betelgeuse/plugin-creator-studio` builds the plugin on save into a
+**Development.** `npm run dev -w @mynote/plugin-creator-studio` builds the plugin on save into a
 folder the dev app loads directly (no zip, no signature) and reloads it in place.
 
 ## Security
@@ -306,14 +306,14 @@ only services the phone has (no folder indexing there).
 
 1. **Plugin runtime in the core:** manifest loading, the contribution registry and its slots
    (sidebar, views, settings, page panels, ⌘K), activation, disposal, the custom protocol that
-   serves plugin files, shared-module mapping, and `@betelgeuse/plugin-api`/`plugin-kit`. Built
+   serves plugin files, shared-module mapping, and `@mynote/plugin-api`/`plugin-kit`. Built
    and tested with a tiny `hello-world` plugin in `plugins/`.
 2. **Host services:** split `library.rs` into `folders`, `media` and `shell`, with permission
    checks; the Creator Studio-specific parts move out.
 3. **Move Creator Studio** into `plugins/creator-studio/`, register through the API, and delete its
    code from the core (`App.tsx`, `Sidebar`, `SettingsDialog`, `PageView`, `CommandPalette`,
    `TabBar` lose their Creator Studio branches). Its data files stay where they are
-   (`.betelgeuse/studio.json` and `library.jsonl` move under `.betelgeuse/plugins/creator-studio/`
+   (`.mynote/studio.json` and `library.jsonl` move under `.mynote/plugins/creator-studio/`
    with a one-time migration), so the author's setup carries over.
 4. **Store:** CI packaging, `plugins.json`, signing, Settings → Plugins (browse, install, update,
    uninstall, enable per workspace), first-run prompt when a workspace uses a plugin that isn't
@@ -329,5 +329,5 @@ Each step ships on its own; after step 3 the app no longer contains Creator Stud
   it), or core (covers are a core feature)? Proposed: core keeps covers and random photos; Unsplash
   search becomes a plugin once `ctx.covers` exists.
 - **Where the registry lives:** release assets of this repository (proposed: one release, one set
-  of plugins), or a separate `betelgeuse-plugins` repository with its own release cadence.
+  of plugins), or a separate `mynote-plugins` repository with its own release cadence.
 - **Auto-update default:** update compatible plugins silently (proposed, like browsers) or ask.

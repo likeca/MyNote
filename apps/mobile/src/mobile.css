@@ -148,29 +148,29 @@ body {
 
 /* Long words and links wrap instead of widening the page (tables and code keep their own lines
    and scroll inside their box). */
-.mobile-page .betelgeuse-prose {
+.mobile-page .mynote-prose {
   overflow-wrap: anywhere;
 }
-.mobile-page .betelgeuse-prose table,
-.mobile-page .betelgeuse-prose pre {
+.mobile-page .mynote-prose table,
+.mobile-page .mynote-prose pre {
   overflow-wrap: normal;
 }
 
 /* Columns, side by side on the desktop, stack one after another. */
-.mobile-page .betelgeuse-prose .columns {
+.mobile-page .mynote-prose .columns {
   flex-direction: column;
 }
-.mobile-page .betelgeuse-prose .column {
+.mobile-page .mynote-prose .column {
   flex: none !important;
   width: 100%;
   box-sizing: border-box;
 }
-.mobile-page .betelgeuse-prose .column + .column {
+.mobile-page .mynote-prose .column + .column {
   padding-left: 0;
   margin-top: 8px;
 }
 /* A picture sized for a narrow column (an avatar, a logo) would fill the screen once stacked. */
-.mobile-page .betelgeuse-prose .column img {
+.mobile-page .mynote-prose .column img {
   max-height: 32vh;
   object-fit: contain;
 }

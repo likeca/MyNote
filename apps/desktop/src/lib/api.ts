@@ -16,6 +16,8 @@ export type NoteMeta = {
 export type RawRow = { path: string; title: string; content: string; modified: number; created: number };
 export type SearchHit = { path: string; title: string; icon: string | null; snippet: string; score: number };
 export type VaultInfo = { path: string; name: string };
+/** A workspace in the history: `display` is the path with `~` for the home folder. */
+export type RecentWorkspace = { path: string; name: string; display: string; exists: boolean };
 export type Change = { path: string; status: "added" | "modified" | "deleted" | "renamed" };
 export type RepoStatus = { branch: string; changes: Change[]; has_remote: boolean };
 export type Commit = { hash: string; short: string; author: string; timestamp: number; subject: string };
@@ -28,6 +30,9 @@ export type McpInfo = { server_path: string; built: boolean; vault: string; node
 export const api = {
   currentVault: () => invoke<VaultInfo>("current_vault"),
   openVault: (path: string) => invoke<VaultInfo>("open_vault", { path }),
+  /** The workspace history, newest first (the open one included). */
+  recentWorkspaces: () => invoke<RecentWorkspace[]>("recent_workspaces"),
+  forgetWorkspace: (path: string) => invoke<void>("forget_workspace", { path }),
   listNotes: () => invoke<NoteMeta[]>("list_notes"),
   readNote: (path: string) => invoke<string>("read_note", { path }),
   writeNote: (path: string, content: string) => invoke<void>("write_note", { path, content }),
@@ -36,6 +41,15 @@ export const api = {
   duplicateNote: (path: string) => invoke<string>("duplicate_note", { path }),
   saveAsset: (name: string, bytes: number[]) => invoke<string>("save_asset", { name, bytes }),
   readAsset: (path: string) => invoke<ArrayBuffer>("read_asset", { path }),
+  writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
+  /** Attaches a file picked on disk: copies it into `.assets/`; returns its vault path. */
+  attachFile: (path: string) => invoke<string>("attach_file", { path }),
+  /** Attaches a dropped or pasted file, sent as raw bytes; returns its vault path. */
+  attachBytes: (name: string, bytes: ArrayBuffer) => invoke<string>("attach_bytes", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),
+  /** A workspace file's size in bytes, or null when it isn't there. */
+  fileSize: (path: string) => invoke<number | null>("file_size", { path }),
+  /** Opens an attached file in its default app, or with `reveal`, shows it in Finder. */
+  openAttachment: (path: string, reveal = false) => invoke<void>("open_attachment", { path, reveal }),
   renameNote: (path: string, title: string) => invoke<string>("rename_note", { path, title }),
   /** Moves a page (and sub-pages) into folder `dest` (a page's sub-pages, or "" for the top level); returns its new path. */
   moveNote: (path: string, dest: string) => invoke<string>("move_note", { path, dest }),

@@ -38,7 +38,7 @@ MyNote uses the git installed on your computer and its credentials, such as SSH 
 
 ### On your phone
 
-The Betelgeuse phone app syncs with the same repository:
+The MyNote phone app syncs with the same repository:
 
 1. On your phone, open **Settings → Sync** and paste the repository's HTTPS address.
 2. Paste an access token from your git host (the app links to the page that makes one) and tap **Connect**.

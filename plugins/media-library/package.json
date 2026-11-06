@@ -1,8 +1,8 @@
 {
-  "name": "@betelgeuse/plugin-media-library",
+  "name": "@mynote/plugin-media-library",
   "private": true,
   "version": "1.0.0",
-  "description": "Media Library: browse and search media and project files in Betelgeuse",
+  "description": "Media Library: browse and search media and project files in MyNote",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "lucide-react": "^1.52.0"
   },
   "devDependencies": {
-    "@betelgeuse/plugin-api": "*",
+    "@mynote/plugin-api": "*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "react": "^19.3.0",

@@ -138,8 +138,8 @@
 
 /* ---------- Palettes (Settings → Appearance). Graphite is the neutral base above. ---------- */
 
-/* Betelgeuse: warm, slightly ember-tinted neutrals. */
-:root[data-palette="betelgeuse"] {
+/* MyNote: warm, slightly ember-tinted neutrals. */
+:root[data-palette="mynote"] {
   --surface: #fffdfb;
   --side: #f7f3ef;
   --raised: #ffffff;
@@ -156,7 +156,7 @@
   --search-bg: #fffdfb;
 }
 
-:root[data-palette="betelgeuse"][data-theme="dark"] {
+:root[data-palette="mynote"][data-theme="dark"] {
   --surface: #1b1715;
   --side: #221d1a;
   --raised: #2b2522;
@@ -236,7 +236,7 @@
 
 /* The page stays true black, but each palette tints the chrome, lines and text around it
    (the neutral values above are Graphite's). */
-:root[data-palette="betelgeuse"][data-theme="dark"][data-black] {
+:root[data-palette="mynote"][data-theme="dark"][data-black] {
   --side: #0d0a08;
   --raised: #16110e;
   --hover: rgba(255, 228, 210, 0.075);
@@ -374,32 +374,38 @@ pre {
 }
 
 /* Page fonts (page menu → Style). */
-[data-font="serif"] .betelgeuse-prose,
+[data-font="serif"] .mynote-prose,
 [data-font="serif"] .page-title {
   font-family: var(--font-serif);
 }
 
-[data-font="mono"] .betelgeuse-prose,
+[data-font="mono"] .mynote-prose,
 [data-font="mono"] .page-title {
   font-family: var(--font-mono);
 }
 
 /* Text size (Settings → Appearance), times the ⌘+ / ⌘− zoom. */
-:root[data-text="large"] .betelgeuse-prose {
+:root[data-text="large"] .mynote-prose {
   font-size: calc(17.5px * var(--text-zoom, 1));
 }
 
-:root[data-text="small"] .betelgeuse-prose {
+:root[data-text="small"] .mynote-prose {
   font-size: calc(15px * var(--text-zoom, 1));
 }
 
-[data-small] .betelgeuse-prose {
+[data-small] .mynote-prose {
   font-size: calc(14px * var(--text-zoom, 1));
 }
 
 /* ---------- Editor ---------- */
 
-.betelgeuse-prose {
+/* Dark themes: the sidebar's inactive text (page rows, Import, Settings…) a little lighter than the
+   theme's muted grey. From --ink, so every palette (and Black) keeps its own tint. */
+:root[data-theme="dark"] [data-sidebar] {
+  --muted: color-mix(in srgb, var(--ink) 80%, transparent);
+}
+
+.mynote-prose {
   outline: none;
   font-size: calc(16px * var(--text-zoom, 1));
   line-height: 1.5;
@@ -409,20 +415,20 @@ pre {
 }
 
 /* Blocks are separated by ~2px; paragraphs have 3px vertical padding. */
-.betelgeuse-prose>*,
-.betelgeuse-prose .column>*,
-.betelgeuse-prose .callout-content>*,
-.betelgeuse-prose [data-type="detailsContent"]>* {
+.mynote-prose>*,
+.mynote-prose .column>*,
+.mynote-prose .callout-content>*,
+.mynote-prose [data-type="detailsContent"]>* {
   margin-top: 2px;
   margin-bottom: 1px;
 }
 
-.betelgeuse-prose p {
+.mynote-prose p {
   padding: 3px 2px;
   min-height: 1.5em;
 }
 
-.betelgeuse-prose .is-empty::before {
+.mynote-prose .is-empty::before {
   content: attr(data-placeholder);
   color: var(--placeholder);
   float: left;
@@ -430,54 +436,54 @@ pre {
   pointer-events: none;
 }
 
-.betelgeuse-prose p.is-empty::before {
+.mynote-prose p.is-empty::before {
   color: var(--faint);
   opacity: 0.7;
 }
 
 /* One hint at a time: on the block with the cursor (the placeholder plugin could leave one on a
    neighbouring empty line), or on a page with nothing in it yet. */
-.betelgeuse-prose .is-empty:not(.has-focus):not(.is-editor-empty)::before {
+.mynote-prose .is-empty:not(.has-focus):not(.is-editor-empty)::before {
   content: none;
 }
 
-.betelgeuse-prose h1,
-.betelgeuse-prose h2,
-.betelgeuse-prose h3 {
+.mynote-prose h1,
+.mynote-prose h2,
+.mynote-prose h3 {
   font-weight: 600;
   line-height: 1.3;
   padding: 3px 2px;
 }
 
-.betelgeuse-prose h1 {
+.mynote-prose h1 {
   font-size: 1.875em;
   margin-top: 2rem;
   margin-bottom: 4px;
 }
 
-.betelgeuse-prose h2 {
+.mynote-prose h2 {
   font-size: 1.5em;
   margin-top: 1.4rem;
   margin-bottom: 1px;
 }
 
-.betelgeuse-prose h3 {
+.mynote-prose h3 {
   font-size: 1.25em;
   margin-top: 1rem;
   margin-bottom: 1px;
 }
 
-.betelgeuse-prose>h1:first-child,
-.betelgeuse-prose>h2:first-child,
-.betelgeuse-prose>h3:first-child {
+.mynote-prose>h1:first-child,
+.mynote-prose>h2:first-child,
+.mynote-prose>h3:first-child {
   margin-top: 0;
 }
 
-.betelgeuse-prose strong {
+.mynote-prose strong {
   font-weight: 600;
 }
 
-.betelgeuse-prose a {
+.mynote-prose a {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
@@ -485,7 +491,7 @@ pre {
   opacity: 0.85;
 }
 
-.betelgeuse-prose code {
+.mynote-prose code {
   font-family: var(--font-mono);
   font-size: 85%;
   color: var(--code-inline);
@@ -494,7 +500,7 @@ pre {
   padding: 0.2em 0.4em;
 }
 
-.betelgeuse-prose span.has-bg {
+.mynote-prose span.has-bg {
   border-radius: 3px;
   padding: 0 2px;
   box-decoration-break: clone;
@@ -502,14 +508,14 @@ pre {
 }
 
 /* Code blocks: a grey card with a language picker and copy on hover. */
-.betelgeuse-prose .code-block {
+.mynote-prose .code-block {
   position: relative;
   margin: 4px 0;
   background: var(--codeblock-bg);
   border-radius: 4px;
 }
 
-.betelgeuse-prose .code-toolbar {
+.mynote-prose .code-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -520,7 +526,7 @@ pre {
   user-select: none;
 }
 
-.betelgeuse-prose .code-block pre {
+.mynote-prose .code-block pre {
   margin: 0;
   padding: 8px 20px 26px 32px;
   font-family: var(--font-mono);
@@ -531,12 +537,12 @@ pre {
   white-space: pre;
 }
 
-.betelgeuse-prose .code-block pre.wrap {
+.mynote-prose .code-block pre.wrap {
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.betelgeuse-prose .code-block pre code {
+.mynote-prose .code-block pre code {
   background: none;
   color: var(--ink);
   padding: 0;
@@ -545,13 +551,13 @@ pre {
 }
 
 /* A shell block's output after Run (⌃E): under the code, not saved with the page. */
-.betelgeuse-prose .code-output {
+.mynote-prose .code-output {
   margin: -18px 0 0;
   padding: 0 8px 8px;
   user-select: text;
 }
 
-.betelgeuse-prose .code-output-bar {
+.mynote-prose .code-output-bar {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -563,100 +569,100 @@ pre {
   user-select: none;
 }
 
-.betelgeuse-prose .code-output pre {
+.mynote-prose .code-output pre {
   max-height: 320px;
   overflow-y: auto;
   padding: 4px 12px 4px 24px;
   color: var(--muted);
 }
 
-.betelgeuse-prose .code-output pre.expanded {
+.mynote-prose .code-output pre.expanded {
   max-height: none;
 }
 
-.betelgeuse-prose blockquote {
+.mynote-prose blockquote {
   border-left: 3px solid currentColor;
   padding: 0 14px;
   margin: 4px 0;
   font-size: 1.1em;
 }
 
-.betelgeuse-prose blockquote p {
+.mynote-prose blockquote p {
   padding-top: 2px;
   padding-bottom: 2px;
 }
 
-.betelgeuse-prose hr {
+.mynote-prose hr {
   border: none;
   border-top: 1px solid var(--line-strong);
   margin: 12px 0;
 }
 
-.betelgeuse-prose hr.ProseMirror-selectednode {
+.mynote-prose hr.ProseMirror-selectednode {
   border-top-color: var(--blue);
 }
 
-.betelgeuse-prose ul,
-.betelgeuse-prose ol {
+.mynote-prose ul,
+.mynote-prose ol {
   padding-left: 1.7em;
 }
 
-.betelgeuse-prose ul {
+.mynote-prose ul {
   list-style: disc;
 }
 
-.betelgeuse-prose ul ul {
+.mynote-prose ul ul {
   list-style: circle;
 }
 
-.betelgeuse-prose ul ul ul {
+.mynote-prose ul ul ul {
   list-style: square;
 }
 
-.betelgeuse-prose ol {
+.mynote-prose ol {
   list-style: decimal;
 }
 
-.betelgeuse-prose ol ol {
+.mynote-prose ol ol {
   list-style: lower-alpha;
 }
 
-.betelgeuse-prose ol ol ol {
+.mynote-prose ol ol ol {
   list-style: lower-roman;
 }
 
-.betelgeuse-prose li>p {
+.mynote-prose li>p {
   padding-top: 3px;
   padding-bottom: 3px;
 }
 
-.betelgeuse-prose li::marker {
+.mynote-prose li::marker {
   color: var(--ink);
 }
 
-.betelgeuse-prose ul[data-type="taskList"] {
+.mynote-prose ul[data-type="taskList"] {
   list-style: none;
   padding-left: 5px;
 }
 
-.betelgeuse-prose ul[data-type="taskList"] li {
+.mynote-prose ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.betelgeuse-prose ul[data-type="taskList"] li>label {
+.mynote-prose ul[data-type="taskList"] li>label {
   flex-shrink: 0;
   margin-top: 6px;
   user-select: none;
 }
 
-.betelgeuse-prose ul[data-type="taskList"] li>div {
+.mynote-prose ul[data-type="taskList"] li>div {
   flex: 1;
   min-width: 0;
 }
 
-.betelgeuse-prose ul[data-type="taskList"] input[type="checkbox"] {
+.mynote-prose ul[data-type="taskList"] input[type="checkbox"] {
   appearance: none;
   width: 16px;
   height: 16px;
@@ -667,16 +673,16 @@ pre {
   cursor: pointer;
 }
 
-.betelgeuse-prose ul[data-type="taskList"] input[type="checkbox"]:hover {
+.mynote-prose ul[data-type="taskList"] input[type="checkbox"]:hover {
   background: var(--hover);
 }
 
-.betelgeuse-prose ul[data-type="taskList"] input[type="checkbox"]:checked {
+.mynote-prose ul[data-type="taskList"] input[type="checkbox"]:checked {
   background: var(--blue);
   border-color: var(--blue);
 }
 
-.betelgeuse-prose ul[data-type="taskList"] input[type="checkbox"]:checked::after {
+.mynote-prose ul[data-type="taskList"] input[type="checkbox"]:checked::after {
   content: "";
   width: 4px;
   height: 8px;
@@ -685,14 +691,14 @@ pre {
   transform: translateY(-1px) rotate(45deg);
 }
 
-.betelgeuse-prose li[data-checked="true"]>div {
+.mynote-prose li[data-checked="true"]>div {
   color: var(--faint);
   text-decoration: line-through;
   text-decoration-color: var(--line-strong);
 }
 
 /* Simple tables */
-.betelgeuse-prose .tableWrapper {
+.mynote-prose .tableWrapper {
   /* Scrolls sideways only when the table is wider than the page; never vertically. */
   overflow-x: auto;
   overflow-y: hidden;
@@ -701,18 +707,18 @@ pre {
 }
 
 /* No "Press '/' for commands" hint in empty cells: it spilled out of narrow cells. */
-.betelgeuse-prose td p.is-empty::before,
-.betelgeuse-prose th p.is-empty::before {
+.mynote-prose td p.is-empty::before,
+.mynote-prose th p.is-empty::before {
   content: none;
 }
 
 /* Drag a column's right border to resize it. */
-.betelgeuse-prose th,
-.betelgeuse-prose td {
+.mynote-prose th,
+.mynote-prose td {
   position: relative;
 }
 
-.betelgeuse-prose .column-resize-handle {
+.mynote-prose .column-resize-handle {
   position: absolute;
   top: 0;
   right: -2px;
@@ -724,40 +730,40 @@ pre {
   pointer-events: none;
 }
 
-.betelgeuse-prose.resize-cursor {
+.mynote-prose.resize-cursor {
   cursor: col-resize;
 }
 
-.betelgeuse-prose table {
+.mynote-prose table {
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.betelgeuse-prose th,
-.betelgeuse-prose td {
+.mynote-prose th,
+.mynote-prose td {
   border: 1px solid var(--line-strong);
   padding: 7px 9px;
   text-align: left;
   vertical-align: top;
 }
 
-.betelgeuse-prose th {
+.mynote-prose th {
   background: var(--codeblock-bg);
   font-weight: 600;
 }
 
-.betelgeuse-prose th p,
-.betelgeuse-prose td p {
+.mynote-prose th p,
+.mynote-prose td p {
   padding: 0;
   min-height: 0;
 }
 
-.betelgeuse-prose .selectedCell {
+.mynote-prose .selectedCell {
   background: var(--accent-soft);
 }
 
 /* Callout */
-.betelgeuse-prose .callout {
+.mynote-prose .callout {
   display: flex;
   gap: 8px;
   padding: 16px 16px 16px 12px;
@@ -765,32 +771,32 @@ pre {
   margin: 4px 0;
 }
 
-.betelgeuse-prose .callout[data-plain] {
+.mynote-prose .callout[data-plain] {
   border: 1px solid var(--line);
 }
 
-.betelgeuse-prose .callout-content {
+.mynote-prose .callout-content {
   flex: 1;
   min-width: 0;
 }
 
-.betelgeuse-prose .callout-content> :first-child {
+.mynote-prose .callout-content> :first-child {
   margin-top: 0;
 }
 
-.betelgeuse-prose .callout-content p {
+.mynote-prose .callout-content p {
   padding-top: 0;
   padding-bottom: 0;
 }
 
 /* Toggle */
-.betelgeuse-prose [data-type="details"] {
+.mynote-prose [data-type="details"] {
   display: flex;
   gap: 2px;
   margin: 2px 0;
 }
 
-.betelgeuse-prose [data-type="details"]>button {
+.mynote-prose [data-type="details"]>button {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
@@ -801,11 +807,11 @@ pre {
   color: var(--ink);
 }
 
-.betelgeuse-prose [data-type="details"]>button:hover {
+.mynote-prose [data-type="details"]>button:hover {
   background: var(--hover);
 }
 
-.betelgeuse-prose [data-type="details"]>button::before {
+.mynote-prose [data-type="details"]>button::before {
   content: "";
   border-style: solid;
   border-width: 5px 0 5px 8px;
@@ -813,77 +819,77 @@ pre {
   transition: transform 120ms;
 }
 
-.betelgeuse-prose [data-type="details"].is-open>button::before {
+.mynote-prose [data-type="details"].is-open>button::before {
   transform: rotate(90deg);
 }
 
-.betelgeuse-prose [data-type="details"]>div {
+.mynote-prose [data-type="details"]>div {
   flex: 1;
   min-width: 0;
 }
 
-.betelgeuse-prose [data-type="details"] summary {
+.mynote-prose [data-type="details"] summary {
   list-style: none;
   padding: 3px 2px;
 }
 
-.betelgeuse-prose [data-type="details"] summary::-webkit-details-marker {
+.mynote-prose [data-type="details"] summary::-webkit-details-marker {
   display: none;
 }
 
-.betelgeuse-prose [data-type="details"]:not(.is-open)>div>[data-type="detailsContent"] {
+.mynote-prose [data-type="details"]:not(.is-open)>div>[data-type="detailsContent"] {
   display: none;
 }
 
 /* Toggle headings: a heading-sized title (as h1–h3), the arrow centred on its first line. */
-.betelgeuse-prose [data-type="details"][data-level]>div>summary {
+.mynote-prose [data-type="details"][data-level]>div>summary {
   font-weight: 600;
   line-height: 1.3;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="1"]>div>summary {
+.mynote-prose [data-type="details"][data-level="1"]>div>summary {
   font-size: 1.875em;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="2"]>div>summary {
+.mynote-prose [data-type="details"][data-level="2"]>div>summary {
   font-size: 1.5em;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="3"]>div>summary {
+.mynote-prose [data-type="details"][data-level="3"]>div>summary {
   font-size: 1.25em;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="1"] {
+.mynote-prose [data-type="details"][data-level="1"] {
   margin-top: 2rem;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="2"] {
+.mynote-prose [data-type="details"][data-level="2"] {
   margin-top: 1.4rem;
 }
 
-.betelgeuse-prose [data-type="details"][data-level="3"] {
+.mynote-prose [data-type="details"][data-level="3"] {
   margin-top: 1rem;
 }
 
-.betelgeuse-prose>[data-type="details"][data-level]:first-child {
+.mynote-prose>[data-type="details"][data-level]:first-child {
   margin-top: 0;
 }
 
 /* (title line height + its 6px padding − the 24px button) / 2 */
-.betelgeuse-prose [data-type="details"][data-level="1"]>button {
+.mynote-prose [data-type="details"][data-level="1"]>button {
   margin-top: calc((1.875em * 1.3 - 18px) / 2);
 }
 
-.betelgeuse-prose [data-type="details"][data-level="2"]>button {
+.mynote-prose [data-type="details"][data-level="2"]>button {
   margin-top: calc((1.5em * 1.3 - 18px) / 2);
 }
 
-.betelgeuse-prose [data-type="details"][data-level="3"]>button {
+.mynote-prose [data-type="details"][data-level="3"]>button {
   margin-top: calc((1.25em * 1.3 - 18px) / 2);
 }
 
 /* Columns */
-.betelgeuse-prose .columns {
+.mynote-prose .columns {
   display: flex;
   margin: 4px 0;
 }
@@ -891,13 +897,13 @@ pre {
 /* The space between columns is the right-hand column's padding rather than a flex gap, so the
    mouse stays over that column on its way to the block handle sitting there. Content-box sizing
    keeps the columns' content equally wide (or in their `data-width` ratio). */
-.betelgeuse-prose .column {
+.mynote-prose .column {
   flex: 1 1 0;
   min-width: 0;
   box-sizing: content-box;
 }
 
-.betelgeuse-prose .column+.column {
+.mynote-prose .column+.column {
   padding-left: 46px;
 }
 
@@ -913,12 +919,12 @@ pre {
   display: none;
 }
 
-.betelgeuse-prose .column> :first-child {
+.mynote-prose .column> :first-child {
   margin-top: 0;
 }
 
 /* Page mentions / wikilinks: the linked page's icon (or ↗) and an underlined title. */
-.betelgeuse-prose .wikilink {
+.mynote-prose .wikilink {
   color: var(--ink);
   font-weight: 500;
   cursor: pointer;
@@ -928,13 +934,13 @@ pre {
   box-decoration-break: clone;
 }
 
-.betelgeuse-prose .wikilink-title {
+.mynote-prose .wikilink-title {
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-underline-offset: 2px;
 }
 
-.betelgeuse-prose .wikilink-icon {
+.mynote-prose .wikilink-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -945,36 +951,36 @@ pre {
   color: var(--muted);
 }
 
-.betelgeuse-prose .wikilink:hover {
+.mynote-prose .wikilink:hover {
   background: var(--hover);
 }
 
-.betelgeuse-prose .wikilink.ProseMirror-selectednode {
+.mynote-prose .wikilink.ProseMirror-selectednode {
   background: var(--accent-soft);
 }
 
-.betelgeuse-prose .wikilink.missing {
+.mynote-prose .wikilink.missing {
   color: var(--muted);
 }
 
-.betelgeuse-prose .wikilink.missing .wikilink-title {
+.mynote-prose .wikilink.missing .wikilink-title {
   text-decoration-style: dashed;
 }
 
 /* A line that is just a page link reads as a block (a "link to page"): one row, icon centred on the
    first line, wrapped title aligned under itself, and the whole row highlights on hover. */
 /* A flex row, so ProseMirror's zero-size cursor helpers around the link (forced inline) can't add empty lines. */
-.betelgeuse-prose p.page-link-line {
+.mynote-prose p.page-link-line {
   display: flex;
   align-items: center;
 }
 
-.betelgeuse-prose p.page-link-line>span {
+.mynote-prose p.page-link-line>span {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.betelgeuse-prose p.page-link-line .wikilink {
+.mynote-prose p.page-link-line .wikilink {
   display: flex;
   align-items: center;
   gap: 0.35em;
@@ -984,14 +990,14 @@ pre {
 }
 
 /* A page-link row stays on one line; long titles end in "…" (the full title is the tooltip). */
-.betelgeuse-prose p.page-link-line .wikilink-title {
+.mynote-prose p.page-link-line .wikilink-title {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.betelgeuse-prose p.page-link-line .wikilink-icon {
+.mynote-prose p.page-link-line .wikilink-icon {
   flex-shrink: 0;
   width: 1.2em;
   /* As tall as the title's first line, so the icon centres on it however the title wraps. */
@@ -1001,7 +1007,7 @@ pre {
   margin: 0;
 }
 
-.betelgeuse-prose img {
+.mynote-prose img {
   max-width: 100%;
   /* No macOS Live Text: clicking a photo selects the image block, not words WebKit found in it. */
   -webkit-user-select: none;
@@ -1009,18 +1015,20 @@ pre {
   -webkit-touch-callout: none;
 }
 
-.betelgeuse-prose .ProseMirror-selectednode:not(.wikilink):not(hr) {
+.mynote-prose .ProseMirror-selectednode:not(.wikilink):not(hr) {
   outline: none;
 }
 
-/* Embedded databases manage their own selection; tinting the whole table looks broken. */
-.betelgeuse-prose>.node-databaseEmbed.ProseMirror-selectednode {
+/* Embedded databases manage their own selection; tinting the whole table looks broken. A selected
+   image has a ring around the picture instead: its block spans the page, so a tint would overhang it. */
+.mynote-prose>.node-databaseEmbed.ProseMirror-selectednode,
+.mynote-prose>.node-image.ProseMirror-selectednode {
   background: transparent !important;
 }
 
-.betelgeuse-prose>.ProseMirror-selectednode,
-.betelgeuse-prose .callout.ProseMirror-selectednode,
-.betelgeuse-prose .code-block.ProseMirror-selectednode {
+.mynote-prose>.ProseMirror-selectednode,
+.mynote-prose .callout.ProseMirror-selectednode,
+.mynote-prose .code-block.ProseMirror-selectednode {
   background-color: color-mix(in srgb, var(--blue) 14%, transparent);
   border-radius: 3px;
 }

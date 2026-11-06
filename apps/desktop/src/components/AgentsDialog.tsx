@@ -61,7 +61,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
   // Full path to Node: Claude Desktop and other GUI apps don't see your shell's PATH.
   const node = info.node_path ?? "node";
   const args = [info.server_path, "--workspace", info.vault, ...flags];
-  const json = JSON.stringify({ mcpServers: { betelgeuse: { command: node, args } } }, null, 2);
+  const json = JSON.stringify({ mcpServers: { mynote: { command: node, args } } }, null, 2);
   const cli = `${node === "node" ? "node" : q(node)} ${q(info.server_path)} --workspace ${q(info.vault)}${readOnly ? " --read-only" : ""}`;
 
   const clients: Client[] = [
@@ -70,7 +70,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
       name: "Claude Code",
       mark: <Terminal size={16} />,
       steps: [
-        { text: "Run this in your terminal:", code: `claude mcp add betelgeuse -- ${cli}` },
+        { text: "Run this in your terminal:", code: `claude mcp add mynote -- ${cli}` },
         { text: <>Start a new session and run <Kbd>/mcp</Kbd> to check that it connected.</> },
       ],
     },
@@ -100,7 +100,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
       steps: [
         { text: "Start the server (keep it running):", code: `${cli} --http 3917` },
         { text: "Point any client that speaks Streamable HTTP at:", code: "http://127.0.0.1:3917/mcp" },
-        { text: "For example, in Claude Code:", code: "claude mcp add --transport http betelgeuse http://127.0.0.1:3917/mcp" },
+        { text: "For example, in Claude Code:", code: "claude mcp add --transport http mynote http://127.0.0.1:3917/mcp" },
       ],
     },
   ];
@@ -140,7 +140,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
           {!info.built && (
             <div className="mb-4 rounded-lg bg-[var(--c-orange-bg)] px-3.5 py-2.5 text-sm text-ink">
-              The server hasn't been built yet. Run <Kbd>npm run mcp:build</Kbd> in the Betelgeuse folder.
+              The server hasn't been built yet. Run <Kbd>npm run mcp:build</Kbd> in the MyNote folder.
             </div>
           )}
           {info.built && !info.node_path && (

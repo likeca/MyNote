@@ -29,7 +29,7 @@ const SHOTS = {
     storage: { [`open:${VAULT.path}`]: "Welcome/Writing and blocks.md", expanded: JSON.stringify(["Welcome"]) },
     async run(page) {
       await page.evaluate(() => {
-        const h = [...document.querySelectorAll(".betelgeuse-prose h3")].find((e) => e.textContent.includes("Text and headings"));
+        const h = [...document.querySelectorAll(".mynote-prose h3")].find((e) => e.textContent.includes("Text and headings"));
         let el = h.parentElement;
         while (el && getComputedStyle(el).overflowY !== "auto") el = el.parentElement;
         el.scrollTop += h.getBoundingClientRect().top - 150;
@@ -37,7 +37,7 @@ const SHOTS = {
       // Add an empty line after the paragraph through Tiptap (the editor sits on its DOM node), then
       // type "/" for real so the slash menu opens the way it does for a person.
       await page.evaluate(() => {
-        const p = [...document.querySelectorAll(".betelgeuse-prose p")].find((e) => e.textContent.startsWith("Plain text is a paragraph"));
+        const p = [...document.querySelectorAll(".mynote-prose p")].find((e) => e.textContent.startsWith("Plain text is a paragraph"));
         const editor = p.closest(".ProseMirror").editor;
         const at = editor.view.posAtDOM(p, p.childNodes.length) + 1;
         editor.chain().insertContentAt(at, { type: "paragraph" }).setTextSelection(at + 1).focus(null, { scrollIntoView: false }).run();

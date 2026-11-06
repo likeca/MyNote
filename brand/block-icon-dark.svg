@@ -23,6 +23,8 @@
     <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#2A84C8" stroke-width="30" stroke-linejoin="round" />
     <!-- Its face. -->
     <rect x="152" y="152" width="680" height="680" rx="76" fill="url(#face)" stroke="#5AB8F5" stroke-width="38" />
-    <text x="492" y="508" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="560" fill="#5AB8F5">N</text>
+    <!-- SF Pro Black (Apple's system font, heaviest weight). y puts the letter's ink in the middle of
+         the face (152..832, centre 492): "central" centres the font's em box, which sits the N low. -->
+    <text x="492" y="480" text-anchor="middle" dominant-baseline="central" font-family="-apple-system, system-ui, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="500" fill="#5AB8F5">N</text>
   </g>
 </svg>

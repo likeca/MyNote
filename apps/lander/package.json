@@ -1,7 +1,7 @@
 {
-  "name": "@betelgeuse/lander",
+  "name": "@mynote/lander",
   "private": true,
-  "description": "The Betelgeuse landing page, exported as a static site",
+  "description": "The MyNote landing page, exported as a static site",
   "license": "MIT",
   "type": "module",
   "scripts": {

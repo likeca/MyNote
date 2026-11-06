@@ -14,7 +14,7 @@ type State =
   | { kind: "failed"; update: Update; message: string };
 
 /**
- * Says when a newer Betelgeuse is out (from the latest GitHub release); one click downloads it,
+ * Says when a newer MyNote is out (from the latest GitHub release); one click downloads it,
  * installs it over this one and restarts. Checks quietly: offline or no release means no banner.
  */
 export function UpdateBanner() {
@@ -68,7 +68,7 @@ export function UpdateBanner() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="font-medium text-ink">
-            {state.kind === "installing" ? "Installing… Betelgeuse will restart" : state.kind === "downloading" ? `Downloading ${update.version}` : `Betelgeuse ${update.version} is out`}
+            {state.kind === "installing" ? "Installing… MyNote will restart" : state.kind === "downloading" ? `Downloading ${update.version}` : `MyNote ${update.version} is out`}
           </div>
           <div className="text-xs text-muted">
             {state.kind === "downloading"

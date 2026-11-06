@@ -24,7 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		03840782904CF288DAB5E23F /* betelgeuse-mobile_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "betelgeuse-mobile_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		03840782904CF288DAB5E23F /* mynote-mobile_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "mynote-mobile_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13C334B2B78EAA96F44E63DE /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		1C00708D9F9B0326B7D2C811 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		1C62FA37B06751CDC04AE701 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -32,7 +32,7 @@
 		38573C2A20FFC6677247A0FE /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		388F9D595D650CEAD97E16A5 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		3A5A45790772D34048A60682 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		4FC122E0CDED88040A3E3303 /* betelgeuse-mobile_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "betelgeuse-mobile_iOS.entitlements"; sourceTree = "<group>"; };
+		4FC122E0CDED88040A3E3303 /* mynote-mobile_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "mynote-mobile_iOS.entitlements"; sourceTree = "<group>"; };
 		6CE4E0706C1E53B1C314C2E8 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		7A896A7598139996A4CF544E /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
 		7CE218E7DB45714F828876F8 /* sync.rs */ = {isa = PBXFileReference; path = sync.rs; sourceTree = "<group>"; };
@@ -71,24 +71,24 @@
 		51CC2EF66EA8185FAD6F9A23 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				03840782904CF288DAB5E23F /* betelgeuse-mobile_iOS.app */,
+				03840782904CF288DAB5E23F /* mynote-mobile_iOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		7151F996213C089F3A16C835 /* betelgeuse-mobile_iOS */ = {
+		7151F996213C089F3A16C835 /* mynote-mobile_iOS */ = {
 			isa = PBXGroup;
 			children = (
-				4FC122E0CDED88040A3E3303 /* betelgeuse-mobile_iOS.entitlements */,
+				4FC122E0CDED88040A3E3303 /* mynote-mobile_iOS.entitlements */,
 				DDFA2F5F74DC53CD9A4FFB95 /* Info.plist */,
 			);
-			path = "betelgeuse-mobile_iOS";
+			path = "mynote-mobile_iOS";
 			sourceTree = "<group>";
 		};
 		718ED62ED78F5107980FD5B0 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				93726C013EEC07DF33699415 /* betelgeuse-mobile */,
+				93726C013EEC07DF33699415 /* mynote-mobile */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -99,7 +99,7 @@
 				EBEA649F638BDFFD37F606CD /* assets */,
 				D089D0E294ED6FA59FE98F82 /* Assets.xcassets */,
 				388F9D595D650CEAD97E16A5 /* LaunchScreen.storyboard */,
-				7151F996213C089F3A16C835 /* betelgeuse-mobile_iOS */,
+				7151F996213C089F3A16C835 /* mynote-mobile_iOS */,
 				F63526B1DA67A4CF7CFA53EC /* Externals */,
 				718ED62ED78F5107980FD5B0 /* Sources */,
 				F0FF04F223350949845E66A1 /* src */,
@@ -108,13 +108,13 @@
 			);
 			sourceTree = "<group>";
 		};
-		93726C013EEC07DF33699415 /* betelgeuse-mobile */ = {
+		93726C013EEC07DF33699415 /* mynote-mobile */ = {
 			isa = PBXGroup;
 			children = (
 				1C62FA37B06751CDC04AE701 /* main.mm */,
 				CD1C7970124B096E990EFA20 /* bindings */,
 			);
-			path = "betelgeuse-mobile";
+			path = "mynote-mobile";
 			sourceTree = "<group>";
 		};
 		9B510347E5E530CFC01DE556 /* Frameworks */ = {
@@ -177,9 +177,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6F1CCE48CD2316312F9AD5DE /* betelgeuse-mobile_iOS */ = {
+		6F1CCE48CD2316312F9AD5DE /* mynote-mobile_iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6653EFFC421A78BA06C3F3E1 /* Build configuration list for PBXNativeTarget "betelgeuse-mobile_iOS" */;
+			buildConfigurationList = 6653EFFC421A78BA06C3F3E1 /* Build configuration list for PBXNativeTarget "mynote-mobile_iOS" */;
 			buildPhases = (
 				9B3AA6907F073FA5D534F419 /* Build Rust Code */,
 				85EC63EF8344F2A98BA241D9 /* Sources */,
@@ -190,11 +190,11 @@
 			);
 			dependencies = (
 			);
-			name = "betelgeuse-mobile_iOS";
+			name = "mynote-mobile_iOS";
 			packageProductDependencies = (
 			);
-			productName = "betelgeuse-mobile_iOS";
-			productReference = 03840782904CF288DAB5E23F /* betelgeuse-mobile_iOS.app */;
+			productName = "mynote-mobile_iOS";
+			productReference = 03840782904CF288DAB5E23F /* mynote-mobile_iOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -208,7 +208,7 @@
 				TargetAttributes = {
 				};
 			};
-			buildConfigurationList = A3F3B3B18842F8F0E7BC3E5B /* Build configuration list for PBXProject "betelgeuse-mobile" */;
+			buildConfigurationList = A3F3B3B18842F8F0E7BC3E5B /* Build configuration list for PBXProject "mynote-mobile" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -222,7 +222,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				6F1CCE48CD2316312F9AD5DE /* betelgeuse-mobile_iOS */,
+				6F1CCE48CD2316312F9AD5DE /* mynote-mobile_iOS */,
 			);
 		};
 /* End PBXProject section */
@@ -347,7 +347,7 @@
 					arm64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "betelgeuse-mobile_iOS/betelgeuse-mobile_iOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "mynote-mobile_iOS/mynote-mobile_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
@@ -355,15 +355,15 @@
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "betelgeuse-mobile_iOS/Info.plist";
+				INFOPLIST_FILE = "mynote-mobile_iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = dev.devianlabs.betelgeuse.mobile;
-				PRODUCT_NAME = "Betelgeuse";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.likeca.mynote.mobile;
+				PRODUCT_NAME = "MyNote";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
@@ -435,7 +435,7 @@
 					arm64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "betelgeuse-mobile_iOS/betelgeuse-mobile_iOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "mynote-mobile_iOS/mynote-mobile_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
@@ -443,15 +443,15 @@
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "betelgeuse-mobile_iOS/Info.plist";
+				INFOPLIST_FILE = "mynote-mobile_iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = dev.devianlabs.betelgeuse.mobile;
-				PRODUCT_NAME = "Betelgeuse";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.likeca.mynote.mobile;
+				PRODUCT_NAME = "MyNote";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
@@ -462,7 +462,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6653EFFC421A78BA06C3F3E1 /* Build configuration list for PBXNativeTarget "betelgeuse-mobile_iOS" */ = {
+		6653EFFC421A78BA06C3F3E1 /* Build configuration list for PBXNativeTarget "mynote-mobile_iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7C7B7E6818D820A32C7CD04C /* debug */,
@@ -471,7 +471,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = debug;
 		};
-		A3F3B3B18842F8F0E7BC3E5B /* Build configuration list for PBXProject "betelgeuse-mobile" */ = {
+		A3F3B3B18842F8F0E7BC3E5B /* Build configuration list for PBXProject "mynote-mobile" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				69B80C2AF5B5FE9A5818D805 /* debug */,

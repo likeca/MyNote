@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Betelgeuse",
+  "productName": "MyNote",
   "version": "0.5.0",
-  "identifier": "dev.devianlabs.betelgeuse.mobile",
+  "identifier": "dev.likeca.mynote.mobile",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1430",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Betelgeuse",
+        "title": "MyNote",
         "width": 420,
         "height": 860
       }

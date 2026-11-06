@@ -3,13 +3,13 @@
 //! Plugins come from the store at run time, so new ones and updates never need a new app; each
 //! says where it runs (`platforms`), and the runtime only loads those made for the phone.
 use crate::AppState;
-use betelgeuse_core::{plugin_store, plugins};
+use mynote_core::{plugin_store, plugins};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
 
 fn dirs(app: &AppHandle) -> plugins::Dirs {
     let path = app.path();
-    let or_temp = |r: tauri::Result<PathBuf>| r.unwrap_or_else(|_| std::env::temp_dir().join("betelgeuse"));
+    let or_temp = |r: tauri::Result<PathBuf>| r.unwrap_or_else(|_| std::env::temp_dir().join("mynote"));
     plugins::Dirs { data: or_temp(path.app_data_dir()), cache: or_temp(path.app_cache_dir()), config: or_temp(path.app_config_dir()) }
 }
 

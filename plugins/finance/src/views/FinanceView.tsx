@@ -1,4 +1,4 @@
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { ExternalLink, LoaderCircle, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AccountDialog, CategoryDialog, HoldingDialog, ImportDialog, ItemDialog, TransactionDialog } from "../dialogs";

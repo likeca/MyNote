@@ -5,8 +5,8 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Betelgeuse",
-    short_name: "Betelgeuse",
+    name: "MyNote",
+    short_name: "MyNote",
     description: "A free, open-source workspace for notes, docs and databases, stored as Markdown files in git.",
     start_url: "/",
     display: "browser",

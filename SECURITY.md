@@ -1,6 +1,6 @@
 # Security
 
-Please don't report security problems in public issues. Use a [private security advisory](https://github.com/devian-labs/betelgeuse/security/advisories/new) instead, and we'll reply within a week.
+Please don't report security problems in public issues. Use a [private security advisory](https://github.com/likeca/MyNote/security/advisories/new) instead, and we'll reply within a week.
 
 We especially want to hear about:
 

@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "6F1CCE48CD2316312F9AD5DE"
-               BuildableName = "betelgeuse-mobile_iOS.app"
-               BlueprintName = "betelgeuse-mobile_iOS"
-               ReferencedContainer = "container:betelgeuse-mobile.xcodeproj">
+               BuildableName = "mynote-mobile_iOS.app"
+               BlueprintName = "mynote-mobile_iOS"
+               ReferencedContainer = "container:mynote-mobile.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6F1CCE48CD2316312F9AD5DE"
-            BuildableName = "betelgeuse-mobile_iOS.app"
-            BlueprintName = "betelgeuse-mobile_iOS"
-            ReferencedContainer = "container:betelgeuse-mobile.xcodeproj">
+            BuildableName = "mynote-mobile_iOS.app"
+            BlueprintName = "mynote-mobile_iOS"
+            ReferencedContainer = "container:mynote-mobile.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -70,9 +70,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6F1CCE48CD2316312F9AD5DE"
-            BuildableName = "betelgeuse-mobile_iOS.app"
-            BlueprintName = "betelgeuse-mobile_iOS"
-            ReferencedContainer = "container:betelgeuse-mobile.xcodeproj">
+            BuildableName = "mynote-mobile_iOS.app"
+            BlueprintName = "mynote-mobile_iOS"
+            ReferencedContainer = "container:mynote-mobile.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -101,9 +101,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6F1CCE48CD2316312F9AD5DE"
-            BuildableName = "betelgeuse-mobile_iOS.app"
-            BlueprintName = "betelgeuse-mobile_iOS"
-            ReferencedContainer = "container:betelgeuse-mobile.xcodeproj">
+            BuildableName = "mynote-mobile_iOS.app"
+            BlueprintName = "mynote-mobile_iOS"
+            ReferencedContainer = "container:mynote-mobile.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

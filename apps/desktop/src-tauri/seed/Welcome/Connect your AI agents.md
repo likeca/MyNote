@@ -18,7 +18,7 @@ Click **Connect agents** in the sidebar, or **Settings → AI agents → Connect
 Turn on **read-only** to give an agent the reading tools only.
 
 > [!orange] 🔧
-> The server needs Node.js 20 or newer. If the dialog says the server isn't built yet, run `npm run mcp:build` in the Betelgeuse folder.
+> The server needs Node.js 20 or newer. If the dialog says the server isn't built yet, run `npm run mcp:build` in the MyNote folder.
 
 <details>
 <summary>Running the server by hand</summary>
@@ -46,11 +46,11 @@ node packages/mcp/dist/index.js --workspace ~/MyNote --read-only  # read tools o
 | `rename_note`    | Rename a page and update every link to it                            |
 | `delete_note`    | Move a page to the Trash                                             |
 
-Pages are also available to agents as `betelgeuse://note/{path}` resources, and the server tells agents how this workspace works: frontmatter, wikilinks, sub-pages and databases.
+Pages are also available to agents as `mynote://note/{path}` resources, and the server tells agents how this workspace works: frontmatter, wikilinks, sub-pages and databases.
 
 ## Reviewing what agents did
 
-Each agent write is its own commit, authored as the agent's name followed by "via Betelgeuse MCP". In a page's history, agent commits have a robot icon, and you can restore any earlier version. See [[History and sync]].
+Each agent write is its own commit, authored as the agent's name followed by "via MyNote MCP". In a page's history, agent commits have a robot icon, and you can restore any earlier version. See [[History and sync]].
 
 ## Things to try
 

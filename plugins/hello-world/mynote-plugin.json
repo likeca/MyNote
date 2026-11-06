@@ -6,7 +6,7 @@
   "author": "Devian Labs",
   "icon": "👋",
   "engines": {
-    "betelgeuse": ">=0.3.0",
+    "mynote": ">=0.3.0",
     "api": "1"
   },
   "platforms": [

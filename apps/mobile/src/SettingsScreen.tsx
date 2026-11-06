@@ -138,7 +138,7 @@ export function SettingsScreen() {
           <div className="flex gap-3 px-4 py-3.5">
             <Monitor size={20} className="mt-0.5 shrink-0 text-muted" />
             <p className="text-[14px] leading-relaxed text-muted">
-              Plugins and AI agents over MCP are part of the Betelgeuse desktop app for macOS, Windows and Linux.
+              Plugins and AI agents over MCP are part of the MyNote desktop app for macOS, Windows and Linux.
             </p>
           </div>
         </Group>
@@ -147,7 +147,7 @@ export function SettingsScreen() {
           <div className="flex items-center gap-3 px-4 py-3.5">
             <Logo className="size-9" />
             <div className="min-w-0 flex-1">
-              <div className="text-[15px] font-semibold text-ink">Betelgeuse</div>
+              <div className="text-[15px] font-semibold text-ink">MyNote</div>
               <div className="text-[13px] text-muted">{version ? `Version ${version} · ` : ""}MIT License</div>
             </div>
           </div>

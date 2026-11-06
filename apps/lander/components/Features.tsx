@@ -67,7 +67,7 @@ const features: { id: string; Icon: LucideIcon; title: string; body: ReactNode; 
     visual: (
       <div className="devices feature-devices">
         <Laptop>
-          <Shot theme="light" name="editor" alt="The Betelgeuse editor on a computer" />
+          <Shot theme="light" name="editor" alt="The MyNote editor on a computer" />
         </Laptop>
         <Phone theme="light" kind="android" name="sync" alt="Sync settings on an Android phone" className="device-left" />
         <Phone theme="light" kind="ios" name="welcome" alt="The Welcome page on an iPhone" className="device-right" />

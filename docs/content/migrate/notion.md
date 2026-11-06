@@ -1,8 +1,8 @@
 ---
 title: Move from Notion
-description: Bring your Notion workspace into Betelgeuse, with its pages, databases, icons, covers, colours and links, and see what changes on the way.
+description: Bring your Notion workspace into MyNote, with its pages, databases, icons, covers, colours and links, and see what changes on the way.
 ---
-Betelgeuse imports a Notion export: your pages and sub-pages, databases and their rows, icons, covers, colours, callouts, toggles, columns, images and the links between them. Everything lands under one new page, as Markdown files on your computer, in a single git commit you can undo.
+MyNote imports a Notion export: your pages and sub-pages, databases and their rows, icons, covers, colours, callouts, toggles, columns, images and the links between them. Everything lands under one new page, as Markdown files on your computer, in a single git commit you can undo.
 
 ## 1. Export from Notion
 
@@ -12,19 +12,19 @@ Betelgeuse imports a Notion export: your pages and sub-pages, databases and thei
 4. Click **Export**. For a big workspace, Notion emails you a download link when the export is ready.
 
 > [!blue] 💡
-> **Choose HTML.** Notion's **Markdown & CSV** export works too, but it leaves out page icons, covers, text colours, highlights, callout colours, toggles and columns, and Betelgeuse has to guess each database property's type from its values.
+> **Choose HTML.** Notion's **Markdown & CSV** export works too, but it leaves out page icons, covers, text colours, highlights, callout colours, toggles and columns, and MyNote has to guess each database property's type from its values.
 
-## 2. Import into Betelgeuse
+## 2. Import into MyNote
 
 1. Click **Import** at the bottom of the sidebar, or open **Settings → Import**.
 2. Under **Notion**, click **Choose .zip…** and pick the download. You don't need to unzip it, even when Notion puts zips inside the zip. If you already unzipped it, click **Unzipped folder…** instead.
-3. Wait for it to finish. Betelgeuse says how many pages, databases and files it brought in, and offers to open them.
+3. Wait for it to finish. MyNote says how many pages, databases and files it brought in, and offers to open them.
 
 Everything goes under a new **Notion import** page, so the rest of your workspace isn't touched. Move pages out of it wherever you like.
 
 ## What comes across
 
-| In Notion | In Betelgeuse |
+| In Notion | In MyNote |
 |---|---|
 | Pages and sub-pages | Pages and sub-pages, in the same order. Each page is a `.md` file; its sub-pages are in a folder of the same name. |
 | Links and @mentions of pages | Links between pages (`[[Page]]`), so backlinks work straight away |
@@ -47,7 +47,7 @@ Everything goes under a new **Notion import** page, so the rest of your workspac
 - **Properties keep their type**: text, number, select, multi-select and status (with their option colours), date, checkbox, URL and email.
 - **Created and edited times** become dates.
 - **Relations** become relations when they link to rows of another database you imported, so rollups can follow them. Otherwise they become the names of the linked pages.
-- **Formulas, rollups and people** come across as the values they showed when you exported. They don't recalculate. Betelgeuse has rollups (add them again on the relation), but no formulas yet.
+- **Formulas, rollups and people** come across as the values they showed when you exported. They don't recalculate. MyNote has rollups (add them again on the relation), but no formulas yet.
 - **Views**: each database gets a table view, plus a board view if it has a Status or Select property and a calendar view if it has a date. Notion's own views, filters and sorts aren't in the export, so add yours again. See [Databases](/docs/guide/databases/).
 - An empty database comes across empty, and a database whose rows were exported without it is rebuilt from them.
 
@@ -77,4 +77,4 @@ Notion's export doesn't include these, so they stay in Notion:
 - **Sub-pages are missing.** **Include subpages** was off when you exported.
 - **A link goes nowhere.** It points at a page that wasn't in the export, such as a page in another workspace or one you didn't include.
 
-Still stuck? [Open an issue](https://github.com/devian-labs/betelgeuse/issues) with what you expected and what you got. A small export that shows the problem helps a lot.
+Still stuck? [Open an issue](https://github.com/likeca/MyNote/issues) with what you expected and what you got. A small export that shows the problem helps a lot.

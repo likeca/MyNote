@@ -1,4 +1,4 @@
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { Pencil, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { ShareBar, TrendChart } from "../charts";

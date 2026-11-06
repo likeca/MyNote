@@ -2,7 +2,7 @@
  * Media Library's live state: the library's status and scan progress (kept current through the
  * library's events), and requests to show a folder in the Library.
  */
-import type { AssetKind, LibraryProgress, LibraryStatus } from "@betelgeuse/plugin-api";
+import type { AssetKind, LibraryProgress, LibraryStatus } from "@mynote/plugin-api";
 import { useSyncExternalStore } from "react";
 import { library } from "./host";
 

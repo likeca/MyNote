@@ -33,7 +33,7 @@ import { ORG, RELEASES, REPO, SITE_NAME, SITE_URL, jsonLd, pageMetadata } from "
 const description =
   "Free, open-source app for notes, docs and databases. Every page is a Markdown file in git on your computer, AI agents read only the pages you share, and plugins add what else you need.";
 
-export const metadata: Metadata = pageMetadata({ title: "Open-Source Markdown Notes & Docs App | Betelgeuse", description, path: "/" });
+export const metadata: Metadata = pageMetadata({ title: "Open-Source Markdown Notes & Docs App | MyNote", description, path: "/" });
 
 /** What connecting an agent gives you, next to the MCP illustration. */
 const agentPoints: { Icon: typeof FileText; title: string; body: string }[] = [
@@ -76,7 +76,7 @@ const pluginPoints: { Icon: typeof FileText; title: string; body: string }[] = [
   },
 ];
 
-/** Plugins from Betelgeuse, each with its docs page. */
+/** Plugins from MyNote, each with its docs page. */
 const featured: { Icon: typeof FileText; name: string; body: string; where: string; href: string }[] = [
   {
     Icon: Wallet,
@@ -100,23 +100,23 @@ const faqs: [string, React.ReactNode, string?][] = [
   [
     "Where are my notes stored?",
     <>
-      In a folder on your computer (<code>~/Betelgeuse</code> by default), as Markdown files in a git repository. Nothing leaves your machine unless
+      In a folder on your computer (<code>~/MyNote</code> by default), as Markdown files in a git repository. Nothing leaves your machine unless
       you add a git remote to sync.
     </>,
-    "In a folder on your computer (~/Betelgeuse by default), as Markdown files in a git repository. Nothing leaves your machine unless you add a git remote to sync.",
+    "In a folder on your computer (~/MyNote by default), as Markdown files in a git repository. Nothing leaves your machine unless you add a git remote to sync.",
   ],
   [
     "What can AI agents see?",
-    "Only what you share. Pages you hide are left out of agent searches, listings and every MCP tool. That boundary covers agents connected through Betelgeuse's MCP server. An agent you separately give access to the folder itself can read the files.",
+    "Only what you share. Pages you hide are left out of agent searches, listings and every MCP tool. That boundary covers agents connected through MyNote's MCP server. An agent you separately give access to the folder itself can read the files.",
   ],
   ["Which AI tools work with it?", "Any MCP client: Claude Code, Claude Desktop, Cursor and others. The app gives you copy-paste setup for each."],
   [
     "What are plugins, and are they safe?",
-    "Plugins add features such as Finance or Media Library. Store plugins are built from source by Betelgeuse's release pipeline and signed, the app checks the signature before installing, and each plugin only gets the permissions it lists.",
+    "Plugins add features such as Finance or Media Library. Store plugins are built from source by MyNote's release pipeline and signed, the app checks the signature before installing, and each plugin only gets the permissions it lists.",
   ],
   [
     "Can I use it on my phone, or on more than one computer?",
-    "Yes, with git. Connect your workspace to a private repository you control, and Betelgeuse syncs in the background on each computer and in the Android app (a preview). A page changed in two places between syncs keeps both versions, so nothing is lost.",
+    "Yes, with git. Connect your workspace to a private repository you control, and MyNote syncs in the background on each computer and in the Android app (a preview). A page changed in two places between syncs keeps both versions, so nothing is lost.",
   ],
   [
     "Why does my computer warn me when I open it?",
@@ -181,7 +181,7 @@ export default async function Home() {
           <div className="wrap">
             <a className="brand" href="#top">
               <Logo size={24} />
-              Betelgeuse
+              MyNote
             </a>
             <nav className="nav-links" aria-label="Sections">
               <a className="optional" href="#features">
@@ -221,7 +221,7 @@ export default async function Home() {
               <div className="hero-visual">
                 <div className="devices hero-devices">
                   <Laptop>
-                    <Shot name="editor" theme="light" priority alt="The Betelgeuse editor on a computer, with the Welcome guide open" />
+                    <Shot name="editor" theme="light" priority alt="The MyNote editor on a computer, with the Welcome guide open" />
                   </Laptop>
                   <Phone
                     kind="android"
@@ -271,7 +271,7 @@ export default async function Home() {
                 Make it <em>yours.</em>
               </h2>
               <p className="intro center">
-                Betelgeuse stays small. Add what you need from the plugin store, from personal finance to a library for your project files, or build
+                MyNote stays small. Add what you need from the plugin store, from personal finance to a library for your project files, or build
                 your own.
               </p>
             </div>
@@ -313,7 +313,7 @@ export default async function Home() {
                   code
                   title="src/main.tsx"
                   lines={[
-                    [`import { definePlugin } from "@betelgeuse/plugin-api";`],
+                    [`import { definePlugin } from "@mynote/plugin-api";`],
                     [""],
                     ["export const { activate } = definePlugin({"],
                     ["  activate(ctx) {"],
@@ -353,7 +353,7 @@ export default async function Home() {
               </div>
               <div className="agents-visual">
                 <Shot name="ai-settings" theme="light" alt="Settings that choose which pages AI agents can see" />
-                <div className="code-window agents-session" aria-label="An agent updating the Roadmap through Betelgeuse">
+                <div className="code-window agents-session" aria-label="An agent updating the Roadmap through MyNote">
                   <div className="code-bar">
                     <span className="lights">
                       <i />
@@ -369,7 +369,7 @@ export default async function Home() {
                           {kind === "you" ? ">" : kind === "tool" ? "⏺" : "✓"}
                         </span>
                         <span>
-                          {kind === "tool" && <span className="session-server">betelgeuse · </span>}
+                          {kind === "tool" && <span className="session-server">mynote · </span>}
                           {text}
                         </span>
                       </div>
@@ -379,7 +379,7 @@ export default async function Home() {
               </div>
             </div>
             <p className="wrap fine-note" data-reveal>
-              Agents see only what you share when they connect through the Betelgeuse MCP server. An agent you separately give access to the folder
+              Agents see only what you share when they connect through the MyNote MCP server. An agent you separately give access to the folder
               can read the files directly.
             </p>
           </section>
@@ -453,7 +453,7 @@ export default async function Home() {
                   title="Terminal"
                   lines={[
                     [`git clone ${REPO}`],
-                    ["cd betelgeuse"],
+                    ["cd MyNote"],
                     ["npm install && npm --prefix mcp install"],
                     ["npm run app", "starts the app with hot reload"],
                   ]}
@@ -512,12 +512,12 @@ export default async function Home() {
                     {
                       id: "unix",
                       title: "macOS & Linux",
-                      content: <Command>{`git clone ${REPO} && cd betelgeuse && ./scripts/install.sh`}</Command>,
+                      content: <Command>{`git clone ${REPO} && cd MyNote && ./scripts/install.sh`}</Command>,
                     },
                     {
                       id: "windows",
                       title: "Windows",
-                      content: <Command prompt=">">{`git clone ${REPO}; cd betelgeuse; .\\scripts\\install.ps1`}</Command>,
+                      content: <Command prompt=">">{`git clone ${REPO}; cd MyNote; .\\scripts\\install.ps1`}</Command>,
                     },
                   ]}
                 />
@@ -534,7 +534,7 @@ export default async function Home() {
             <div>
               <a className="brand" href="#top">
                 <Logo size={22} />
-                Betelgeuse
+                MyNote
               </a>
               <p>A beautiful workspace that stays yours.</p>
               <StarButton className="button small" />
@@ -565,7 +565,7 @@ export default async function Home() {
             </nav>
           </div>
           <div className="wrap legal">
-            © 2026 Devian Labs and contributors. Built by <a href={ORG.url}>Devian Labs</a>. Betelgeuse™ is a trademark of Devian Labs.
+            © 2026 Devian Labs and contributors. Built by <a href={ORG.url}>Devian Labs</a>.
           </div>
         </footer>
       </div>

@@ -7,9 +7,9 @@ type Heading = { el: HTMLElement; text: string; level: number };
  * heading) at any depth. Those in closed toggles are hidden and left out.
  */
 const HEADINGS = [
-  ".betelgeuse-prose > :is(h1, h2, h3)",
-  '.betelgeuse-prose [data-type="detailsContent"] > :is(h1, h2, h3)',
-  '.betelgeuse-prose [data-type="details"][data-level] > div > summary',
+  ".mynote-prose > :is(h1, h2, h3)",
+  '.mynote-prose [data-type="detailsContent"] > :is(h1, h2, h3)',
+  '.mynote-prose [data-type="details"][data-level] > div > summary',
 ].join(", ");
 const levelOf = (el: HTMLElement) => (el.tagName === "SUMMARY" ? Number(el.closest<HTMLElement>('[data-type="details"]')?.dataset.level) : Number(el.tagName[1]));
 const headingsIn = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>(HEADINGS)].filter((el) => el.offsetParent !== null && el.textContent?.trim());

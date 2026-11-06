@@ -2,7 +2,7 @@
 // (MIT, Apache-2.0, BSD, ISC, …) ask for their notices to travel with copies of the software.
 //
 // - npm packages bundled into the app's interface and the MCP server it ships (production
-//   dependencies of @betelgeuse/desktop and betelgeuse-mcp)
+//   dependencies of @mynote/desktop and mynote-mcp)
 // - Rust crates compiled into the app (normal dependencies of src-tauri, for every platform)
 //
 // Packages with the same license text are listed together under one copy of it.
@@ -46,7 +46,7 @@ function runNpm(args, options) {
 
 // npm: the production dependency trees of the app and the MCP server, without the workspaces themselves.
 const npm = JSON.parse(
-  runNpm(["ls", "--omit=dev", "--all", "--long", "--json", "-w", "@betelgeuse/desktop", "-w", "betelgeuse-mcp"], {
+  runNpm(["ls", "--omit=dev", "--all", "--long", "--json", "-w", "@mynote/desktop", "-w", "mynote-mcp"], {
     cwd: desktop,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
@@ -106,7 +106,7 @@ const body = [...groups]
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(
   out,
-  `Betelgeuse includes the open-source software listed below, under the licenses that follow each list.\n` +
+  `MyNote includes the open-source software listed below, under the licenses that follow each list.\n` +
     `${packages.size} packages in total.\n\n${body}`,
 );
 console.log(`Wrote ${packages.size} packages (${groups.size} license texts) to public/third-party-notices.txt`);

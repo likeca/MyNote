@@ -3,7 +3,7 @@ import { PageIcon } from "./PageIcon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type NoteMeta, type SearchHit } from "../lib/api";
 import { useContributions } from "../plugins/runtime";
-import type { SearchResult as PluginResult } from "@betelgeuse/plugin-api";
+import type { SearchResult as PluginResult } from "@mynote/plugin-api";
 import type { ReactNode } from "react";
 import { Modal } from "./Modal";
 

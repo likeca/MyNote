@@ -11,7 +11,7 @@ const description =
 // Defaults for every route; each page sets its own title, description, canonical and social cards (lib/site.ts).
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "Open-Source Markdown Notes & Docs App | Betelgeuse", template: "%s | Betelgeuse" },
+  title: { default: "Open-Source Markdown Notes & Docs App | MyNote", template: "%s | MyNote" },
   description,
   applicationName: SITE_NAME,
   publisher: ORG.name,

@@ -20,7 +20,7 @@ MyNote/
 │   └── …
 ├── .assets/        uploaded icons and imported images
 ├── .trash/         pages in the Trash, ignored by git
-├── .betelgeuse/    workspace settings, such as the AI policy
+├── .mynote/        workspace settings, such as the AI policy (an older .betelgeuse/ folder is renamed to this automatically)
 └── .git/           every version of every page
 ```
 

@@ -1,15 +1,15 @@
 {
-  "name": "betelgeuse-monorepo",
+  "name": "mynote-monorepo",
   "private": true,
   "description": "Block-based notes on plain Markdown + git, open to AI agents over MCP",
   "license": "MIT",
-  "homepage": "https://betelgeuse.devianlabs.com",
+  "homepage": "https://github.com/likeca/MyNote",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devian-labs/betelgeuse.git"
+    "url": "https://github.com/likeca/MyNote.git"
   },
   "bugs": {
-    "url": "https://github.com/devian-labs/betelgeuse/issues"
+    "url": "https://github.com/likeca/MyNote/issues"
   },
   "type": "module",
   "engines": {
@@ -21,10 +21,10 @@
     "plugins/*"
   ],
   "scripts": {
-    "app": "npm run app -w @betelgeuse/desktop",
-    "build:app": "npm run mcp:build && npm run build:app -w @betelgeuse/desktop",
-    "lander": "npm run dev -w @betelgeuse/lander",
-    "mcp:build": "npm run build -w betelgeuse-mcp",
+    "app": "npm run app -w @mynote/desktop",
+    "build:app": "npm run mcp:build && npm run build:app -w @mynote/desktop",
+    "lander": "npm run dev -w @mynote/lander",
+    "mcp:build": "npm run build -w mynote-mcp",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "version:set": "node scripts/set-version.mjs",

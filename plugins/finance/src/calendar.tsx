@@ -2,7 +2,7 @@
  * The same month calendar as the app's own date pickers (plugins can't import the app's code, so
  * Finance carries a copy), and a date field that opens it.
  */
-import { Popover } from "@betelgeuse/plugin-api/ui";
+import { Popover } from "@mynote/plugin-api/ui";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { dayLabel } from "./format";

@@ -49,7 +49,7 @@ export function Home() {
     <div className="safe-top flex h-full flex-col bg-side">
       <header className="flex h-14 shrink-0 items-center gap-2 pr-2 pl-4">
         <Logo className="size-7 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-[17px] font-semibold">Betelgeuse</span>
+        <span className="min-w-0 flex-1 truncate text-[17px] font-semibold">MyNote</span>
         <SyncButton />
         <IconButton label="Settings" onClick={() => m.go({ name: "settings" })}>
           <Settings size={21} />

@@ -83,11 +83,11 @@ A divider is a line across the page:
 
 `/Table` adds a table with a header row. Tab moves to the next cell, and adds a new row when you're in the last one.
 
-| Star       | Constellation | Colour |
-| ---------- | ------------- | ------ |
-| Betelgeuse | Orion         | Red    |
-| Rigel      | Orion         | Blue   |
-| Sirius     | Canis Major   | White  |
+| Star    | Constellation | Colour |
+| ------- | ------------- | ------ |
+| Antares | Scorpius      | Red    |
+| Rigel   | Orion         | Blue   |
+| Sirius  | Canis Major   | White  |
 
 ### Code
 
@@ -104,6 +104,18 @@ On the desktop app, a **Bash**, **Bash + profile**, **Shell** or **Zsh** block c
 `/Image`, then paste a link to an image and click **Embed image**. Images that come in with an import are copied into the workspace's `.assets/` folder.
 
 To resize an image, hover it and drag the handle on either side; it keeps its proportions. Double-click a handle to go back to the image's own size. The width is saved in the page the way Obsidian writes it, `![description|320](link)` for 320 pixels wide.
+
+### File
+
+`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into the workspace's `.assets/` folder, so it's versioned with your pages, and shows as a chip with its name and size. Click a file to open it in its app, or `⌘`-click it to show it in Finder. In the page it's an ordinary link, `[Report.pdf](.assets/Report-….pdf)`, so other Markdown apps can open it too.
+
+Everything attached goes into git with the page: big files make the repository, and every sync, bigger.
+
+### Draw.io diagram
+
+`/Draw.io` opens draw.io's editor over the page. Draw, then save and exit, and the diagram appears where you typed the command. To change it later, hover it and click the pencil, or double-click it. Editing needs an internet connection: the editor is draw.io's own, loaded from embed.diagrams.net, and your diagram is handed to it inside MyNote's window.
+
+Each diagram is a `.drawio.svg` file in `.assets/`: a picture with the diagram stored inside. The page shows it like any image (you can resize it the same way), other Markdown apps show the picture, and draw.io's desktop app or its VS Code extension can open the file and edit it.
 
 ### Columns
 
@@ -146,6 +158,8 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Code            | Three backticks and the language                         |
 | Image           | `![description](link)`                                   |
 | Resized image   | `![description\|320](link)`                              |
+| Draw.io diagram | `![Diagram](.assets/….drawio.svg)`                       |
+| File            | `[Report.pdf](.assets/Report-….pdf)`                     |
 | Page link       | `[[Ideas]]`                                              |
 | Inline database | `![[Roadmap]]`                                           |
 | Colour          | `<span data-color="red">…</span>`                        |

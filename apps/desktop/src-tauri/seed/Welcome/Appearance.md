@@ -10,11 +10,11 @@ Open **Settings → Appearance**, or press `⌘,`. These settings are saved on t
 
 ## Palette
 
-| Palette    | Feel                |
-| ---------- | ------------------- |
-| Betelgeuse | Warm ember neutrals |
-| Graphite   | Neutral greys       |
-| Midnight   | Cool blue slate     |
+| Palette  | Feel                |
+| -------- | ------------------- |
+| MyNote   | Warm ember neutrals |
+| Graphite | Neutral greys       |
+| Midnight | Cool blue slate     |
 
 Every palette has a light and a dark version.
 

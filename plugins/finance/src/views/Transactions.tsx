@@ -1,4 +1,4 @@
-import { Button } from "@betelgeuse/plugin-api/ui";
+import { Button } from "@mynote/plugin-api/ui";
 import { FileUp, Plus, Receipt, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { dayLabel, money } from "../format";

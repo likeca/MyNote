@@ -1,4 +1,4 @@
-//! The plugin store: an index of plugins built and signed by Betelgeuse's release CI, and installing
+//! The plugin store: an index of plugins built and signed by the upstream project's release CI (see `DEFAULT_INDEX`), and installing
 //! from it.
 //!
 //! CI builds every plugin in `plugins/`, zips each one, and publishes with every release:
@@ -20,6 +20,7 @@ use std::sync::LazyLock;
 use std::time::{Duration, SystemTime};
 use crate::plugins::Dirs;
 
+// MyNote installs store plugins from upstream Betelgeuse (devian-labs/betelgeuse) releases; their key signs them.
 const DEFAULT_INDEX: &str = "https://github.com/devian-labs/betelgeuse/releases/latest/download/plugins.json";
 /// Refetch the index after this long (it's also refreshed on demand).
 const MAX_AGE: Duration = Duration::from_secs(6 * 3600);
@@ -72,7 +73,11 @@ pub struct Index {
 }
 
 fn index_url() -> String {
-    std::env::var("BETELGEUSE_PLUGIN_INDEX").ok().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| DEFAULT_INDEX.into())
+    // Legacy name (before the rename to MyNote): BETELGEUSE_PLUGIN_INDEX, when the new one is unset.
+    ["MYNOTE_PLUGIN_INDEX", "BETELGEUSE_PLUGIN_INDEX"]
+        .iter()
+        .find_map(|k| std::env::var(k).ok().filter(|s| !s.trim().is_empty()))
+        .unwrap_or_else(|| DEFAULT_INDEX.into())
 }
 
 fn cache_file(dirs: &Dirs) -> Option<PathBuf> {
@@ -86,7 +91,7 @@ fn now() -> u64 {
 static AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
     ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(60)))
-        .user_agent(concat!("Betelgeuse/", env!("CARGO_PKG_VERSION"), " (plugin store)"))
+        .user_agent(concat!("MyNote/", env!("CARGO_PKG_VERSION"), " (plugin store)"))
         .build()
         .into()
 });
@@ -163,10 +168,10 @@ pub fn verify(bytes: &[u8], entry: &Entry) -> Result<(), String> {
         Some(key) => {
             let sig = base64::engine::general_purpose::STANDARD.decode(entry.signature.trim()).map_err(|_| format!("{} isn't signed.", entry.name))?;
             let sig = Signature::from_slice(&sig).map_err(|_| format!("{} has an invalid signature.", entry.name))?;
-            key.verify(bytes, &sig).map_err(|_| format!("{} isn't signed by Betelgeuse. It wasn't installed.", entry.name))
+            key.verify(bytes, &sig).map_err(|_| format!("{} isn't signed by the plugin store. It wasn't installed.", entry.name))
         }
         None if cfg!(debug_assertions) => Ok(()),
-        None => Err("This build of Betelgeuse can't verify plugins, so it can't install them from the store.".into()),
+        None => Err("This build of MyNote can't verify plugins, so it can't install them from the store.".into()),
     }
 }
 
@@ -210,7 +215,7 @@ fn install_bytes(dirs: &Dirs, bytes: &[u8], entry: &Entry) -> Result<String, Str
     std::fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
     let result = (|| {
         unpack(bytes, &tmp)?;
-        let manifest: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(tmp.join(crate::plugins::MANIFEST)).map_err(|_| "The plugin package has no manifest.")?)
+        let manifest: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(crate::plugins::manifest_file(&tmp)).map_err(|_| "The plugin package has no manifest.")?)
             .map_err(|e| format!("The plugin's manifest is malformed: {e}"))?;
         if manifest.get("id").and_then(|v| v.as_str()) != Some(entry.id.as_str()) || manifest.get("version").and_then(|v| v.as_str()) != Some(entry.version.as_str()) {
             return Err("The plugin package doesn't match the store's listing.".to_string());
@@ -271,7 +276,7 @@ mod tests {
     }
 
     /// Checks what `node scripts/package-plugins.mjs --key …` produced against the public key built
-    /// into the app, the way installing does: `cargo test -p betelgeuse-core --features plugins packaged -- --ignored`.
+    /// into the app, the way installing does: `cargo test -p mynote-core --features plugins packaged -- --ignored`.
     #[test]
     #[ignore]
     fn packaged_plugins_verify() {
@@ -281,9 +286,9 @@ mod tests {
         for e in &index.plugins {
             let bytes = std::fs::read(dir.join(&e.url)).unwrap();
             verify(&bytes, e).unwrap_or_else(|err| panic!("{}: {err}", e.id));
-            let dest = std::env::temp_dir().join(format!("betelgeuse-store-{}-{}", e.id, std::process::id()));
+            let dest = std::env::temp_dir().join(format!("mynote-store-{}-{}", e.id, std::process::id()));
             unpack(&bytes, &dest).unwrap();
-            let m: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dest.join("betelgeuse-plugin.json")).unwrap()).unwrap();
+            let m: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(crate::plugins::manifest_file(&dest)).unwrap()).unwrap();
             assert_eq!(m["id"], e.id.as_str());
             assert!(dest.join("main.js").is_file());
             // A tampered package fails, even with a matching checksum.
@@ -291,7 +296,7 @@ mod tests {
             let last = bad.len() - 1;
             bad[last] ^= 1;
             let forged = Entry { sha256: hex::encode(Sha256::digest(&bad)), ..e.clone() };
-            assert!(verify(&bad, &forged).unwrap_err().contains("isn't signed by Betelgeuse"));
+            assert!(verify(&bad, &forged).unwrap_err().contains("isn't signed by the plugin store"));
             let _ = std::fs::remove_dir_all(dest);
             println!("{} {}: signature ok, unpacked", e.id, e.version);
         }
@@ -306,7 +311,7 @@ mod tests {
             std::io::Write::write_all(&mut w, b"x").unwrap();
             w.finish().unwrap();
         }
-        let dest = std::env::temp_dir().join(format!("betelgeuse-unpack-{}", std::process::id()));
+        let dest = std::env::temp_dir().join(format!("mynote-unpack-{}", std::process::id()));
         assert!(unpack(buf.get_ref(), &dest).unwrap_err().contains("unsafe"));
         let _ = std::fs::remove_dir_all(dest);
     }

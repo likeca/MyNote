@@ -51,11 +51,23 @@ const assetUrls = new Map<string, Promise<string>>();
 export function assetUrl(path: string): Promise<string> {
   let url = assetUrls.get(path);
   if (!url) {
-    url = api.readAsset(path).then((buf) => URL.createObjectURL(new Blob([buf])));
+    // The webview works out most image types from their bytes, but shows SVG only when told it's SVG.
+    const type = /\.svg$/i.test(path) ? "image/svg+xml" : "";
+    url = api.readAsset(path).then((buf) => URL.createObjectURL(new Blob([buf], { type })));
     url.catch(() => assetUrls.delete(path));
     assetUrls.set(path, url);
   }
   return url;
+}
+
+/** Event (detail: the asset's path) telling views showing an asset that it changed. */
+export const ASSET_CHANGED = "mynote:asset-changed";
+
+/** Forgets a rewritten asset's cached URL and has the views showing it load it again. */
+export function assetChanged(path: string) {
+  assetUrls.get(path)?.then(URL.revokeObjectURL, () => {});
+  assetUrls.delete(path);
+  window.dispatchEvent(new CustomEvent(ASSET_CHANGED, { detail: path }));
 }
 
 function AssetImage({ src, local, size }: { src: string; local: boolean; size: number }) {

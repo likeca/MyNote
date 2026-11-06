@@ -1,6 +1,6 @@
 //! The vault is a plain folder of Markdown files. A note `A/B.md` is the
 //! sub-page of `A.md`, so a nested page tree maps 1:1 onto folders that
-//! Obsidian, git and any agent can read without Betelgeuse running.
+//! Obsidian, git and any agent can read without MyNote running.
 
 use serde::Serialize;
 use std::fs;
@@ -156,7 +156,7 @@ fn unquote(v: &str) -> String {
         .to_string()
 }
 
-/// Minimal YAML reader for the scalar and list keys Betelgeuse cares about.
+/// Minimal YAML reader for the scalar and list keys MyNote cares about.
 pub fn fm_value(fm: &str, key: &str) -> Option<String> {
     fm.lines().find_map(|l| {
         let (k, v) = l.split_once(':')?;
@@ -648,39 +648,106 @@ pub fn search(vault: &Path, query: &str) -> Vec<SearchHit> {
     hits
 }
 
-/// Saves an uploaded file (e.g. a custom page icon) under the hidden `.assets/` folder,
-/// which is versioned with the vault but kept out of the page tree. Returns its vault path.
-pub fn save_asset(vault: &Path, name: &str, bytes: &[u8]) -> Result<String, String> {
+/// A new, unused path in the hidden `.assets/` folder (versioned with the vault but kept out of the
+/// page tree) for a file called `name`: its stem cut down to letters, digits and dashes, plus a
+/// timestamp. `default_ext` is used when `name` has no extension. Creates the folder.
+fn new_asset(vault: &Path, name: &str, default_ext: Option<&str>) -> Result<(String, PathBuf), String> {
     let ext = Path::new(name)
         .extension()
         .and_then(|e| e.to_str())
-        .filter(|e| e.len() <= 5 && e.chars().all(|c| c.is_ascii_alphanumeric()))
-        .unwrap_or("png")
-        .to_ascii_lowercase();
-    let stem: String = Path::new(name)
-        .file_stem()
-        .map(|s| s.to_string_lossy().chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').take(40).collect())
+        .filter(|e| e.len() <= 10 && e.chars().all(|c| c.is_ascii_alphanumeric()))
+        .map(str::to_ascii_lowercase)
+        .or_else(|| default_ext.map(str::to_string));
+    let stem = Path::new(name).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    // draw.io's apps know their diagrams by the double extension (`flow.drawio.svg`), so it's kept.
+    let (stem, kind) = match stem.strip_suffix(".drawio") {
+        Some(s) => (s.to_string(), ".drawio"),
+        None => (stem, ""),
+    };
+    let stem: String = Some(stem.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').take(40).collect())
         .filter(|s: &String| !s.is_empty())
         .unwrap_or_else(|| "asset".into());
     let stamp = std::time::SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis());
-    let rel = format!(".assets/{stem}-{stamp}.{ext}");
+    let rel = match ext {
+        Some(ext) => format!(".assets/{stem}-{stamp}{kind}.{ext}"),
+        None => format!(".assets/{stem}-{stamp}{kind}"),
+    };
     let abs = vault.join(&rel);
     fs::create_dir_all(abs.parent().unwrap()).map_err(|e| e.to_string())?;
+    Ok((rel, abs))
+}
+
+/// Saves an uploaded image (a custom page icon, a pasted picture) in `.assets/`; returns its vault path.
+pub fn save_asset(vault: &Path, name: &str, bytes: &[u8]) -> Result<String, String> {
+    let (rel, abs) = new_asset(vault, name, Some("png"))?;
     fs::write(abs, bytes).map_err(|e| e.to_string())?;
     Ok(rel)
+}
+
+/// Saves a file attached to a page (dropped or pasted) in `.assets/`; returns its vault path.
+pub fn save_attachment(vault: &Path, name: &str, bytes: &[u8]) -> Result<String, String> {
+    let (rel, abs) = new_asset(vault, name, None)?;
+    fs::write(abs, bytes).map_err(|e| e.to_string())?;
+    Ok(rel)
+}
+
+/// Copies a file from anywhere on disk into `.assets/` to attach it to a page; returns its vault path.
+pub fn copy_attachment(vault: &Path, src: &Path) -> Result<String, String> {
+    if !src.is_file() {
+        return Err(format!("not a file: {}", src.display()));
+    }
+    let name = src.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let (rel, abs) = new_asset(vault, &name, None)?;
+    fs::copy(src, abs).map_err(|e| e.to_string())?;
+    Ok(rel)
+}
+
+/// A file's size in bytes, or `None` when it isn't there (deleted, or not pulled yet).
+pub fn file_size(vault: &Path, rel: &str) -> Option<u64> {
+    let meta = fs::metadata(resolve(vault, rel).ok()?).ok()?;
+    meta.is_file().then(|| meta.len())
 }
 
 pub fn read_asset(vault: &Path, rel: &str) -> Result<Vec<u8>, String> {
     fs::read(resolve(vault, rel)?).map_err(|e| e.to_string())
 }
 
+/// Replaces an existing file in `.assets/` (a diagram edited in place); nothing else can be written this way.
+pub fn write_asset(vault: &Path, rel: &str, bytes: &[u8]) -> Result<(), String> {
+    let abs = resolve(vault, rel)?;
+    let is_asset = rel.strip_prefix(".assets/").is_some_and(|name| !name.contains('/'));
+    // `symlink_metadata`: a link in `.assets/` mustn't lead the write elsewhere.
+    if !is_asset || !fs::symlink_metadata(&abs).is_ok_and(|m| m.is_file()) {
+        return Err(format!("not an asset: {rel}"));
+    }
+    fs::write(abs, bytes).map_err(|e| e.to_string())
+}
+
+// ---------- The workspace's own folder ----------
+
+/// The workspace's settings folder: AI policy, enabled plugins, plugin data, studio settings.
+pub const DIR: &str = ".mynote";
+/// Legacy name (before the rename to MyNote): workspaces created by Betelgeuse keep their settings here.
+pub const LEGACY_DIR: &str = ".betelgeuse";
+
+/// Renames `<vault>/.betelgeuse` (legacy name, before the rename to MyNote) to `<vault>/.mynote`
+/// so a workspace made by Betelgeuse keeps its settings. Does nothing when `.mynote` already exists
+/// or there is no legacy folder. Call it whenever a workspace opens, before anything reads `.mynote`.
+pub fn migrate_legacy_dir(vault: &Path) -> std::io::Result<()> {
+    let (old, new) = (vault.join(LEGACY_DIR), vault.join(DIR));
+    if new.exists() || !old.is_dir() {
+        return Ok(());
+    }
+    fs::rename(old, new)
+}
+
 // ---------- AI visibility ----------
 //
-// Shared with the MCP server through `.betelgeuse/config.json` (versioned with the workspace):
+// Shared with the MCP server through `.mynote/config.json` (versioned with the workspace):
 //   "all"    every page is visible to agents unless it or an ancestor has `ai: false`
 //   "shared" only pages with `ai: true` on themselves or an ancestor (and none with `ai: false`)
 
-const CONFIG: &str = ".betelgeuse/config.json";
+const CONFIG: &str = ".mynote/config.json";
 
 pub fn ai_policy(vault: &Path) -> String {
     fs::read_to_string(vault.join(CONFIG))
@@ -734,8 +801,34 @@ mod tests {
     }
 
     #[test]
+    fn migrates_legacy_dir() {
+        let dir = std::env::temp_dir().join(format!("mynote-migrate-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        // A legacy folder moves with its contents.
+        fs::create_dir_all(dir.join(LEGACY_DIR).join("plugins/x")).unwrap();
+        fs::write(dir.join(LEGACY_DIR).join("config.json"), "{\"ai\":{\"policy\":\"shared\"}}").unwrap();
+        fs::write(dir.join(LEGACY_DIR).join("plugins/x/data.json"), "{}").unwrap();
+        migrate_legacy_dir(&dir).unwrap();
+        assert!(!dir.join(LEGACY_DIR).exists());
+        assert_eq!(ai_policy(&dir), "shared");
+        assert!(dir.join(DIR).join("plugins/x/data.json").is_file());
+        // An existing `.mynote` is left alone, and so is the legacy folder next to it.
+        fs::create_dir_all(dir.join(LEGACY_DIR)).unwrap();
+        fs::write(dir.join(LEGACY_DIR).join("config.json"), "{}").unwrap();
+        migrate_legacy_dir(&dir).unwrap();
+        assert_eq!(ai_policy(&dir), "shared");
+        assert!(dir.join(LEGACY_DIR).join("config.json").is_file());
+        // Nothing to migrate is fine.
+        let empty = dir.join("empty");
+        fs::create_dir_all(&empty).unwrap();
+        migrate_legacy_dir(&empty).unwrap();
+        assert!(!empty.join(DIR).exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn list_notes_exposes_order() {
-        let dir = std::env::temp_dir().join(format!("bg-order-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-order-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "A.md", "---\nicon: 🚀\norder: 2\n---\n").unwrap();
         write_note(&dir, "B.md", "---\norder: -0.5\n---\nbody").unwrap();
@@ -753,8 +846,59 @@ mod tests {
     }
 
     #[test]
+    fn attachments_keep_their_extension_and_report_their_size() {
+        let dir = std::env::temp_dir().join(format!("mynote-attach-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        // Long extensions (Keynote, Numbers) survive; a file without one gets none (not ".png").
+        let numbers = save_attachment(&dir, "Budget 2026.numbers", b"n").unwrap();
+        assert!(numbers.starts_with(".assets/Budget2026-") && numbers.ends_with(".numbers"), "{numbers}");
+        let plain = save_attachment(&dir, "Makefile", b"all:").unwrap();
+        assert!(!plain.trim_start_matches(".assets/").contains('.'), "{plain}");
+        // Images saved the old way still default to .png.
+        assert!(save_asset(&dir, "clipboard", b"p").unwrap().ends_with(".png"));
+
+        let outside = std::env::temp_dir().join(format!("mynote-attach-src-{}.pdf", std::process::id()));
+        fs::write(&outside, b"%PDF-1.7 hello").unwrap();
+        let copied = copy_attachment(&dir, &outside).unwrap();
+        assert!(copied.ends_with(".pdf"), "{copied}");
+        assert_eq!(read_asset(&dir, &copied).unwrap(), b"%PDF-1.7 hello");
+        assert_eq!(file_size(&dir, &copied), Some(14));
+        assert_eq!(file_size(&dir, ".assets/missing.pdf"), None);
+        assert_eq!(file_size(&dir, ".assets"), None, "a folder isn't a file");
+        assert!(copy_attachment(&dir, &dir).is_err(), "folders can't be attached");
+        let _ = fs::remove_file(&outside);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn diagrams_keep_their_drawio_extension_and_only_assets_are_rewritten() {
+        let dir = std::env::temp_dir().join(format!("mynote-assets-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let diagram = save_asset(&dir, "Flow chart.drawio.svg", b"<svg/>").unwrap();
+        assert!(diagram.starts_with(".assets/Flowchart-") && diagram.ends_with(".drawio.svg"), "{diagram}");
+        let photo = save_asset(&dir, "photo.png", b"png").unwrap();
+        assert!(!photo.contains("drawio"), "{photo}");
+
+        write_asset(&dir, &diagram, b"<svg>2</svg>").unwrap();
+        assert_eq!(read_asset(&dir, &diagram).unwrap(), b"<svg>2</svg>");
+        // Pages, files outside `.assets/`, new files and escapes are all refused.
+        write_note(&dir, "Page.md", "text").unwrap();
+        for rel in ["Page.md", ".assets/new.svg", ".assets/../Page.md", "../outside.svg", ".assets/sub/x.svg"] {
+            assert!(write_asset(&dir, rel, b"x").is_err(), "{rel}");
+        }
+        assert_eq!(fs::read_to_string(dir.join("Page.md")).unwrap(), "text");
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(dir.join("Page.md"), dir.join(".assets/link.svg")).unwrap();
+            assert!(write_asset(&dir, ".assets/link.svg", b"x").is_err());
+            assert_eq!(fs::read_to_string(dir.join("Page.md")).unwrap(), "text");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn moves_pages_with_their_sub_pages_and_links() {
-        let dir = std::env::temp_dir().join(format!("bg-move-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-move-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Work.md", "").unwrap();
         write_note(&dir, "Work/Plan.md", "").unwrap();
@@ -778,7 +922,7 @@ mod tests {
 
     #[test]
     fn database_rows_follow_their_order() {
-        let dir = std::env::temp_dir().join(format!("bg-row-order-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-row-order-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Db.md", "---\ntype: database\n---\n").unwrap();
         write_note(&dir, "Db/Apple.md", "---\norder: 3\n---\n").unwrap();
@@ -808,7 +952,7 @@ mod tests {
 
     #[test]
     fn relations_in_frontmatter_are_backlinks_and_follow_renames() {
-        let dir = std::env::temp_dir().join(format!("bg-relations-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-relations-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("Areas/Projects")).unwrap();
         fs::create_dir_all(dir.join("Tasks")).unwrap();
@@ -830,7 +974,7 @@ mod tests {
 
     #[test]
     fn ai_visibility_inherits_from_parent_pages() {
-        let dir = std::env::temp_dir().join(format!("bg-ai-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-ai-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Open.md", "hello").unwrap();
         write_note(&dir, "Secret.md", "---\nai: false\n---\nshh").unwrap();
@@ -849,7 +993,7 @@ mod tests {
 
     #[test]
     fn trash_round_trip() {
-        let dir = std::env::temp_dir().join(format!("bg-trash-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-trash-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Projects.md", "---\nicon: 🚀\n---\nhi").unwrap();
         write_note(&dir, "Projects/Plan.md", "plan").unwrap();
@@ -872,7 +1016,7 @@ mod tests {
 
     #[test]
     fn pages_in_one_place_can_share_a_name() {
-        let dir = std::env::temp_dir().join(format!("bg-names-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("mynote-names-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Budget.md", "---\ntype: database\n---\n").unwrap();
         let names = |dir: &Path| database_rows(dir, "Budget.md").unwrap().into_iter().map(|r| (r.path, r.title)).collect::<Vec<_>>();

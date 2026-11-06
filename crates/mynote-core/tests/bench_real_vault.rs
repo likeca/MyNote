@@ -1,12 +1,13 @@
-//! Timings against a real workspace (read-only): `BETELGEUSE_BENCH=~/Documents/betelgeuse cargo test -p betelgeuse-core --release --test bench_real_vault -- --ignored --nocapture`
-use betelgeuse_core::vault;
+//! Timings against a real workspace (read-only): `MYNOTE_BENCH=~/Documents/mynote cargo test -p mynote-core --release --test bench_real_vault -- --ignored --nocapture`
+use mynote_core::vault;
 use std::path::PathBuf;
 use std::time::Instant;
 
 #[test]
 #[ignore]
 fn timings() {
-    let Ok(dir) = std::env::var("BETELGEUSE_BENCH") else { return };
+    // Legacy name (before the rename to MyNote): BETELGEUSE_BENCH.
+    let Ok(dir) = std::env::var("MYNOTE_BENCH").or_else(|_| std::env::var("BETELGEUSE_BENCH")) else { return };
     let ws = PathBuf::from(dir);
     let t = Instant::now();
     let notes = vault::list_notes(&ws);
