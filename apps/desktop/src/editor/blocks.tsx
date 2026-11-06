@@ -72,6 +72,10 @@ declare module "@tiptap/core" {
       setColor: (attrs: { color?: string; bg?: string }) => ReturnType;
     };
   }
+  interface Storage {
+    /** The vault path of the page the editor shows: its attachments go in its folder. */
+    fileAttachment: { page: string | null };
+  }
 }
 
 const KEEP_COLOR = "keepColor";
@@ -1092,6 +1096,7 @@ export const ImageBlock = Image.extend({
     return ReactNodeViewRenderer(ImageView);
   },
   addProseMirrorPlugins() {
+    const editor = this.editor;
     return [
       new Plugin({
         key: new PluginKey("imageFiles"),
@@ -1103,14 +1108,14 @@ export const ImageBlock = Image.extend({
             if (moved || !files.length) return false;
             event.preventDefault();
             const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            void insertFiles(view, files, at ? at.pos : view.state.selection.from);
+            void insertFiles(view, files, at ? at.pos : view.state.selection.from, editor.storage.fileAttachment.page);
             return true;
           },
           handlePaste: (view, event) => {
             const files = Array.from(event.clipboardData?.files ?? []);
             if (!files.length) return false;
             event.preventDefault();
-            void insertFiles(view, files, view.state.selection.from);
+            void insertFiles(view, files, view.state.selection.from, editor.storage.fileAttachment.page);
             return true;
           },
         },
@@ -1120,7 +1125,7 @@ export const ImageBlock = Image.extend({
 });
 
 /** Saves each file into `.assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
-async function insertFiles(view: EditorView, files: File[], pos: number) {
+async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null) {
   for (const file of files) {
     const { schema } = view.state;
     let node;
@@ -1131,7 +1136,7 @@ async function insertFiles(view: EditorView, files: File[], pos: number) {
         node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
       } else {
         const name = file.name || "file";
-        const src = await api.attachBytes(name, bytes);
+        const src = assetHref(await api.attachBytes(name, bytes, page));
         node = schema.nodes.paragraph.create(null, schema.nodes.fileAttachment.create({ src, name }));
       }
     } catch (e) {
@@ -1149,12 +1154,13 @@ async function insertFiles(view: EditorView, files: File[], pos: number) {
 
 /** The `/File` command: asks for files to attach and puts them at the cursor, each on its own line. */
 export async function pickAttachments(editor: TiptapEditor) {
+  const page = editor.storage.fileAttachment.page;
   const picked = await openDialog({ multiple: true, title: "Attach files" });
   const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
   const lines: JSONContent[] = [];
   for (const path of paths) {
     try {
-      const src = await api.attachFile(path);
+      const src = assetHref(await api.attachFile(path, page));
       lines.push({ type: "paragraph", content: [{ type: "fileAttachment", attrs: { src, name: path.split(/[\\/]/).pop() } }] });
     } catch (e) {
       console.error(`Couldn't attach ${path}`, e);
@@ -1172,6 +1178,18 @@ export async function pickAttachments(editor: TiptapEditor) {
  */
 const ATTACHMENT = /^\[((?:\\.|[^\]\\\n])*)\]\((\.assets\/[^)\s]+)\)/;
 
+/** A vault path as written in a Markdown link: spaces, brackets and `%` escaped as `%XX` (as Obsidian and GitHub read them). */
+export const assetHref = (path: string) => path.replace(/[ %()<>[\]]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+
+/** The vault path a link points to (its `%XX` escapes decoded). */
+export function assetPath(href: string) {
+  try {
+    return decodeURIComponent(href);
+  } catch {
+    return href;
+  }
+}
+
 export const FileAttachment = Node.create({
   name: "fileAttachment",
   group: "inline",
@@ -1180,7 +1198,11 @@ export const FileAttachment = Node.create({
   selectable: true,
   draggable: true,
   addAttributes() {
+    // `src` is the link as written in the Markdown; assetPath() gives the file's vault path.
     return { src: { default: "" }, name: { default: "" } };
+  },
+  addStorage() {
+    return { page: null as string | null };
   },
   parseHTML() {
     // Ahead of the link mark, which also matches `a[href]`.
@@ -1191,6 +1213,36 @@ export const FileAttachment = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(AttachmentView);
+  },
+  // When the last link to a file leaves the page (Backspace, cut, deleting its block, its bin
+  // button), the file leaves `.assets/` too, unless another page links to it. It waits in the Trash:
+  // if the link comes back (undo, pasted elsewhere), showing it brings the file back (file_size).
+  addProseMirrorPlugins() {
+    const { name, storage } = this;
+    const linked = (doc: PMNode) => {
+      const srcs = new Set<string>();
+      doc.descendants((n) => void (n.type.name === name && srcs.add(n.attrs.src)));
+      return srcs;
+    };
+    return [
+      new Plugin({
+        key: new PluginKey("attachmentFiles"),
+        view: (view) => {
+          let current = linked(view.state.doc);
+          return {
+            update: (v, prev) => {
+              if (v.state.doc === prev.doc) return;
+              const next = linked(v.state.doc);
+              const page = storage.page;
+              for (const src of current) {
+                if (!next.has(src) && page) void api.deleteAttachment(assetPath(src), page).catch(() => {});
+              }
+              current = next;
+            },
+          };
+        },
+      }),
+    ];
   },
   markdownTokenizer: {
     name: "fileAttachment",
@@ -1226,14 +1278,18 @@ export function formatFileSize(bytes: number) {
   return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[u]}`;
 }
 
-/** An attached file: its icon, name and size. Click opens it; ⌘-click shows it in Finder. */
-function AttachmentView({ node, selected }: NodeViewProps) {
+/**
+ * An attached file: its icon, name and size. Click opens it; ⌘-click shows it in Finder. Its bin
+ * (on hover) removes it from the page, and with it the file (see FileAttachment's plugin); undo
+ * brings both back.
+ */
+function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
   const { src, name } = node.attrs as { src: string; name: string };
   // undefined: not known (yet, or this app can't tell); null: the file isn't there.
   const [size, setSize] = useState<number | null | undefined>(undefined);
   useEffect(() => {
     let alive = true;
-    api.fileSize(src).then(
+    api.fileSize(assetPath(src)).then(
       (s) => alive && setSize(s),
       () => alive && setSize(undefined),
     );
@@ -1245,7 +1301,12 @@ function AttachmentView({ node, selected }: NodeViewProps) {
   const Icon = ATTACHMENT_ICONS.find(([re]) => re.test(name) || re.test(src))?.[1] ?? FileGeneric;
   const open = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!missing) void api.openAttachment(src, e.metaKey).catch(() => setSize(null));
+    if (!missing) void api.openAttachment(assetPath(src), e.metaKey).catch(() => setSize(null));
+  };
+  const remove = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deleteNode();
   };
   return (
     <NodeViewWrapper
@@ -1254,7 +1315,7 @@ function AttachmentView({ node, selected }: NodeViewProps) {
       data-attachment
       onClick={open}
       title={missing ? `${src}\nThis file isn't in the workspace` : `${name}\nClick to open · ⌘-click to show in Finder`}
-      className={`mx-px inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-line bg-side px-2 py-0.5 align-middle text-[0.9em] leading-normal hover:bg-hover ${
+      className={`group/att relative mx-px inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-line bg-side px-2 py-0.5 align-middle text-[0.9em] leading-normal hover:bg-hover ${
         selected ? "ring-2 ring-[var(--blue)]/50" : ""
       } ${missing ? "opacity-60" : ""}`}
     >
@@ -1262,6 +1323,15 @@ function AttachmentView({ node, selected }: NodeViewProps) {
       <span className={`min-w-0 truncate text-ink ${missing ? "line-through" : ""}`}>{name || src.split("/").pop()}</span>
       {size != null && <span className="shrink-0 text-xs text-faint">{formatFileSize(size)}</span>}
       {missing && <span className="shrink-0 text-xs text-faint">missing</span>}
+      {/* Floats over the chip's end on hover, so nothing around the chip moves. */}
+      <button
+        title="Delete file"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={remove}
+        className="absolute top-1/2 right-1 hidden size-5 -translate-y-1/2 place-items-center rounded border border-line bg-raised text-muted shadow-sm group-hover/att:grid hover:text-[var(--c-red-text)]"
+      >
+        <Trash2 size={13} />
+      </button>
     </NodeViewWrapper>
   );
 }

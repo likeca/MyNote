@@ -391,21 +391,23 @@ fn write_asset(state: State<AppState>, path: String, bytes: Vec<u8>) -> Result<(
     vault::write_asset(&vault(&state)?, &path, &bytes)
 }
 
-/// Copies a file picked on disk into `.assets/` to attach it to a page; returns its vault path.
+/// Copies a file picked on disk into `page`'s attachment folder; returns its vault path.
 #[tauri::command]
-fn attach_file(state: State<AppState>, path: String) -> Result<String, String> {
-    vault::copy_attachment(&vault(&state)?, Path::new(&path))
+fn attach_file(state: State<AppState>, path: String, page: Option<String>) -> Result<String, String> {
+    vault::copy_attachment(&vault(&state)?, page.as_deref(), Path::new(&path))
 }
 
-/// Saves a dropped or pasted file. Its bytes are the raw request body (a JSON list of numbers would be
-/// slow for big files); its name comes percent-encoded in the `x-file-name` header.
+/// Saves a dropped or pasted file in its page's attachment folder. Its bytes are the raw request body
+/// (a JSON list of numbers would be slow for big files); its name and page come percent-encoded in
+/// the `x-file-name` and `x-page` headers.
 #[tauri::command]
 fn attach_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Result<String, String> {
     let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
         return Err("expected the file's bytes".into());
     };
-    let name = request.headers().get("x-file-name").and_then(|v| v.to_str().ok()).map(percent_decode).unwrap_or_default();
-    vault::save_attachment(&vault(&state)?, &name, bytes)
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).map(percent_decode);
+    let page = header("x-page").filter(|p| !p.is_empty());
+    vault::save_attachment(&vault(&state)?, page.as_deref(), &header("x-file-name").unwrap_or_default(), bytes)
 }
 
 /// Decodes `%XX` escapes (what JS's `encodeURIComponent` makes); anything else is kept as is.
@@ -427,10 +429,13 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// A workspace file's size in bytes, or nothing when it isn't there.
+/// A workspace file's size in bytes, or nothing when it isn't there. An attached file whose link
+/// came back (undone, or pasted on another page) is brought back from the Trash first.
 #[tauri::command]
 fn file_size(state: State<AppState>, path: String) -> Option<u64> {
-    vault::file_size(&vault(&state).ok()?, &path)
+    let vault = vault(&state).ok()?;
+    vault::restore_attachment(&vault, &path);
+    vault::file_size(&vault, &path)
 }
 
 /// Opens an attached file (in `.assets/`) in its default app, or with `reveal`, shows it in Finder.
@@ -440,12 +445,21 @@ fn open_attachment(app: AppHandle, state: State<AppState>, path: String, reveal:
     if !path.starts_with(".assets/") {
         return Err("Only attached files can be opened.".into());
     }
-    let abs = vault::resolve(&vault(&state)?, &path)?;
+    let vault = vault(&state)?;
+    vault::restore_attachment(&vault, &path);
+    let abs = vault::resolve(&vault, &path)?;
     if !abs.is_file() {
         return Err("This file isn't in the workspace any more.".into());
     }
     let opened = if reveal { app.opener().reveal_item_in_dir(abs) } else { app.opener().open_path(abs.to_string_lossy(), None::<String>) };
     opened.map_err(|e| e.to_string())
+}
+
+/// Moves an attached file whose link left `page` to the Trash (and removes folders that leaves
+/// empty), unless other pages still link to it: then it's kept and their titles come back.
+#[tauri::command]
+fn delete_attachment(state: State<AppState>, path: String, page: String) -> Result<Vec<String>, String> {
+    vault::delete_attachment(&vault(&state)?, &path, &page)
 }
 
 #[tauri::command]
@@ -869,6 +883,7 @@ pub fn run() {
             attach_bytes,
             file_size,
             open_attachment,
+            delete_attachment,
             rename_note,
             move_note,
             delete_note,

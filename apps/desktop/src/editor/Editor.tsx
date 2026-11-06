@@ -52,12 +52,12 @@ import {
   Trash2,
   Type,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { PageIcon } from "../components/PageIcon";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
 import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
-import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, FileAttachment, ImageBlock, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
+import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, FileAttachment, ImageBlock, PageContext, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
 import { normalizeMarkdown } from "./markdown";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { WikiLink } from "./WikiLink";
@@ -194,6 +194,12 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       },
     },
   });
+
+  // Files attached in this editor go in its page's folder.
+  const pagePath = useContext(PageContext);
+  useEffect(() => {
+    if (editor) editor.storage.fileAttachment.page = pagePath;
+  }, [editor, pagePath]);
 
   useEffect(() => {
     if (!editorRef) return;

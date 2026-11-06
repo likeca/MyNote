@@ -14,6 +14,7 @@ for (const key of ["window", "document", "navigator", "Node", "HTMLElement", "El
 
 const { Editor } = await import("@tiptap/core");
 const { contentExtensions } = await import("../src/editor/Editor.tsx");
+const { assetHref, assetPath } = await import("../src/editor/blocks.tsx");
 const { normalizeMarkdown } = await import("../src/editor/markdown.ts");
 const { joinNote, patchFrontmatter, readFrontmatter, splitNote } = await import("../src/lib/frontmatter.ts");
 const { parseSchema } = await import("../src/database/model.ts");
@@ -266,6 +267,12 @@ test("links to files in .assets/ are attachments; images and other links stay as
   assert.deepEqual(kinds("[Notes \\[final\\].txt](.assets/Notesfinal-2.txt)"), ["file:Notes [final].txt→.assets/Notesfinal-2.txt"]);
   // Attachments inside lists and quotes keep their place.
   exact("- [a.zip](.assets/a-3.zip)\n\n> [b.csv](.assets/b-4.csv)\n");
+  // In a page's folder, spaces and brackets are escaped in the link; the file's path reads back exactly.
+  const md2 = "[Q3 Report (final).pdf](.assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf)\n";
+  exact(md2);
+  assert.deepEqual(kinds(md2), ["file:Q3 Report (final).pdf→.assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf"]);
+  assert.equal(assetHref(".assets/Projects/Launch plan/Q3 Report (final).pdf"), ".assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf");
+  assert.equal(assetPath(".assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf"), ".assets/Projects/Launch plan/Q3 Report (final).pdf");
 });
 
 test("HTML-imported colours, highlights and callout colours", () => {

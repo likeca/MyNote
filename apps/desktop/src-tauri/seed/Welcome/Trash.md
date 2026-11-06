@@ -8,6 +8,7 @@ Deleting a page moves it, and everything inside it, to the Trash. A message at t
 
 - Choose **Move to Trash** in the page's `•••` menu, or in the `•••` menu next to it in the sidebar.
 - Sub-pages, and the rows of a database, go with it.
+- The files attached to it go with it, and come back if you restore it.
 - When an agent deletes a page, it goes to the same Trash.
 
 ## The Trash

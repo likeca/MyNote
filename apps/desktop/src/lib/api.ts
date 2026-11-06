@@ -42,14 +42,17 @@ export const api = {
   saveAsset: (name: string, bytes: number[]) => invoke<string>("save_asset", { name, bytes }),
   readAsset: (path: string) => invoke<ArrayBuffer>("read_asset", { path }),
   writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
-  /** Attaches a file picked on disk: copies it into `.assets/`; returns its vault path. */
-  attachFile: (path: string) => invoke<string>("attach_file", { path }),
-  /** Attaches a dropped or pasted file, sent as raw bytes; returns its vault path. */
-  attachBytes: (name: string, bytes: ArrayBuffer) => invoke<string>("attach_bytes", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),
+  /** Attaches a file picked on disk: copies it into `page`'s attachment folder; returns its vault path. */
+  attachFile: (path: string, page: string | null) => invoke<string>("attach_file", { path, page }),
+  /** Attaches a dropped or pasted file to `page`, sent as raw bytes; returns its vault path. */
+  attachBytes: (name: string, bytes: ArrayBuffer, page: string | null) =>
+    invoke<string>("attach_bytes", bytes, { headers: { "x-file-name": encodeURIComponent(name), "x-page": encodeURIComponent(page ?? "") } }),
   /** A workspace file's size in bytes, or null when it isn't there. */
   fileSize: (path: string) => invoke<number | null>("file_size", { path }),
   /** Opens an attached file in its default app, or with `reveal`, shows it in Finder. */
   openAttachment: (path: string, reveal = false) => invoke<void>("open_attachment", { path, reveal }),
+  /** Deletes an attached file removed from `page`, unless other pages link to it: returns their titles (then it's kept). */
+  deleteAttachment: (path: string, page: string) => invoke<string[]>("delete_attachment", { path, page }),
   renameNote: (path: string, title: string) => invoke<string>("rename_note", { path, title }),
   /** Moves a page (and sub-pages) into folder `dest` (a page's sub-pages, or "" for the top level); returns its new path. */
   moveNote: (path: string, dest: string) => invoke<string>("move_note", { path, dest }),

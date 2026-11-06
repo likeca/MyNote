@@ -18,7 +18,7 @@ MyNote/
 ├── Roadmap/
 │   ├── Design the database views.md
 │   └── …
-├── .assets/        uploaded icons and imported images
+├── .assets/        uploaded icons, images, and each page's attached files (in a folder named after the page)
 ├── .trash/         pages in the Trash, ignored by git
 ├── .mynote/        workspace settings, such as the AI policy (an older .betelgeuse/ folder is renamed to this automatically)
 └── .git/           every version of every page

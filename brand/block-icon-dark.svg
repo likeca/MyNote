@@ -18,7 +18,7 @@
     </linearGradient>
   </defs>
   <rect id="tile" x="100" y="100" width="824" height="824" rx="185" fill="url(#tile-fill)" />
-  <g transform="translate(512 512) scale(0.66) translate(-512 -512)">
+  <g transform="translate(512 512) scale(0.76) translate(-512 -512)">
     <!-- The block's thickness, showing below and to the right of its face. -->
     <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#2A84C8" stroke-width="30" stroke-linejoin="round" />
     <!-- Its face. -->

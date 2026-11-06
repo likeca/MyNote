@@ -88,6 +88,13 @@ export const titleOf = (rel: string) => path.posix.basename(rel, ".md");
  */
 export const pageTitle = (rel: string, fm: Frontmatter) => (typeof fm.title === "string" && fm.title.trim() ? fm.title.trim() : titleOf(rel));
 const childrenDir = (rel: string) => rel.replace(/\.md$/, "");
+/** The folder a page's attached files live in, as the app keeps them: `.assets/<the page's path>`. */
+const attachmentsDir = (rel: string) => `.assets/${childrenDir(rel)}`;
+/** A path as written in a Markdown link: spaces, brackets and `%` escaped as `%XX` (as the app writes them). */
+const linkPath = (p: string) => p.replace(/[ %()<>[\]]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+/** Points links to files in one page's attachment folder (`moved` = [from, to]) at the other. */
+const followAttachments = (text: string, moved: [string, string] | null) =>
+  moved ? text.split(`](${linkPath(moved[0])}/`).join(`](${linkPath(moved[1])}/`) : text;
 
 /** The name a page is given: trimmed, and "Untitled" when there's nothing left. */
 const nameFrom = (title: string) => title.replace(/\s+/g, " ").trim() || "Untitled";
@@ -320,19 +327,22 @@ export class Vault {
       await rename(oldChildren, path.join(this.root, childrenDir(next)));
       touched.push(childrenDir(rel), childrenDir(next));
     }
+    const moved = await this.moveAttachments(rel, next);
+    if (moved) touched.push(...moved);
     const [from, to] = [titleOf(rel), titleOf(next)];
     const [fromDir, toDir] = [childrenDir(rel), childrenDir(next)];
     // Rewrites links in every page (hidden ones too) so nothing breaks; nothing is returned from them.
     // Path links follow as well: `[[Areas/Old]]` (how relations name their database) and `[[Areas/Old/Sub]]`.
     for (const f of await this.allFiles()) {
       const text = await readFile(this.resolve(f), "utf8");
-      const updated = text.replace(/\[\[([^\]\n|#]+)([|#][^\]\n]*)?\]\]/g, (m, target: string, rest = "") => {
+      const relinked = text.replace(/\[\[([^\]\n|#]+)([|#][^\]\n]*)?\]\]/g, (m, target: string, rest = "") => {
         // Case-insensitive, as links resolve (`[[ideas]]` opens `Ideas`).
         const t = target.trim();
         const lower = t.toLowerCase();
         if (lower === from.toLowerCase() || lower === fromDir.toLowerCase()) return `[[${lower === fromDir.toLowerCase() ? toDir : to}${rest}]]`;
         return lower.startsWith(`${fromDir.toLowerCase()}/`) ? `[[${toDir}${t.slice(fromDir.length)}${rest}]]` : m;
       });
+      const updated = followAttachments(relinked, moved);
       if (updated !== text) {
         await writeFile(this.resolve(f), updated);
         touched.push(f);
@@ -362,18 +372,21 @@ export class Vault {
       await rename(path.join(this.root, own), path.join(this.root, nextOwn));
       touched.push(own, nextOwn);
     }
+    const moved = await this.moveAttachments(rel, next);
+    if (moved) touched.push(...moved);
     // A folder left empty (the page was its only content) goes too.
     if (dir) await rmdir(path.join(this.root, dir)).catch(() => {});
     const [from, to] = [titleOf(rel), titleOf(next)];
     for (const f of await this.allFiles()) {
       const text = await readFile(this.resolve(f), "utf8");
-      const updated = text.replace(/\[\[([^\]\n|#]+)([|#][^\]\n]*)?\]\]/g, (m, target: string, rest = "") => {
+      const relinked = text.replace(/\[\[([^\]\n|#]+)([|#][^\]\n]*)?\]\]/g, (m, target: string, rest = "") => {
         const t = target.trim();
         if (t === own) return `[[${nextOwn}${rest}]]`;
         if (t.startsWith(`${own}/`)) return `[[${nextOwn}${t.slice(own.length)}${rest}]]`;
         // Numbered to avoid a page of the same name there ("Plan 2"): title links follow, as on rename.
         return t === from && from !== to ? `[[${to}${rest}]]` : m;
       });
+      const updated = followAttachments(relinked, moved);
       if (updated !== text) {
         await writeFile(this.resolve(f), updated);
         touched.push(f);
@@ -385,8 +398,37 @@ export class Vault {
   }
 
   /**
+   * Moves a page's attachment folder along with it (sub-pages' folders are inside it), as the app does.
+   * Returns the [from, to] folders, or null when there's none or another is in the way.
+   */
+  private async moveAttachments(rel: string, next: string): Promise<[string, string] | null> {
+    const [from, to] = [attachmentsDir(rel), attachmentsDir(next)];
+    const [src, dest] = [path.join(this.root, from), path.join(this.root, to)];
+    if (!existsSync(src) || existsSync(dest)) return null;
+    await mkdir(path.dirname(dest), { recursive: true });
+    await rename(src, dest);
+    await this.removeEmptyAssetDirs(path.dirname(src));
+    return [from, to];
+  }
+
+  /**
+   * Removes `dir` and the folders above it while they're empty, up to (not including) `.assets/`.
+   * A folder holding only Finder's `.DS_Store` counts as empty.
+   */
+  private async removeEmptyAssetDirs(dir: string) {
+    const assets = path.join(this.root, ".assets");
+    while (dir.startsWith(`${assets}${path.sep}`)) {
+      const entries = await readdir(dir).catch(() => [] as string[]);
+      if (entries.length === 1 && entries[0] === ".DS_Store") await rm(path.join(dir, ".DS_Store"), { force: true });
+      if (!(await rmdir(dir).then(() => true, () => false))) return;
+      dir = path.dirname(dir);
+    }
+  }
+
+  /**
    * Moves a note (and its sub-pages) to the workspace Trash, where the user can restore it from the
-   * app. Same layout as the desktop app: `.trash/<id>/<file>.md` plus `meta.json`.
+   * app. Same layout as the desktop app: `.trash/<id>/<file>.md` plus `meta.json`, and its attached
+   * files in `.trash/<id>/.assets`.
    */
   async delete(rel: string): Promise<string[]> {
     let id = String(Date.now());
@@ -400,6 +442,12 @@ export class Vault {
     if (existsSync(children)) {
       await rename(children, path.join(dir, childrenDir(file)));
       moved.push(childrenDir(rel));
+    }
+    const attachments = path.join(this.root, attachmentsDir(rel));
+    if (existsSync(attachments)) {
+      await rename(attachments, path.join(dir, ".assets"));
+      await this.removeEmptyAssetDirs(path.dirname(attachments));
+      moved.push(attachmentsDir(rel));
     }
     await writeFile(path.join(dir, "meta.json"), JSON.stringify({ original: rel, deleted: Date.now() }));
     return moved;

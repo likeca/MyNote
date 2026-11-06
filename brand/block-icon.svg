@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!--
-    App icon, on Apple's macOS icon grid: a light blue block outline with an "N", everything else
-    transparent (the block's face too, so the background shows through, light or dark), well inside
-    the 824px icon shape so the system's rounded edge never cuts into it. The in-app logo is the same
-    block, cropped to its edges.
+    App icon: a light blue block outline with an "N", everything else transparent (the block's face
+    too, so the background shows through, light or dark). macOS (26 and later) puts an icon that
+    isn't a full rounded square on its own plate and shrinks the whole canvas to about two-thirds of
+    the plate, so the block fills most of the canvas to come out a good size there. The in-app logo
+    is the same block, cropped to its edges.
   -->
   <defs>
     <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
@@ -16,7 +17,7 @@
       <rect x="152" y="152" width="680" height="680" rx="76" fill="black" stroke="black" stroke-width="38" />
     </mask>
   </defs>
-  <g transform="translate(512 512) scale(0.66) translate(-512 -512)">
+  <g transform="translate(512 512) scale(1.15) translate(-512 -512)">
     <!-- The block's thickness, showing below and to the right of its face. -->
     <rect x="192" y="192" width="680" height="680" rx="76" fill="url(#side)" stroke="#3A9FE8" stroke-width="30" stroke-linejoin="round" mask="url(#outside-face)" />
     <!-- Its face: just the outline. -->

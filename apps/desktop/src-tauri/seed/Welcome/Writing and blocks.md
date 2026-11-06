@@ -107,7 +107,9 @@ To resize an image, hover it and drag the handle on either side; it keeps its pr
 
 ### File
 
-`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into the workspace's `.assets/` folder, so it's versioned with your pages, and shows as a chip with its name and size. Click a file to open it in its app, or `⌘`-click it to show it in Finder. In the page it's an ordinary link, `[Report.pdf](.assets/Report-….pdf)`, so other Markdown apps can open it too.
+`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into a folder named after the page, inside the workspace's `.assets/` folder: a page "Launch plan" keeps its files in `.assets/Launch plan/`, under their own names, so they're versioned with your pages. Rename or move the page and its folder follows. A file shows as a chip with its name and size. Click it to open it in its app, or `⌘`-click it to show it in Finder. In the page it's an ordinary link, `[Q3 Report.pdf](.assets/Launch%20plan/Q3%20Report.pdf)` (spaces are written `%20`), so other Markdown apps can open it too.
+
+To delete a file, take it off the page: hover it and click the bin, or select it and press Backspace (deleting its line does it too). The file leaves the page's folder, and the folder goes too once it's empty. It waits in the Trash for 30 days, so undoing, or pasting it on another page, brings it back. If another page links to the same file, the file stays for it.
 
 Everything attached goes into git with the page: big files make the repository, and every sync, bigger.
 
@@ -159,7 +161,7 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Image           | `![description](link)`                                   |
 | Resized image   | `![description\|320](link)`                              |
 | Draw.io diagram | `![Diagram](.assets/….drawio.svg)`                       |
-| File            | `[Report.pdf](.assets/Report-….pdf)`                     |
+| File            | `[Report.pdf](.assets/Page/Report.pdf)`                  |
 | Page link       | `[[Ideas]]`                                              |
 | Inline database | `![[Roadmap]]`                                           |
 | Colour          | `<span data-color="red">…</span>`                        |
