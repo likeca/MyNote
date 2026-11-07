@@ -167,6 +167,8 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
         includeChildren: true,
         placeholder: ({ node, pos, editor: e }) => {
           if (node.type.name === "heading") return `Heading ${node.attrs.level}`;
+          // `/` types a slash in code: no block menu to point to.
+          if (node.type.name === "codeBlock") return "";
           if (node.type.name === "detailsSummary") {
             const level = e.state.doc.resolve(pos).parent.attrs.level;
             return level ? `Toggle heading ${level}` : "Toggle";
