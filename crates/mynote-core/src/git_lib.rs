@@ -195,7 +195,19 @@ fn status_with(vault: &Path, save: bool) -> Result<RepoStatus, String> {
         })
         .collect();
     let has_remote = repo.find_remote("origin").is_ok();
-    Ok(RepoStatus { branch: branch_name(&repo), changes, has_remote })
+    let unpushed = if has_remote { unpushed(&repo) } else { 0 };
+    Ok(RepoStatus { branch: branch_name(&repo), changes, has_remote, unpushed })
+}
+
+/// Commits on this branch `origin` doesn't have, as of the last fetch (all of them before the first
+/// push). Like `integrate` and `push`, it goes by `refs/remotes/origin/<branch>`: no upstream is set.
+fn unpushed(repo: &Repository) -> usize {
+    let Some(head) = repo.head().ok().and_then(|h| h.target()) else { return 0 };
+    let upstream = repo.find_reference(&format!("refs/remotes/origin/{}", branch_name(repo))).ok().and_then(|r| r.target());
+    match upstream {
+        Some(up) => repo.graph_ahead_behind(head, up).map(|(ahead, _)| ahead).unwrap_or(0),
+        None => repo.revwalk().and_then(|mut w| w.push(head).map(|_| w.count())).unwrap_or(0),
+    }
 }
 
 /// Stages everything and commits. Returns `None` when there was nothing to commit.
@@ -622,7 +634,11 @@ mod tests {
 
         // Both edit the same page: the remote's version wins the path, the other is kept beside it.
         std::fs::write(a.join("Plan.md"), "a edits\n").unwrap();
+        assert_eq!(status(&a).unwrap().unpushed, 0);
+        commit_all(&a, "a edits").unwrap();
+        assert_eq!(status(&a).unwrap().unpushed, 1, "committed here, not uploaded yet");
         assert_eq!(sync(&a), Integrated::default());
+        assert_eq!(status(&a).unwrap().unpushed, 0);
         std::fs::write(b.join("Plan.md"), "b edits\n").unwrap();
         std::fs::write(b.join("New.md"), "new on b\n").unwrap();
         let got = sync(&b);

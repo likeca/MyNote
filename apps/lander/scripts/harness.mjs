@@ -416,7 +416,7 @@ export function installMockTauri({ files, histories, vault, mcp, git }) {
         .slice(0, 50);
     },
     backlinks: ({ path }) => notes().filter((k) => k !== path && wikilinks(store.get(k).content).some((t) => linkMatches(t, path))).map(meta),
-    git_status: () => ({ branch: git.branch, changes: [], has_remote: true }),
+    git_status: () => ({ branch: git.branch, changes: [], has_remote: true, unpushed: 0 }),
     git_commit: () => null,
     git_log: ({ path, limit }) => (histories[path] ?? initial).slice(0, limit ?? 50).map(({ content, ...c }) => c),
     git_show: ({ rev, path }) => {

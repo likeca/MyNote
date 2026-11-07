@@ -25,6 +25,9 @@ pub struct RepoStatus {
     pub branch: String,
     pub changes: Vec<Change>,
     pub has_remote: bool,
+    /// Commits on this branch the remote doesn't have yet, as of the last fetch (every commit
+    /// when the branch has never been pushed); 0 without a remote.
+    pub unpushed: usize,
 }
 
 fn run(vault: &Path, args: &[&str]) -> Result<String, String> {
@@ -99,7 +102,14 @@ pub fn status(vault: &Path) -> Result<RepoStatus, String> {
     }
     let branch = run(vault, &["branch", "--show-current"]).map(|s| s.trim().to_string()).unwrap_or_default();
     let has_remote = run(vault, &["remote"]).is_ok_and(|s| !s.trim().is_empty());
-    Ok(RepoStatus { branch, changes, has_remote })
+    let unpushed = if has_remote { unpushed(vault) } else { 0 };
+    Ok(RepoStatus { branch, changes, has_remote, unpushed })
+}
+
+/// Commits on this branch its upstream doesn't have (all of them before the first push).
+fn unpushed(vault: &Path) -> usize {
+    let range = if run(vault, &["rev-parse", "--abbrev-ref", "@{upstream}"]).is_ok() { "@{upstream}..HEAD" } else { "HEAD" };
+    run(vault, &["rev-list", "--count", range]).ok().and_then(|s| s.trim().parse().ok()).unwrap_or(0)
 }
 
 /// Stages everything and commits. Returns `None` when there was nothing to commit.
@@ -296,8 +306,15 @@ mod sync_tests {
         ident(&a);
         set_remote(&a, remote.to_str().unwrap()).unwrap();
         std::fs::write(a.join("Plan.md"), "v1\n").unwrap();
+        // Before the first push, every commit is still to upload.
+        commit_all(&a, "v1").unwrap();
+        assert_eq!(status(&a).unwrap().unpushed, settings(&a).unwrap().commits);
         // A fresh, empty remote: the first sync publishes.
         sync_merging(&a).unwrap();
+        assert_eq!(status(&a).unwrap().unpushed, 0);
+        std::fs::write(a.join("Plan.md"), "v2\n").unwrap();
+        commit_all(&a, "v2").unwrap();
+        assert_eq!(status(&a).unwrap().unpushed, 1, "committed here, not uploaded yet");
 
         std::process::Command::new("git").args(["clone", "--quiet"]).arg(&remote).arg(&b).status().unwrap();
         ident(&b);

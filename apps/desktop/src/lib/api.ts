@@ -19,7 +19,8 @@ export type VaultInfo = { path: string; name: string };
 /** A workspace in the history: `display` is the path with `~` for the home folder. */
 export type RecentWorkspace = { path: string; name: string; display: string; exists: boolean };
 export type Change = { path: string; status: "added" | "modified" | "deleted" | "renamed" };
-export type RepoStatus = { branch: string; changes: Change[]; has_remote: boolean };
+/** `unpushed`: commits the remote doesn't have yet, as of the last fetch (0 without a remote). */
+export type RepoStatus = { branch: string; changes: Change[]; has_remote: boolean; unpushed: number };
 export type Commit = { hash: string; short: string; author: string; timestamp: number; subject: string };
 export type GitSettings = { branch: string; remote_url: string | null; user_name: string | null; user_email: string | null; commits: number };
 export type AiPolicy = "all" | "shared";

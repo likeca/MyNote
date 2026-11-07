@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsRight,
+  CloudUpload,
   Copy,
   Download,
   Eye,
@@ -19,7 +20,6 @@ import {
   MoreHorizontal,
   PanelLeft,
   Plus,
-  RefreshCw,
   Settings,
   Search,
   SquarePen,
@@ -321,24 +321,29 @@ export function Sidebar(p: Props) {
         <IconButton title="Support MyNote" onClick={() => openLink(LINKS.sponsor)}>
           <Heart size={15} />
         </IconButton>
+        {/* One button for git. With a remote it's Upload: it commits your edits, then pulls and
+            pushes; the badge counts what isn't uploaded yet. Without one it commits. */}
         <IconButton
-          title={p.busy ?? (changes ? `${changes} uncommitted change${changes > 1 ? "s" : ""} on ${p.status?.branch} · click to commit (⌘S)` : `All changes committed on ${p.status?.branch ?? "main"}`)}
-          onClick={p.onCommit}
+          title={
+            p.status?.has_remote
+              ? "Upload"
+              : (p.busy ??
+                (changes ? `${changes} uncommitted change${changes > 1 ? "s" : ""} on ${p.status?.branch} · click to commit (⌘S)` : `All changes committed on ${p.status?.branch ?? "main"}`))
+          }
+          onClick={p.status?.has_remote ? p.onSync : p.onCommit}
         >
           <span className="relative">
-            <BookDown size={17} />
-            {changes > 0 && (
+            {p.status?.has_remote ? <CloudUpload size={16} className={p.busy?.startsWith("Sync") ? "animate-pulse" : ""} /> : <BookDown size={17} />}
+            {changes > 0 ? (
               <span className="absolute -top-1.5 -right-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-[var(--c-red-text)] px-0.5 text-[9px] font-semibold text-white">
                 {changes > 9 ? "9+" : changes}
               </span>
+            ) : (
+              // Committed, but not on the remote yet.
+              !!p.status?.unpushed && <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[var(--c-red-text)] ring-2 ring-[var(--side)]" />
             )}
           </span>
         </IconButton>
-        {p.status?.has_remote && (
-          <IconButton title="Sync with remote (pull and push)" onClick={p.onSync}>
-            <RefreshCw size={15} className={p.busy?.startsWith("Sync") ? "animate-spin" : ""} />
-          </IconButton>
-        )}
       </div>
 
       {p.open && (

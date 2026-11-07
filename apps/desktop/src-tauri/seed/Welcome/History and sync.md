@@ -11,7 +11,7 @@ Pages save as you type. The top bar shows "Saving…" and then when the page was
 ## Commits
 
 - After **8 seconds** without changes, MyNote commits everything that changed, with a message such as "Update Welcome".
-- Press `⌘S`, or click the commit button at the bottom of the sidebar, to commit right away. Its badge counts the uncommitted changes.
+- Press `⌘S`, or click the git button at the bottom of the sidebar, to commit right away. Its badge counts the uncommitted changes. Once you've added a remote, that button is **Upload** (below).
 - Every change an agent makes is its own commit. See [[Connect your AI agents]].
 
 **Settings → Git &amp; sync** shows the branch and the number of commits. You can also change the auto-commit delay there, from 5 seconds to 5 minutes, or turn it off, and set the name and email used for commits in this workspace.
@@ -32,7 +32,9 @@ Sync keeps your workspace the same on every computer and phone you use, through 
 2. Open **Settings → Git &amp; sync**, paste the repository's HTTPS or SSH address under **Remote repository** and click **Save**.
 3. Click **Test connection**, then **Push** to upload your workspace.
 
-From then on, MyNote **syncs on its own**: once you've stopped editing for a moment, it pulls what changed elsewhere and pushes your changes, every 5 minutes and whenever you come back to the window. Change how often, or turn it off, with **Sync automatically** in **Settings → Git &amp; sync**. To sync right away, click the sync button at the bottom of the sidebar, or **Sync (pull + push)** in Settings.
+From then on, MyNote **syncs on its own**: once you've stopped editing for a moment, it pulls what changed elsewhere and pushes your changes, every 5 minutes and whenever you come back to the window. Change how often, or turn it off, with **Sync automatically** in **Settings → Git &amp; sync**.
+
+To upload right away, click **Upload**, the cloud at the bottom of the sidebar: it commits your edits, pulls what changed elsewhere and pushes. Its badge shows what isn't uploaded yet: a number counts the changes not committed yet, and a dot means commits that are waiting to go up. With no badge, everything is uploaded. **Sync (pull + push)** in Settings does the same.
 
 MyNote uses the git installed on your computer and its credentials, such as SSH keys, a credential helper or the GitHub CLI.
 

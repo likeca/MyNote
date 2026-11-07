@@ -15,7 +15,7 @@ MyNote has two parts: the sidebar on the left and the open page on the right.
 - **Add new**, or the pen icon at the top, creates a page. So does `⌘N`.
 - **Connect agents** sets up AI agents. See [[Connect your AI agents]].
 - **Import**, items added by plugins (such as **Library** from Media Library), **Settings** and **Trash** are at the bottom. See [[Import]], [[Plugins]] and [[Trash]].
-- The footer shows the workspace name, the commit button and, once you've added a remote, **Sync**. See [[History and sync]].
+- The footer shows the workspace name and the git button: **Upload** (a cloud) once you've added a remote, or commit before that. See [[History and sync]].
 
 Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, hover the left edge of the window to peek at it, then click the button at the top to keep it open.
 
