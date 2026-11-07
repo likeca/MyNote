@@ -47,6 +47,7 @@ Conventions:
 - Notes link to each other with [[Title]] or [[Title|label]] wikilinks.
 - The body is GitHub-flavoured Markdown: headings, lists, "- [ ]" task lists, tables, code blocks and quotes.
 - Images are "![description](link)"; "![description|320](link)" shows one 320 pixels wide (Obsidian's syntax).
+- Maths is LaTeX: "$x^2$" in a sentence, and a block equation as "$$" on its own line, the LaTeX, then "$$". A "$" that isn't maths stays as typed when it can't pair up ("$5 and $10"); otherwise escape it as "\\$".
 - Files attached to a page are links into a folder named after the page, inside ".assets/", e.g. "[Q3 Report.pdf](.assets/Projects/Launch%20plan/Q3%20Report.pdf)" for "Projects/Launch plan.md" (spaces written %20). rename_note and move_note move that folder too, and delete_note takes it to the Trash with the page.
 - Rich blocks use readable HTML-ish syntax: <span data-color="red" data-bg="yellow">text</span> for colours,
   "> [!yellow] 💡" callouts, <details><summary>Title</summary> … </details> toggles (a toggle heading's title is a

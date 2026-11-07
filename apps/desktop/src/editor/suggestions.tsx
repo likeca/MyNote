@@ -22,6 +22,8 @@ import {
   Plus,
   Quote,
   SquareCode,
+  SquareSigma,
+  Radical,
   Table,
   Table2,
   Type,
@@ -248,6 +250,23 @@ function blocks(page: PageActions): Action[] {
       },
     },
     { id: "code", title: "Code", icon: <SquareCode size={18} />, keywords: "snippet pre", shortcut: "```", action: (e, r) => run(e, r).toggleCodeBlock().run() },
+    {
+      id: "block-equation",
+      title: "Block equation",
+      hint: "A LaTeX equation on its own line",
+      icon: <SquareSigma size={18} />,
+      keywords: "math latex tex formula katex",
+      shortcut: "$$",
+      action: (e, r) => run(e, r).insertBlockEquation().run(),
+    },
+    {
+      id: "inline-equation",
+      title: "Inline equation",
+      hint: "A LaTeX equation in the text (⌘⇧E)",
+      icon: <Radical size={18} />,
+      keywords: "math latex tex formula katex",
+      action: (e, r) => run(e, r).insertInlineEquation().run(),
+    },
   ]);
 
   const layout: Action[] = section("Layout", [

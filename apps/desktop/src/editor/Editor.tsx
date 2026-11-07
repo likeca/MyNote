@@ -7,7 +7,6 @@ import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Focus } from "@tiptap/extensions";
 import { TableKit } from "@tiptap/extension-table";
-import { Markdown } from "@tiptap/markdown";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { NodeSelection, Selection } from "@tiptap/pm/state";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -59,6 +58,7 @@ import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
 import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, FileAttachment, ImageBlock, PageContext, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
 import { normalizeMarkdown } from "./markdown";
+import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { WikiLink } from "./WikiLink";
 
@@ -146,6 +146,8 @@ export function contentExtensions() {
     ImageBlock,
     FileAttachment,
     CodeBlock,
+    BlockEquation,
+    InlineEquation,
     ColorMark,
     Callout,
     Toggle,
@@ -154,7 +156,7 @@ export function contentExtensions() {
     ColumnList,
     Column,
     DatabaseEmbed,
-    Markdown.configure({ indentation: { style: "space", size: 2 } }),
+    MathAwareMarkdown.configure({ indentation: { style: "space", size: 2 } }),
     WikiLink,
   ];
 }
@@ -563,6 +565,7 @@ const NODE_LABELS: Record<string, string> = {
   databaseEmbed: "Database",
   table: "Table",
   image: "Image",
+  blockEquation: "Equation",
   horizontalRule: "Divider",
 };
 

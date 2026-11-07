@@ -113,6 +113,14 @@ To delete a file, take it off the page: hover it and click the bin, or select it
 
 Everything attached goes into git with the page: big files make the repository, and every sync, bigger.
 
+### Equation
+
+Write maths in LaTeX, as in Notion. `/Block equation` (or `$$` and a space on an empty line) adds one on its own line; `/Inline equation`, or `⌘⇧E`, adds one in the text, and turns selected text into one. Typing `$x^2$` makes an inline equation too. Click an equation to edit it: the page shows the result as you type, and `Enter` (`⌘Enter` in a block equation) or a click outside finishes. In the page, a block equation is `$$` lines around the LaTeX and an inline one is `$x^2$`, as in Obsidian and GitHub. Prices like $5 and $10 stay text.
+
+A block equation is centred; to align it left, use the alignment buttons next to **Done** while you edit it. The page keeps that as a `% align: left` line at the top of the LaTeX, a comment other apps skip. For several lines, end each one with `\\`, and put them in `\begin{aligned} … \end{aligned}` with an `&` before the `=` to line them up.
+
+While you edit an equation, the two **A** buttons make the LaTeX you're typing bigger or smaller. MyNote remembers the size for the next equation you edit; it doesn't change the equation in the page.
+
 ### Draw.io diagram
 
 `/Draw.io` opens draw.io's editor over the page. Draw, then save and exit, and the diagram appears where you typed the command. To change it later, hover it and click the pencil, or double-click it. Editing needs an internet connection: the editor is draw.io's own, loaded from embed.diagrams.net, and your diagram is handed to it inside MyNote's window.
@@ -162,6 +170,8 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Resized image   | `![description\|320](link)`                              |
 | Draw.io diagram | `![Diagram](.assets/….drawio.svg)`                       |
 | File            | `[Report.pdf](.assets/Page/Report.pdf)`                  |
+| Block equation  | `$$` lines around the LaTeX                              |
+| Inline equation | `$x^2$`                                                  |
 | Page link       | `[[Ideas]]`                                              |
 | Inline database | `![[Roadmap]]`                                           |
 | Colour          | `<span data-color="red">…</span>`                        |

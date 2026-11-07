@@ -1088,9 +1088,16 @@ impl<'a> Conv<'a> {
             }
             "span" if e.value().classes().any(|c| c.contains("equation") || c == "katex") => {
                 if let Some(tex) = tex_of(e) {
-                    m.code = true;
-                    m.color = (None, None);
-                    out.push(Atom::Text(tex, m));
+                    // An inline equation, `$…$`, as the editor writes one. LaTeX that can't be one
+                    // (a `$` or line break inside, or a `|` that would split a table cell) stays code.
+                    let tex = tex.trim().to_string();
+                    if !tex.is_empty() && !tex.contains(['$', '\n']) && !(self.in_table && tex.contains('|')) {
+                        out.push(Atom::Raw(format!("${tex}$")));
+                    } else {
+                        m.code = true;
+                        m.color = (None, None);
+                        out.push(Atom::Text(tex, m));
+                    }
                 }
                 return;
             }
@@ -1454,7 +1461,14 @@ impl<'a> Conv<'a> {
             return if md.is_empty() { vec![] } else { vec![Block::Paragraph(md)] };
         }
         if has_class(e, "equation") {
-            return tex_of(e).map(|t| vec![Block::Other(format!("```latex\n{t}\n```"))]).unwrap_or_default();
+            // A block equation, `$$` lines around it; LaTeX that can't be one stays a code block.
+            return tex_of(e)
+                .map(|t| {
+                    let t = t.trim();
+                    let fits = !t.contains("$$") && !t.lines().any(|l| l.trim().is_empty());
+                    vec![Block::Other(if fits { format!("$$\n{t}\n$$") } else { format!("```latex\n{t}\n```") })]
+                })
+                .unwrap_or_default();
         }
         if let Some(img) = e.descendent_elements().find(|x| x.value().name() == "img" && !has_class(*x, "icon") && !has_class(*x, "bookmark-image")) {
             if has_class(e, "image") || e.descendent_elements().all(|x| !has_class(x, "bookmark")) {
@@ -1920,7 +1934,12 @@ mod tests {
         assert_eq!(md(r#"<figure><div class="source">https://www.figma.com/design/x</div></figure>"#), "[https://www.figma.com/design/x](https://www.figma.com/design/x)");
         assert_eq!(
             md(r#"<figure class="equation"><div class="equation-container"><span class="katex"><annotation encoding="application/x-tex">x^2</annotation></span></div></figure><p>Inline <span class="notion-text-equation-token"><span class="katex"><annotation encoding="application/x-tex">a_b</annotation></span></span>.</p>"#),
-            "```latex\nx^2\n```\n\nInline `a_b`."
+            "$$\nx^2\n$$\n\nInline $a_b$."
+        );
+        // LaTeX that can't be an equation in Markdown stays code: a `$` inside, or a blank line.
+        assert_eq!(
+            md(r#"<p>Pay <span class="notion-text-equation-token"><span class="katex"><annotation encoding="application/x-tex">\$5</annotation></span></span></p>"#),
+            "Pay `\\$5`"
         );
         assert_eq!(md(r##"<nav class="table_of_contents"><div><a href="#x">Heading</a></div></nav><p>after</p>"##), "after");
     }

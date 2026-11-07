@@ -275,6 +275,39 @@ test("links to files in .assets/ are attachments; images and other links stay as
   assert.equal(assetPath(".assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf"), ".assets/Projects/Launch plan/Q3 Report (final).pdf");
 });
 
+test("equations: $$ blocks and $…$ inline are LaTeX; prices and escaped dollars stay text", () => {
+  const kinds = (md) => {
+    const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+    const editor = new Editor({ extensions, content: md, contentType: "markdown" });
+    const found = [];
+    editor.state.doc.descendants((n) => void (n.type.name.endsWith("Equation") && found.push(`${n.type.name}:${n.attrs.latex}`)));
+    editor.destroy();
+    return found;
+  };
+  const md = "Euler: $e^{i\\pi} + 1 = 0$, and the sum\n\n$$\n\\sum_{k=1}^{n} k = \\frac{n(n+1)}{2}\n$$\n\nAfter.\n";
+  exact(md);
+  assert.deepEqual(kinds(md), ["inlineEquation:e^{i\\pi} + 1 = 0", "blockEquation:\\sum_{k=1}^{n} k = \\frac{n(n+1)}{2}"]);
+  // A one-line $$…$$ is a block too, written back on its own lines; several lines stay as they are.
+  assert.equal(roundTrip("$$x^2$$").trim(), "$$\nx^2\n$$");
+  exact("$$\na &= b \\\\\nc &= d\n$$\n");
+  // Aligned left: a LaTeX comment on the first line (other apps skip it), not part of the LaTeX.
+  const left = "$$\n% align: left\nx = 1 \\\\\ny = 2\n$$\n";
+  exact(left);
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, content: left, contentType: "markdown" });
+  assert.deepEqual({ ...editor.state.doc.firstChild.attrs }, { latex: "x = 1 \\\\\ny = 2", align: "left" });
+  editor.destroy();
+  assert.deepEqual(kinds("$$\n% a note\nx\n$$\n"), ["blockEquation:% a note\nx"], "other comments are just LaTeX");
+  // Not math: prices, a dollar with spaces inside, $$ in a sentence, escaped dollars.
+  for (const text of ["It costs $5 and $10.\n", "Between $ a and b $ here.\n", "Pay $$ now.\n", "A \\$x\\$ literal.\n"]) {
+    exact(text);
+    assert.deepEqual(kinds(text), [], text);
+  }
+  // Inside lists, quotes and tables.
+  exact("- $a^2$ term\n\n> $b$\n\n| x     |\n| ----- |\n| $c_1$ |\n");
+  assert.equal(kinds("- $a^2$ term\n\n> $b$\n\n| x     |\n| ----- |\n| $c_1$ |\n").length, 3);
+});
+
 test("HTML-imported colours, highlights and callout colours", () => {
   exact('Some <span data-color="green">green **bold**</span> text and <span data-bg="red">the plan</span>.\n');
   exact('**<span data-color="green">Desktop</span>** and *<span data-color="red">it</span>*\n');

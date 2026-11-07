@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Equations (editor/math.tsx). */
+@import "katex/dist/katex.min.css";
 
 /* Graphite, the default palette, light and dark. */
 :root {
@@ -1020,10 +1022,21 @@ pre {
 }
 
 /* Embedded databases manage their own selection; tinting the whole table looks broken. A selected
-   image has a ring around the picture instead: its block spans the page, so a tint would overhang it. */
+   image or equation has a ring around it instead: its block spans the page, so a tint would overhang it. */
 .mynote-prose>.node-databaseEmbed.ProseMirror-selectednode,
-.mynote-prose>.node-image.ProseMirror-selectednode {
+.mynote-prose>.node-image.ProseMirror-selectednode,
+.mynote-prose>.node-blockEquation.ProseMirror-selectednode {
   background: transparent !important;
+}
+
+/* A block equation's own padding spaces it; KaTeX's display margin would double that. */
+.mynote-prose [data-equation="block"] .katex-display {
+  margin: 0.25em 0;
+}
+
+/* Aligned left: flush with the text, without KaTeX's 2em indent. */
+.mynote-prose [data-equation="block"] .katex-display.fleqn>.katex {
+  padding-left: 0;
 }
 
 .mynote-prose>.ProseMirror-selectednode,
