@@ -47,7 +47,7 @@ export function TerminalView({ active }: { active: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const term = useRef<Terminal | null>(null);
   const fit = useRef<FitAddon | null>(null);
-  const { textZoom } = useSettings();
+  const { textZoom, colors, accent } = useSettings();
   const zoom = useRef(textZoom);
   zoom.current = textZoom;
 
@@ -122,6 +122,11 @@ export function TerminalView({ active }: { active: boolean }) {
     term.current.options.fontSize = Math.round(FONT * textZoom);
     if (box.current?.offsetParent) fit.current?.fit();
   }, [textZoom]);
+
+  // Custom colours (Settings → Appearance) change the page's, and so the terminal's.
+  useEffect(() => {
+    if (term.current) term.current.options.theme = theme();
+  }, [colors, accent]);
 
   // Shown again: fit what may have changed meanwhile, and type into it.
   useEffect(() => {

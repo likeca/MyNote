@@ -18,6 +18,7 @@ import {
   Moon,
   MoonStar,
   Palette as PaletteIcon,
+  RotateCcw,
   Scale,
   ArrowLeft,
   Sun,
@@ -31,7 +32,8 @@ import { api, type AiPolicy, type GitSettings, type ImportReport, type RepoStatu
 import { LINKS, open } from "../lib/links";
 import { useVault } from "../lib/vault";
 import { PageIcon } from "./PageIcon";
-import { ACCENTS, PALETTES, updateSettings, useSettings, type Mode, type TextSize } from "../lib/settings";
+import { ACCENTS, PALETTES, accentColor, themeTone, updateSettings, useSettings, type Mode, type TextSize } from "../lib/settings";
+import { CUSTOM_COLORS, isHex, toHex, type ColorKey } from "../lib/customColors";
 import { Logo } from "./Logo";
 import { Modal } from "./Modal";
 import { PluginsSection } from "../plugins/PluginsSection";
@@ -203,7 +205,7 @@ function Appearance() {
       </div>
 
       <div className="mt-2 divide-y divide-[var(--line)]">
-        <Row label="Accent color" hint="Buttons, selection, checkboxes and links.">
+        <Row label="Accent color" hint="Buttons, selection, checkboxes and links. The rainbow picks any colour.">
           <div className="flex gap-2">
             {ACCENTS.map((a) => (
               <button
@@ -216,6 +218,24 @@ function Appearance() {
                 {s.accent === a.id && <Check size={14} className="text-white" />}
               </button>
             ))}
+            {/* Any colour: the picker starts from the accent showing now. */}
+            <label
+              title="Custom colour"
+              className="relative grid size-7 cursor-pointer place-items-center rounded-full transition-transform hover:scale-110"
+              style={{
+                background: isHex(s.accent) ? s.accent : "conic-gradient(#e2582b, #d98a0b, #10a37f, #2383e2, #7c5cff, #e0457b, #e2582b)",
+                boxShadow: isHex(s.accent) ? `0 0 0 2px var(--raised), 0 0 0 4px ${s.accent}` : undefined,
+              }}
+            >
+              {isHex(s.accent) && <Check size={14} className="text-white" />}
+              <input
+                type="color"
+                aria-label="Custom accent colour"
+                value={accentColor(s.accent)}
+                onChange={(e) => updateSettings({ accent: e.target.value })}
+                className="absolute inset-0 size-full cursor-pointer opacity-0"
+              />
+            </label>
           </div>
         </Row>
         <Row label="Recents in the sidebar" hint="How many of your most recent pages the sidebar lists.">
@@ -244,7 +264,80 @@ function Appearance() {
           <Switch label="Full width pages" checked={s.fullWidth} onChange={(fullWidth) => updateSettings({ fullWidth })} />
         </Row>
       </div>
+
+      <Colors />
     </>
+  );
+}
+
+/** Read with the custom colours switched off: the palette's own, as `#rrggbb` for the pickers. */
+function paletteColors(): Record<ColorKey, string> {
+  const sheet = (document.getElementById("custom-colors") as HTMLStyleElement | null)?.sheet;
+  if (sheet) sheet.disabled = true;
+  const css = getComputedStyle(document.documentElement);
+  const surface = toHex(css.getPropertyValue("--surface"));
+  const out = Object.fromEntries(CUSTOM_COLORS.map(({ key }) => [key, toHex(css.getPropertyValue(`--${key}`), surface)])) as Record<ColorKey, string>;
+  if (sheet) sheet.disabled = false;
+  return out;
+}
+
+/**
+ * Fine-tunes the theme showing now (Light, Dark or Black each keep their own): its backgrounds,
+ * text and borders, on top of the palette.
+ */
+function Colors() {
+  const s = useSettings();
+  const tone = themeTone(s);
+  const set = s.colors[tone];
+  const [palette, setPalette] = useState(paletteColors);
+  useEffect(() => setPalette(paletteColors()), [tone, s.palette]);
+  const change = (key: ColorKey, value: string | null) => {
+    const next = { ...set };
+    if (value) next[key] = value;
+    else delete next[key];
+    updateSettings({ colors: { ...s.colors, [tone]: next } });
+  };
+  const name = { light: "Light", dark: "Dark", black: "Black" }[tone];
+  return (
+    <div className="mt-4 border-t border-line pt-5">
+      <div className="flex items-start gap-6">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-ink">Colours</div>
+          <div className="mt-0.5 text-xs leading-relaxed text-muted">
+            Fine-tune the {name} theme on top of its palette. Light, Dark and Black each keep their own: switch the theme above to tune another.
+          </div>
+        </div>
+        {Object.keys(set).length > 0 && (
+          <button onClick={() => updateSettings({ colors: { ...s.colors, [tone]: {} } })} className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm text-muted hover:bg-hover hover:text-ink">
+            <RotateCcw size={13} /> Reset all
+          </button>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-x-6">
+        {CUSTOM_COLORS.map(({ key, label, hint }) => (
+          <div key={key} className="flex items-center gap-3 py-2">
+            <label title={`Choose the ${label.toLowerCase()} colour`} className="relative size-8 shrink-0 cursor-pointer rounded-md border border-[var(--line-strong)] shadow-sm" style={{ background: `var(--${key})` }}>
+              <input
+                type="color"
+                aria-label={label}
+                value={set[key] ?? palette[key]}
+                onChange={(e) => change(key, e.target.value)}
+                className="absolute inset-0 size-full cursor-pointer opacity-0"
+              />
+            </label>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm text-ink">{label}</div>
+              <div className="truncate text-xs text-muted">{set[key] ? <span className="font-mono">{set[key]}</span> : hint}</div>
+            </div>
+            {set[key] && (
+              <button title="Back to the palette's colour" onClick={() => change(key, null)} className="grid size-6 shrink-0 place-items-center rounded text-faint hover:bg-hover hover:text-ink">
+                <RotateCcw size={13} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

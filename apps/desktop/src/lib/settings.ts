@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { api } from "./api";
+import { NO_COLORS, colorsCss, isHex, sanitizeColors, type CustomColors, type Tone } from "./customColors";
 
 /** "black" is dark mode with true-black surfaces. */
 export type Mode = "system" | "light" | "dark" | "black";
@@ -25,6 +26,8 @@ export type Settings = {
   recentRows: number;
   /** Access Key of the person's own Unsplash developer app, for cover photo search. */
   unsplashKey: string;
+  /** Fine-tuned theme colours (Appearance → Colours), per theme, on top of the palette. */
+  colors: CustomColors;
 };
 
 export const ACCENTS: { id: string; label: string; color: string }[] = [
@@ -42,7 +45,7 @@ export const PALETTES: { id: Palette; label: string; hint: string; swatch: [stri
   { id: "midnight", label: "Midnight", hint: "Cool blue slate", swatch: ["#13161d", "#191d26", "#5b7cfa"] },
 ];
 
-const DEFAULTS: Settings = { mode: "system", palette: "mynote", accent: "ember", textSize: "default", textZoom: 1, fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "" };
+const DEFAULTS: Settings = { mode: "system", palette: "mynote", accent: "ember", textSize: "default", textZoom: 1, fullWidth: true, autocommit: 8, autosync: 300, sidebarAiBadges: false, recentRows: 5, unsplashKey: "", colors: NO_COLORS };
 
 /** The steps ⌘+ and ⌘− move through, like a browser's zoom. */
 const TEXT_ZOOMS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
@@ -56,6 +59,7 @@ function load(): Settings {
     const s: Settings = { ...DEFAULTS, ...JSON.parse(saved ?? localStorage.getItem(LEGACY_KEY) ?? "{}") };
     // Legacy palette id (before the rename to MyNote).
     if ((s.palette as string) === "betelgeuse") s.palette = "mynote";
+    s.colors = sanitizeColors(s.colors);
     if (!(typeof s.textZoom === "number" && s.textZoom >= TEXT_ZOOMS[0] && s.textZoom <= TEXT_ZOOMS.at(-1)!)) s.textZoom = 1;
     if (saved === null) {
       try {
@@ -105,21 +109,38 @@ export function useSettings(): Settings {
 
 const systemDark = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 
+/** The theme showing now: Light, Dark or Black (System follows the OS). */
+export const themeTone = (s: Settings): Tone => (s.mode === "black" ? "black" : s.mode === "dark" || (s.mode === "system" && systemDark()) ? "dark" : "light");
+
+/** The accent's colour: one of `ACCENTS`, or a custom `#rrggbb`. */
+export const accentColor = (accent: string) => ACCENTS.find((a) => a.id === accent)?.color ?? (isHex(accent) ? accent : ACCENTS[0].color);
+
 /** Whether the Dock shows the dark icon, so it changes only when the theme flips. */
 let dockDark: boolean | undefined;
 
-/** Writes the appearance settings onto <html> as data attributes and the accent variable, and matches the Dock icon. */
+/**
+ * Writes the appearance settings onto <html> (data attributes, the accent and the theme's custom
+ * colours), and matches the Dock icon.
+ */
 function apply() {
   const root = document.documentElement;
-  const dark = current.mode === "dark" || current.mode === "black" || (current.mode === "system" && systemDark());
+  const tone = themeTone(current);
+  const dark = tone !== "light";
   root.dataset.theme = dark ? "dark" : "light";
-  if (current.mode === "black") root.dataset.black = "";
+  if (tone === "black") root.dataset.black = "";
   else delete root.dataset.black;
   root.dataset.palette = current.palette;
   root.dataset.text = current.textSize;
-  root.style.setProperty("--blue", ACCENTS.find((a) => a.id === current.accent)?.color ?? ACCENTS[0].color);
+  root.style.setProperty("--blue", accentColor(current.accent));
   root.style.setProperty("--text-zoom", String(current.textZoom));
   root.style.colorScheme = dark ? "dark" : "light";
+  let sheet = document.getElementById("custom-colors");
+  if (!sheet) {
+    sheet = document.createElement("style");
+    sheet.id = "custom-colors";
+    document.head.appendChild(sheet);
+  }
+  sheet.textContent = colorsCss(current.colors[tone]);
   if (dark !== dockDark) {
     dockDark = dark;
     api.setDockIcon(dark).catch(() => {}); // only the macOS app has a Dock icon
