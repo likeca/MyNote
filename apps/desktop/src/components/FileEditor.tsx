@@ -8,7 +8,6 @@ import jsonWorker from "monaco-editor/language/json/json.worker?worker";
 import tsWorker from "monaco-editor/language/typescript/ts.worker?worker";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { toHex } from "../lib/customColors";
 import { fileName } from "../lib/fileTabs";
 import { isQuietWrite, markQuietWrite } from "../lib/quiet";
 import { useSettings } from "../lib/settings";
@@ -30,38 +29,86 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const SAVE_AFTER = 700;
 const FONT = 13;
 
-/** The editor's colours from MyNote's theme (and its custom colours): its background, text and accent. */
-function applyTheme() {
-  const css = getComputedStyle(document.documentElement);
-  const v = (name: string) => css.getPropertyValue(name).trim();
-  const surface = toHex(v("--surface"));
-  const over = (name: string) => toHex(v(name), surface);
-  const dark = document.documentElement.dataset.theme === "dark";
-  const accent = toHex(v("--blue"));
-  monaco.editor.defineTheme("mynote", {
-    base: dark ? "vs-dark" : "vs",
-    inherit: true,
-    rules: [],
-    colors: {
-      "editor.background": surface,
-      "editor.foreground": over("--ink"),
-      "editorGutter.background": surface,
-      "minimap.background": surface,
-      "editorLineNumber.foreground": over("--faint"),
-      "editorLineNumber.activeForeground": over("--ink"),
-      "editor.lineHighlightBackground": over("--row-hover"),
-      "editor.lineHighlightBorder": surface,
-      "editorCursor.foreground": accent,
-      "editor.selectionBackground": `${accent}40`,
-      "editor.inactiveSelectionBackground": `${accent}26`,
-      "editorWidget.background": over("--raised"),
-      "editorWidget.border": over("--line-strong"),
-      "editorIndentGuide.background1": over("--line"),
-      "focusBorder": `${accent}80`,
-    },
-  });
-  monaco.editor.setTheme("mynote");
-}
+/**
+ * VS Code's Monokai (its monokai-color-theme.json), for Monaco: its colours as VS Code has them,
+ * on black instead of Monokai's dark olive (#272822), and its token colours given to the names
+ * Monaco's highlighters use for the same things.
+ */
+monaco.editor.defineTheme("monokai", {
+  base: "vs-dark",
+  inherit: true,
+  rules: [
+    { token: "", foreground: "F8F8F2" },
+    { token: "comment", foreground: "88846F" },
+    { token: "string", foreground: "E6DB74" },
+    { token: "string.escape", foreground: "AE81FF" },
+    { token: "regexp", foreground: "E6DB74" },
+    { token: "number", foreground: "AE81FF" },
+    { token: "constant", foreground: "AE81FF" },
+    { token: "keyword", foreground: "F92672" },
+    { token: "operator", foreground: "F92672" },
+    // A type the language has (`int`, `string`) is storage.type; a named one (`Editor`) a class name.
+    { token: "type", foreground: "66D9EF", fontStyle: "italic" },
+    { token: "type.identifier", foreground: "A6E22E", fontStyle: "underline" },
+    { token: "predefined", foreground: "66D9EF" },
+    { token: "identifier", foreground: "F8F8F2" },
+    { token: "variable", foreground: "F8F8F2" },
+    { token: "delimiter", foreground: "F8F8F2" },
+    { token: "tag", foreground: "F92672" },
+    { token: "metatag", foreground: "F92672" },
+    { token: "attribute.name", foreground: "A6E22E" },
+    { token: "attribute.value", foreground: "E6DB74" },
+    { token: "invalid", foreground: "F44747" },
+    // JSON: keys are support.type.property-name, string values Monokai's own JSON string colour.
+    { token: "string.key.json", foreground: "66D9EF", fontStyle: "italic" },
+    { token: "string.value.json", foreground: "CFCFC2" },
+    { token: "keyword.json", foreground: "AE81FF" },
+    // YAML keys are tag names (entity.name.tag) in VS Code.
+    { token: "type.yaml", foreground: "F92672", fontStyle: "" },
+    // Its true, false and null are constants (constant.language).
+    { token: "keyword.yaml", foreground: "AE81FF" },
+    // Monaco's Python marks a string's quotes as escapes; they're the string's own colour in VS Code.
+    { token: "string.escape.python", foreground: "E6DB74" },
+    // CSS properties are support.type.property-name.
+    { token: "attribute.name.css", foreground: "66D9EF", fontStyle: "italic" },
+    { token: "attribute.name.scss", foreground: "66D9EF", fontStyle: "italic" },
+    { token: "attribute.name.less", foreground: "66D9EF", fontStyle: "italic" },
+    { token: "keyword.md", foreground: "A6E22E", fontStyle: "bold" },
+  ],
+  colors: {
+    "editor.background": "#000000",
+    "editor.foreground": "#F8F8F2",
+    "editorGutter.background": "#000000",
+    "editor.selectionBackground": "#878B9180",
+    "editor.selectionHighlightBackground": "#575B6180",
+    "editor.wordHighlightBackground": "#4A4A7680",
+    "editor.wordHighlightStrongBackground": "#6A6A9680",
+    "editor.lineHighlightBackground": "#3E3D32",
+    "editorLineNumber.foreground": "#90908A",
+    "editorLineNumber.activeForeground": "#C2C2BF",
+    "editorCursor.foreground": "#F8F8F0",
+    "editorWhitespace.foreground": "#464741",
+    "editorIndentGuide.background1": "#464741",
+    "editorIndentGuide.activeBackground1": "#767771",
+    "editorWidget.background": "#1E1F1C",
+    "editorHoverWidget.background": "#414339",
+    "editorHoverWidget.border": "#75715E",
+    "editorSuggestWidget.background": "#000000",
+    "editorSuggestWidget.border": "#75715E",
+    "input.background": "#414339",
+    "inputOption.activeBorder": "#75715E",
+    "focusBorder": "#99947C",
+    "widget.shadow": "#00000098",
+    "list.hoverBackground": "#3E3D32",
+    "list.activeSelectionBackground": "#75715E",
+    "list.inactiveSelectionBackground": "#414339",
+    "list.highlightForeground": "#F8F8F2",
+    "peekView.border": "#75715E",
+    "peekViewEditor.background": "#000000",
+    "peekViewResult.background": "#1E1F1C",
+    "peekViewTitle.background": "#1E1F1C",
+  },
+});
 
 type Loaded = { kind: "loading" } | { kind: "ready" } | { kind: "missing" } | { kind: "binary" } | { kind: "large"; size: number } | { kind: "error"; message: string };
 type Saved = "saved" | "unsaved" | "saving" | { error: string };
@@ -78,7 +125,7 @@ function asText(bytes: Uint8Array): string | null {
 
 /**
  * An attached file in its own tab, in Monaco (VS Code's editor): highlighting by its extension,
- * find and replace, multiple cursors, the minimap. Edits save as you go (⌘S at once); a change made
+ * find and replace, multiple cursors. Edits save as you go (⌘S at once); a change made
  * elsewhere (an agent, another app) comes in while there's nothing unsaved here. Stays mounted
  * (hidden) while other tabs show, so undo and the scroll position last.
  */
@@ -89,7 +136,7 @@ export default function FileEditor({ path, active }: { path: string; active: boo
   const [saved, setSaved] = useState<Saved>("saved");
   const [wrap, setWrap] = useState(false);
   const [language, setLanguage] = useState("");
-  const { textZoom, colors, accent, mode, palette } = useSettings();
+  const { textZoom } = useSettings();
   // Read when the editor is made, after the file loads.
   const textZoomRef = useRef(textZoom);
   textZoomRef.current = textZoom;
@@ -132,15 +179,14 @@ export default function FileEditor({ path, active }: { path: string; active: boo
       // No language given: Monaco picks it from the file's extension (or name, like `Dockerfile`).
       model = monaco.editor.createModel(text, undefined, uri);
       setLanguage(monaco.languages.getLanguages().find((l) => l.id === model!.getLanguageId())?.aliases?.[0] ?? model.getLanguageId());
-      applyTheme();
       const ed = monaco.editor.create(box.current!, {
         model,
-        theme: "mynote",
+        theme: "monokai",
         automaticLayout: true,
         fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
         fontSize: Math.round(FONT * textZoomRef.current),
         lineHeight: 1.5,
-        minimap: { enabled: true },
+        minimap: { enabled: false },
         scrollBeyondLastLine: false,
         renderWhitespace: "selection",
         smoothScrolling: true,
@@ -182,17 +228,10 @@ export default function FileEditor({ path, active }: { path: string; active: boo
     };
   }, [path]);
 
-  // The theme, colours and page text zoom (⌘+ / ⌘−) follow MyNote's.
+  // The page text zoom (⌘+ / ⌘−) sizes the editor's text too.
   useEffect(() => {
-    if (!editor.current) return;
-    applyTheme();
-    editor.current.updateOptions({ fontSize: Math.round(FONT * textZoom) });
-  }, [textZoom, colors, accent, mode, palette, loaded.kind]);
-  useEffect(() => {
-    const observer = new MutationObserver(() => editor.current && applyTheme());
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-palette", "data-black"] });
-    return () => observer.disconnect();
-  }, []);
+    editor.current?.updateOptions({ fontSize: Math.round(FONT * textZoom) });
+  }, [textZoom, loaded.kind]);
   useEffect(() => editor.current?.updateOptions({ wordWrap: wrap ? "on" : "off" }), [wrap]);
 
   // Shown again: type straight into it.

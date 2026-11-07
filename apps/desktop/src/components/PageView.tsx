@@ -361,7 +361,7 @@ export function PageView(p: Props) {
           </CoverBox>
         )}
 
-        <div className={`mx-auto w-full ${width} ${peekMode ? "pt-6" : cover ? "pt-0" : "pt-20"} pb-[30vh]`}>
+        <div className={`mx-auto w-full ${width} ${peekMode ? "pt-6" : cover ? "pt-0" : "pt-4"} pb-[30vh]`}>
           <div className="group/head relative">
             {icon && (
               <button
