@@ -33,6 +33,8 @@ regex = "1"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 scraper = { version = "0.27", default-features = false }
 tauri-plugin-opener = "2"
+# Terminal tabs: the shell in a real pseudo-terminal (terminal.rs).
+portable-pty = "0.9"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 ureq = "3"

@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, ChevronsRight, FileText, PanelLeft, Puzzle, Plus, Table2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsRight, FileText, PanelLeft, Puzzle, Plus, SquareTerminal, Table2, X } from "lucide-react";
 import { useState } from "react";
 import type { NoteMeta } from "../lib/api";
 import { PageIcon } from "./PageIcon";
+import { isTerminalPath } from "./TerminalView";
 import { parseViewPath, useContributions } from "../plugins/runtime";
 import { MenuDivider, MenuItem, Popover } from "./Popover";
 
@@ -16,6 +17,8 @@ type Props = {
   onCloseOthers: (i: number) => void;
   onCloseRight: (i: number) => void;
   onNew: () => void;
+  /** Opens a terminal tab (the user's shell, in the workspace folder). */
+  onNewTerminal: () => void;
   onBack?: () => void;
   onForward?: () => void;
   /** Shown while the sidebar is closed: opens it, and hovering peeks it. */
@@ -24,15 +27,19 @@ type Props = {
 };
 
 /**
- * The tab strip, always shown above the page: back / forward, one tab per open page, and +.
- * The active tab takes the page's colour so it reads as part of the page below it.
+ * The tab strip, always shown above the page: back / forward, one tab per open page or terminal,
+ * and + (a new tab, or a terminal). The active tab takes the page's colour so it reads as part of
+ * the page below it.
  */
 export function TabBar(props: Props) {
-  const { tabs, active, notes, inset, onSelect, onClose, onNew, onBack, onForward, onShowSidebar, onPeekSidebar } = props;
+  const { tabs, active, notes, inset, onSelect, onClose, onNew, onNewTerminal, onBack, onForward, onShowSidebar, onPeekSidebar } = props;
   // Right-clicking a tab: which one, and where.
   const [menu, setMenu] = useState<{ i: number; at: DOMRect } | null>(null);
+  // The + button's menu, under it.
+  const [adding, setAdding] = useState<HTMLElement | null>(null);
   const { views } = useContributions();
   const run = (f: (i: number) => void) => () => (menu && f(menu.i), setMenu(null));
+  const terminalTabs = tabs.filter((t) => isTerminalPath(t.path));
   return (
     <div
       data-tauri-drag-region
@@ -63,7 +70,13 @@ export function TabBar(props: Props) {
           const note = notes.find((n) => n.path === tab.path);
           const plugin = parseViewPath(tab.path);
           const view = plugin && views.find((v) => v.pluginId === plugin.pluginId && v.id === plugin.viewId);
-          const title = plugin ? (view?.title ?? plugin.viewId) : (note?.title ?? tab.path.split("/").pop()!.replace(/\.md$/, ""));
+          const terminal = isTerminalPath(tab.path);
+          // Terminals are numbered once there are several.
+          const title = terminal
+            ? `Terminal${terminalTabs.length > 1 ? ` ${terminalTabs.indexOf(tab) + 1}` : ""}`
+            : plugin
+              ? (view?.title ?? plugin.viewId)
+              : (note?.title ?? tab.path.split("/").pop()!.replace(/\.md$/, ""));
           const on = i === active;
           return (
             <div
@@ -81,7 +94,17 @@ export function TabBar(props: Props) {
               }`}
             >
               <span className="grid size-4 shrink-0 place-items-center text-faint">
-                {plugin ? (view?.icon ?? <Puzzle size={14} />) : note?.icon ? <PageIcon icon={note.icon} size={15} /> : note?.kind === "database" ? <Table2 size={14} /> : <FileText size={14} />}
+                {terminal ? (
+                  <SquareTerminal size={14} />
+                ) : plugin ? (
+                  (view?.icon ?? <Puzzle size={14} />)
+                ) : note?.icon ? (
+                  <PageIcon icon={note.icon} size={15} />
+                ) : note?.kind === "database" ? (
+                  <Table2 size={14} />
+                ) : (
+                  <FileText size={14} />
+                )}
               </span>
               <span className="min-w-0 flex-1 truncate">{title}</span>
               {/* A lone tab can't be closed: there would be no page left to show. */}
@@ -98,15 +121,27 @@ export function TabBar(props: Props) {
             </div>
           );
         })}
-        <button onClick={onNew} title="New tab (⌘T)" className="grid w-10 shrink-0 place-items-center text-muted hover:bg-hover hover:text-ink">
+        <button
+          onClick={(e) => setAdding(e.currentTarget)}
+          title="New tab or terminal"
+          className={`grid w-10 shrink-0 place-items-center hover:bg-hover hover:text-ink ${adding ? "bg-hover text-ink" : "text-muted"}`}
+        >
           <Plus size={16} />
         </button>
         <div data-tauri-drag-region className="min-w-4 flex-1" />
       </div>
 
+      {adding && (
+        <Popover anchor={adding} onClose={() => setAdding(null)} className="w-52 p-1">
+          <MenuItem icon={<FileText size={15} />} label="New tab" hint="⌘T" onClick={() => (setAdding(null), onNew())} />
+          <MenuItem icon={<SquareTerminal size={15} />} label="New terminal" hint="⌃`" onClick={() => (setAdding(null), onNewTerminal())} />
+        </Popover>
+      )}
+
       {menu && (
         <Popover anchor={menu.at} onClose={() => setMenu(null)} className="w-52 p-1">
           <MenuItem icon={<Plus size={15} />} label="New tab" hint="⌘T" onClick={run(onNew)} />
+          <MenuItem icon={<SquareTerminal size={15} />} label="New terminal" hint="⌃`" onClick={() => (setMenu(null), onNewTerminal())} />
           {tabs.length > 1 && (
             <>
               <MenuDivider />

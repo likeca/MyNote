@@ -57,8 +57,8 @@ if [[ "$OS" == "Darwin" ]]; then
   DEST="/Applications"
   [[ -w "$DEST" ]] || DEST="$HOME/Applications"
   mkdir -p "$DEST"
-  # The app was called MyNote before; the same app under its old name goes too.
-  rm -rf "$DEST/MyNote.app" "$DEST/Betelgeuse.app" # Legacy name (before the rename to MyNote)
+  # The app was called Betelgeuse before the rename to MyNote; that copy goes too.
+  rm -rf "$DEST/MyNote.app" "$DEST/Betelgeuse.app"
   cp -R "$APP" "$DEST/"
   xattr -dr com.apple.quarantine "$DEST/MyNote.app" 2>/dev/null || true
   ok "Installed to $DEST/MyNote.app"

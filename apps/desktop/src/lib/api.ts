@@ -92,6 +92,20 @@ export const api = {
     return invoke<number | null>("run_script", { id, language, script, onOutput: channel });
   },
   stopScript: (id: number) => invoke<void>("stop_script", { id }),
+  /**
+   * Starts a terminal tab's shell in the workspace folder (desktop only); resolves to its session id.
+   * `onOutput` gets what it prints, as raw bytes in order; `onExit` runs once it has ended.
+   */
+  terminalOpen: (cols: number, rows: number, onOutput: (bytes: Uint8Array) => void, onExit: () => void) => {
+    const output = new Channel<ArrayBuffer | number[]>();
+    output.onmessage = (bytes) => onOutput(new Uint8Array(bytes));
+    const exit = new Channel<null>();
+    exit.onmessage = () => onExit();
+    return invoke<number>("terminal_open", { cols, rows, onOutput: output, onExit: exit });
+  },
+  terminalWrite: (id: number, data: string) => invoke<void>("terminal_write", { id, data }),
+  terminalResize: (id: number, cols: number, rows: number) => invoke<void>("terminal_resize", { id, cols, rows }),
+  terminalClose: (id: number) => invoke<void>("terminal_close", { id }),
   /** The running app's Dock icon: the dark one for dark themes (macOS desktop only). */
   setDockIcon: (dark: boolean) => invoke<void>("set_dock_icon", { dark }),
 

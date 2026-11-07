@@ -1,6 +1,8 @@
 @import "tailwindcss";
 /* Equations (editor/math.tsx). */
 @import "katex/dist/katex.min.css";
+/* Terminal tabs (components/TerminalView.tsx). */
+@import "@xterm/xterm/css/xterm.css";
 
 /* Graphite, the default palette, light and dark. */
 :root {

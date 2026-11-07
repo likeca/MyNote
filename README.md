@@ -34,6 +34,36 @@ git clone https://github.com/likeca/MyNote && cd MyNote
 
 **Android** (preview): Build it with `npm run android:build -w @mynote/mobile` (setup in [CONTRIBUTING.md](CONTRIBUTING.md)), then open **Settings → Sync** to connect the repository your workspace syncs with. The iOS app builds, but isn't distributed yet.
 
+### Build it yourself
+
+The install scripts run these commands; run them yourself to build without installing, or to update a copy you built before. The first build takes a few minutes. Every build also builds the MCP server that ships inside the app.
+
+**macOS** needs the Xcode Command Line Tools (`xcode-select --install`), Node.js 20+ and Rust:
+
+```sh
+npm ci
+npm run tauri -w @mynote/desktop -- build --bundles app    # or --bundles dmg for a disk image
+```
+
+The app is `target/release/bundle/macos/MyNote.app`. To install it, quit MyNote, then:
+
+```sh
+rm -rf /Applications/MyNote.app
+cp -R target/release/bundle/macos/MyNote.app /Applications/
+xattr -dr com.apple.quarantine /Applications/MyNote.app
+```
+
+**Windows** needs Node.js 20+, Rust and the **Desktop development with C++** workload from [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). WebView2 comes with Windows 10 and 11. In PowerShell:
+
+```powershell
+npm ci
+npm run tauri -w @mynote/desktop -- build --bundles nsis   # or --bundles msi (needs the WiX Toolset)
+```
+
+The installer is `target\release\bundle\nsis\MyNote_<version>_x64-setup.exe`; run it to install or update MyNote.
+
+To run MyNote from the source while you work on it, with changes showing as you save, use `npm run app`.
+
 ## Connect your AI agents
 
 Click **Connect agents** in the sidebar and copy the setup for Claude Code, Claude Desktop, Cursor or any other MCP client. It shows the exact command for your install. From a source checkout, it looks like this:

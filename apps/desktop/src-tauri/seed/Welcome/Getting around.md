@@ -32,6 +32,12 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 - On a page with two or more headings, an outline appears on the right. Hover it to see the headings, and click one to jump to it.
 - At the bottom, **backlinks** list every page that links to this one. See [[Links and backlinks]].
 
+## Tabs and terminals
+
+Each page opens in a tab at the top of the window. Click `+` there for **New tab**, which shows the same page again (`⌘T`), or **New terminal** (`Ctrl` + backtick). Right-click a tab to close it, the others or the ones to its right; a middle-click closes it too.
+
+A terminal tab runs your own shell, as Terminal does, starting in the workspace folder, so you can use git, run scripts or start an agent next to your pages. It keeps running while you look at other tabs, and closing the tab ends it. Pages you open from a terminal tab open in a new tab beside it. In a terminal, `Ctrl` keys go to the shell (`Ctrl C`, `Ctrl R`…), and `⌘+` and `⌘−` zoom its text with the pages'. When the shell exits, press Enter to start a new one. Terminals aren't reopened the next time you start MyNote.
+
 ## Workspaces
 
 A workspace is a folder. Click the workspace name at the bottom of the sidebar to switch: the menu lists the workspaces you've opened, newest first, with a tick on the open one. Click one to open it, or **Open another folder…** to pick a different folder. If you pick an empty one, MyNote sets it up with these guide pages and starts a git repository in it. Hover a workspace in the list and click `×` to take it off the list; the folder itself isn't touched. **Settings → Workspace** shows where the current workspace is.

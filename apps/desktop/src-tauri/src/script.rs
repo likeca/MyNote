@@ -37,7 +37,7 @@ fn setup_for(language: &str) -> Option<(&'static str, Startup)> {
 }
 
 /// The user's own shell, as a new terminal would start it.
-fn user_shell() -> String {
+pub(crate) fn user_shell() -> String {
     let fallback = if cfg!(target_os = "macos") { "/bin/zsh" } else { "/bin/sh" };
     std::env::var("SHELL").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| fallback.into())
 }

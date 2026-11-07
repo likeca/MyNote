@@ -3,6 +3,7 @@ mod legacy;
 mod library;
 mod script;
 mod seed;
+mod terminal;
 
 // The workspace engine lives in the shared core crate; these keep `crate::vault` / `crate::git` paths working.
 pub(crate) use mynote_core::{git, plugin_store, plugins, vault};
@@ -43,6 +44,8 @@ struct Shared {
     library: library::Shared,
     /// Shell code blocks being run from pages.
     scripts: script::Running,
+    /// The shells of open terminal tabs.
+    terminals: terminal::Terminals,
 }
 
 impl Default for Shared {
@@ -60,6 +63,7 @@ impl Default for Shared {
             syncing: AtomicBool::new(false),
             library: Arc::default(),
             scripts: script::Running::default(),
+            terminals: terminal::Terminals::default(),
         }
     }
 }
@@ -828,6 +832,41 @@ fn stop_script(state: State<AppState>, id: u32) {
     script::stop(&state.scripts, id)
 }
 
+/// Starts the user's shell for a terminal tab, in the workspace folder; what it prints streams to
+/// `on_output` (raw bytes), and `on_exit` gets a message once it has ended. Returns the session id.
+#[tauri::command]
+fn terminal_open(
+    state: State<AppState>,
+    cols: u16,
+    rows: u16,
+    on_output: tauri::ipc::Channel<tauri::ipc::InvokeResponseBody>,
+    on_exit: tauri::ipc::Channel<()>,
+) -> Result<u32, String> {
+    let cwd = vault(&state)?;
+    state.terminals.open(
+        terminal::shell_command(&cwd),
+        cols,
+        rows,
+        move |bytes| drop(on_output.send(tauri::ipc::InvokeResponseBody::Raw(bytes))),
+        move || drop(on_exit.send(())),
+    )
+}
+
+#[tauri::command]
+fn terminal_write(state: State<AppState>, id: u32, data: String) -> Result<(), String> {
+    state.terminals.write(id, data.as_bytes())
+}
+
+#[tauri::command]
+fn terminal_resize(state: State<AppState>, id: u32, cols: u16, rows: u16) {
+    state.terminals.resize(id, cols, rows)
+}
+
+#[tauri::command]
+fn terminal_close(state: State<AppState>, id: u32) {
+    state.terminals.close(id)
+}
+
 /// The Dock icon while MyNote runs: the dark one (icons/dock-dark.png, from brand/block-icon-dark.svg)
 /// for dark themes, else the app's own. Finder, Launchpad and a Dock not running MyNote show the app's
 /// own icon: a per-appearance one needs an asset catalog, which only Xcode's actool can build.
@@ -940,6 +979,10 @@ pub fn run() {
             plugin_store_install,
             run_script,
             stop_script,
+            terminal_open,
+            terminal_write,
+            terminal_resize,
+            terminal_close,
             set_dock_icon
         ])
         .run(tauri::generate_context!())

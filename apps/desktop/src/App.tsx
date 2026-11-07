@@ -11,6 +11,7 @@ import { Logo } from "./components/Logo";
 import { Toast, type ToastData } from "./components/Toast";
 import { PageView } from "./components/PageView";
 import { TabBar } from "./components/TabBar";
+import { TerminalView, isTerminalPath, newTerminalPath } from "./components/TerminalView";
 import { Sidebar } from "./components/Sidebar";
 import { api, type AiPolicy, type NoteMeta, type RepoStatus, type VaultInfo } from "./lib/api";
 import { aiAccess } from "./lib/ai";
@@ -66,8 +67,8 @@ export default function App() {
   const [notes, setNotes] = useState<NoteMeta[]>([]);
   const [tabs, setTabs] = useState<Tabs>({ list: [], active: 0 });
   const openPath = current(tabs.list[tabs.active]);
-  /** The open page, when the tab shows one (not the Library). */
-  const pagePath = openPath?.startsWith("@plugin/") ? undefined : openPath;
+  /** The open page, when the tab shows one (not a plugin's view or a terminal). */
+  const pagePath = openPath?.startsWith("@plugin/") || isTerminalPath(openPath) ? undefined : openPath;
   const [recents, setRecents] = useState<string[]>([]);
   const [peekPath, setPeekPath] = useState<string | null>(null);
   const [status, setStatus] = useState<RepoStatus | null>(null);
@@ -190,10 +191,11 @@ export default function App() {
   }, [refresh]);
 
   useEffect(() => {
-    if (vault && openPath) store.set(`open:${vault.path}`, openPath);
+    if (vault && openPath && !isTerminalPath(openPath)) store.set(`open:${vault.path}`, openPath);
   }, [vault, openPath]);
   useEffect(() => {
-    if (vault) store.set(`tabs:${vault.path}`, JSON.stringify(tabs.list.map(current)));
+    // Terminals aren't reopened: their shells end with the app.
+    if (vault) store.set(`tabs:${vault.path}`, JSON.stringify(tabs.list.map(current).filter((p) => !isTerminalPath(p))));
   }, [vault, tabs]);
   useEffect(() => {
     if (!vault) return;
@@ -213,18 +215,30 @@ export default function App() {
   const reveal = useCallback((_path: string) => setPeekPath(null), []);
 
   // Opens a page in the current tab (browser-style back/forward), or a new
-  // tab next to it. With no tab open yet, the page gets the first one.
+  // tab next to it. With no tab open yet, the page gets the first one. A terminal
+  // tab stays a terminal: the page opens in a new tab next to it.
   const openPage = useCallback(
     (path: string, opts?: OpenOptions) => {
       reveal(path);
       setTabs((t) => {
         if (!t.list.length) return { list: [newTab(path)], active: 0 };
-        if (opts?.newTab) return { list: [...t.list.slice(0, t.active + 1), newTab(path), ...t.list.slice(t.active + 1)], active: t.active + 1 };
+        if (opts?.newTab || isTerminalPath(current(t.list[t.active])))
+          return { list: [...t.list.slice(0, t.active + 1), newTab(path), ...t.list.slice(t.active + 1)], active: t.active + 1 };
         return withActive(t, (tab) => (current(tab) === path ? tab : { ...tab, stack: [...tab.stack.slice(0, tab.index + 1), path], index: tab.index + 1 }));
       });
     },
     [reveal],
   );
+  /** A terminal tab next to the current one: the user's shell, in the workspace folder. */
+  const openTerminal = useCallback(
+    () => setTabs((t) => ({ list: [...t.list.slice(0, t.active + 1), newTab(newTerminalPath()), ...t.list.slice(t.active + 1)], active: t.active + 1 })),
+    [],
+  );
+  /** ⌘T: the current page again in a new tab; from a terminal, the last page. */
+  const newPageTab = () => {
+    const path = isTerminalPath(openPath) ? (recents[0] ?? notes[0]?.path) : openPath;
+    if (path) openPage(path, { newTab: true });
+  };
   useEffect(() => {
     setPluginHost({ openPath: openPage, toast: (message) => setToast({ message }), openSettings: (section) => setSettings(section as Section) });
   }, [openPage]);
@@ -307,7 +321,7 @@ export default function App() {
       if (peekPath === path) setPeekPath(null);
       // Tabs showing a deleted page close; the last one moves to the first page left.
       setTabs((t) => {
-        const alive = t.list.filter((tab) => n.some((x) => x.path === current(tab)));
+        const alive = t.list.filter((tab) => isTerminalPath(current(tab)) || n.some((x) => x.path === current(tab)));
         if (alive.length === t.list.length) return t;
         if (!alive.length) return { list: n[0] ? [newTab(n[0].path)] : [], active: 0 };
         const keep = alive.indexOf(t.list[t.active]);
@@ -373,6 +387,11 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Keys typed in a terminal are the shell's (Ctrl-K, Ctrl-P, Escape…); only ⌘ shortcuts, and
+      // Ctrl-` and Ctrl-Tab, are the app's there.
+      const inTerminal = e.target instanceof Element && !!e.target.closest("[data-terminal]");
+      if (e.ctrlKey && !e.metaKey && e.key === "`") return (e.preventDefault(), openTerminal());
+      if (inTerminal && !e.metaKey && !(e.ctrlKey && e.key === "Tab")) return;
       if (e.key === "Escape" && peekPath && !document.querySelector("[data-popover]")) setPeekPath(null);
       if (!e.metaKey && !e.ctrlKey) return;
       const key = e.key.toLowerCase();
@@ -388,7 +407,7 @@ export default function App() {
         e.preventDefault();
         selectTab((tabs.active + (e.shiftKey ? tabs.list.length - 1 : 1)) % tabs.list.length);
       }
-      if (key === "t" && !e.shiftKey && openPath) (e.preventDefault(), openPage(openPath, { newTab: true }));
+      if (key === "t" && !e.shiftKey && openPath) (e.preventDefault(), newPageTab());
       // Page text zoom: ⌘+ (or ⌘=) and ⌘− step it, ⌘0 resets it.
       const zoom = e.altKey ? null : key === "=" || key === "+" ? 1 : key === "-" ? -1 : key === "0" ? 0 : null;
       if (zoom !== null) {
@@ -568,7 +587,8 @@ export default function App() {
               onClose={closeTab}
               onCloseOthers={(i) => keepTabs(i, (k) => k === i)}
               onCloseRight={(i) => keepTabs(i, (k) => k <= i)}
-              onNew={() => openPath && openPage(openPath, { newTab: true })}
+              onNew={newPageTab}
+              onNewTerminal={openTerminal}
               onBack={activeTab && activeTab.index > 0 ? () => go(-1) : undefined}
               onForward={activeTab && activeTab.index < activeTab.stack.length - 1 ? () => go(1) : undefined}
               onShowSidebar={sidebar ? undefined : () => (setSidebar(true), setSidebarPeek(false))}
@@ -576,7 +596,7 @@ export default function App() {
             />
           )}
           <div className="relative flex min-h-0 flex-1">
-          {openPath && parseViewPath(openPath) ? (
+          {isTerminalPath(openPath) ? null : openPath && parseViewPath(openPath) ? (
             <PluginView path={openPath} onOpenSettings={() => setSettings("plugins")} />
           ) : pagePath ? (
             <PageView
@@ -595,6 +615,10 @@ export default function App() {
               </button>
             </div>
           )}
+          {/* Every terminal stays mounted (its shell running) while other tabs are shown. */}
+          {tabs.list.map(current).filter((p): p is string => isTerminalPath(p)).map((path) => (
+            <TerminalView key={path} active={path === openPath} />
+          ))}
 
           {peekPath && (
             <div className="peek-panel absolute inset-y-0 right-0 z-30 flex w-[min(720px,62%)] border-l border-line bg-surface shadow-peek">
