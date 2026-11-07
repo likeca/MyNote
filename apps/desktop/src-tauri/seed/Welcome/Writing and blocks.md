@@ -83,6 +83,16 @@ A divider is a line across the page:
 
 `/Table` adds a table with a header row. Tab moves to the next cell, and adds a new row when you're in the last one.
 
+Hover the table to work on it:
+
+- **Rows and columns:** a grip shows beside the row and above the column under the pointer. Drag it to move the row or column, or click it to colour, insert, duplicate, clear or delete it.
+- **Adding:** click the `+` under the table for a new row, or beside it for a new column. Drag the `+` to add several at once.
+- **Cells:** select some cells, or right-click one, to colour or clear them. A colour is either the text's or the cell's background.
+- **The whole table:** its `⋮⋮` handle (or a right-click) turns the **header row** and **header column** on or off, makes it **fit to page width**, colours every cell, or **turns it into a database**. The first column becomes the rows' names and the others text properties.
+- **Widths:** drag a column's right border to resize it.
+
+The cells stay a plain Markdown table. Headers, colours and widths are saved in a comment just above it, which other Markdown apps ignore.
+
 | Star    | Constellation | Colour |
 | ------- | ------------- | ------ |
 | Antares | Scorpius      | Red    |
@@ -97,7 +107,7 @@ A divider is a line across the page:
 const greet = (name) => `Hello, ${name}!`;
 ```
 
-On the desktop app, a **Bash**, **Bash + profile**, **Shell** or **Zsh** block can be run: hover it and click **Run** to run the whole block, or put the cursor on a line and press `Ctrl E` (or click **Run line**) to run just that line. It runs in your workspace folder. **Bash** runs on its own, without your startup files. **Bash + profile** first loads `~/.bash_profile` (or `~/.profile`), **Zsh** loads `~/.zprofile` and `~/.zshrc`, aliases included, and **Shell** runs Bash with the `PATH` and exports from your own shell's startup files. The language menu shows what each one loads. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
+On the desktop app, a **Bash**, **Bash + profile**, **Shell**, **Zsh** or **Python** block can be run: hover it and click **Run** to run the whole block, or put the cursor on a line and press `Ctrl E` (or click **Run line**) to run just that line. It runs in your workspace folder. **Bash** runs on its own, without your startup files. **Bash + profile** first loads `~/.bash_profile` (or `~/.profile`), **Zsh** loads `~/.zprofile` and `~/.zshrc`, aliases included, and **Shell** runs Bash with the `PATH` and exports from your own shell's startup files. **Python** runs `python3` (`python` on Windows) with that same `PATH`, so it's the Python you'd get in Terminal, Homebrew's or pyenv's included; a line run on its own loses its indent, so a line from inside a `for` or `def` still runs. The language menu shows what each one loads. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
 
 ### Image
 
@@ -107,7 +117,9 @@ To resize an image, hover it and drag the handle on either side; it keeps its pr
 
 ### File
 
-`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into a folder named after the page, inside the workspace's `.assets/` folder: a page "Launch plan" keeps its files in `.assets/Launch plan/`, under their own names, so they're versioned with your pages. Rename or move the page and its folder follows. A file shows as a chip with its name and size. Click it to open it in its app, or `⌘`-click it to show it in Finder. In the page it's an ordinary link, `[Q3 Report.pdf](.assets/Launch%20plan/Q3%20Report.pdf)` (spaces are written `%20`), so other Markdown apps can open it too.
+`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into a folder named after the page, inside the workspace's `.assets/` folder: a page "Launch plan" keeps its files in `.assets/Launch plan/`, under their own names, so they're versioned with your pages. Rename or move the page and its folder follows. A file shows as a chip with its name and size. In the page it's an ordinary link, `[Q3 Report.pdf](.assets/Launch%20plan/Q3%20Report.pdf)` (spaces are written `%20`), so other Markdown apps can open it too.
+
+Click a file to open it. On the desktop app, text and code (JSON, YAML, CSV, scripts, configs and the like) open in a tab of their own, in the same code editor as VS Code: colours for its language, find and replace (`⌘F`), several cursors, a minimap. What you type saves as you go, and `⌘S` saves straight away. Clicking the file again goes back to its tab. Pictures, sound, video, PDFs, office documents and archives open in their own app instead; so does any file from the tab's buttons, which also show it in Finder. `⌘`-click a file to show it in Finder.
 
 To delete a file, take it off the page: hover it and click the bin, or select it and press Backspace (deleting its line does it too). The file leaves the page's folder, and the folder goes too once it's empty. It waits in the Trash for 30 days, so undoing, or pasting it on another page, brings it back. If another page links to the same file, the file stays for it.
 

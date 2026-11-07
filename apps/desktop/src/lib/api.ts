@@ -43,6 +43,8 @@ export const api = {
   saveAsset: (name: string, bytes: number[]) => invoke<string>("save_asset", { name, bytes }),
   readAsset: (path: string) => invoke<ArrayBuffer>("read_asset", { path }),
   writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
+  /** Saves an attached text file edited in its tab. */
+  writeAssetText: (path: string, text: string) => invoke<void>("write_asset_text", { path, text }),
   /** Attaches a file picked on disk: copies it into `page`'s attachment folder; returns its vault path. */
   attachFile: (path: string, page: string | null) => invoke<string>("attach_file", { path, page }),
   /** Attaches a dropped or pasted file to `page`, sent as raw bytes; returns its vault path. */

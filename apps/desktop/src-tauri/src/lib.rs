@@ -395,6 +395,12 @@ fn write_asset(state: State<AppState>, path: String, bytes: Vec<u8>) -> Result<(
     vault::write_asset(&vault(&state)?, &path, &bytes)
 }
 
+/// Saves an attached text file edited in its tab (`write_asset` for text, without a list of numbers).
+#[tauri::command]
+fn write_asset_text(state: State<AppState>, path: String, text: String) -> Result<(), String> {
+    vault::write_asset(&vault(&state)?, &path, text.as_bytes())
+}
+
 /// Copies a file picked on disk into `page`'s attachment folder; returns its vault path.
 #[tauri::command]
 fn attach_file(state: State<AppState>, path: String, page: Option<String>) -> Result<String, String> {
@@ -918,6 +924,7 @@ pub fn run() {
             save_asset,
             read_asset,
             write_asset,
+            write_asset_text,
             attach_file,
             attach_bytes,
             file_size,

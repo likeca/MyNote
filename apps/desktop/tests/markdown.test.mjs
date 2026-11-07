@@ -205,10 +205,65 @@ const exact = (md) => assert.equal(roundTrip(md), md);
 
 test("a page may start with a table", () => exact("| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nAfter\n"));
 
+test("a database page's views stay where they are among its text", () => {
+  exact("## Plan\n\n<!-- database views -->\n\nNotes below.\n");
+  exact("<!-- database views -->\n\nNotes below.\n");
+  exact("<!-- database views -->\n");
+});
+
 test("dragged column widths ride along in a comment above the table", () => {
   exact("Before\n\n<!-- table widths: 160, 0 -->\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nAfter\n");
   // Tables nobody resized stay plain Markdown.
   exact("Before\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nAfter\n");
+});
+
+/** The cells of the page's first table as the editor holds them: `th`/`td` and colour per cell. */
+function tableCells(md) {
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, content: md, contentType: "markdown" });
+  const table = editor.getJSON().content.find((n) => n.type === "table");
+  editor.destroy();
+  return {
+    fit: !!table.attrs?.fit,
+    cells: table.content.map((r) => r.content.map((c) => `${c.type === "tableHeader" ? "th" : "td"}${c.attrs?.color ? `:${c.attrs.color}` : ""}`)),
+  };
+}
+
+const ROWS = "| a   | b   |\n| --- | --- |\n| 1   | 2   |\n| 3   | 4   |\n";
+
+test("a table without a header row puts its first row on the Markdown header line, and says so", () => {
+  const md = `<!-- table header: none -->\n${ROWS}`;
+  exact(md);
+  assert.deepEqual(tableCells(md).cells, [["td", "td"], ["td", "td"], ["td", "td"]]);
+  // Without the comment, the first row is the header row, as in any Markdown app.
+  assert.deepEqual(tableCells(ROWS).cells, [["th", "th"], ["td", "td"], ["td", "td"]]);
+});
+
+test("a header column survives a save, with or without the header row", () => {
+  const both = `<!-- table header: row, column -->\n${ROWS}`;
+  exact(both);
+  assert.deepEqual(tableCells(both).cells, [["th", "th"], ["th", "td"], ["th", "td"]]);
+  const column = `<!-- table header: column -->\n${ROWS}`;
+  exact(column);
+  assert.deepEqual(tableCells(column).cells, [["th", "td"], ["th", "td"], ["th", "td"]]);
+});
+
+test("cell colours are kept by column, row and cell, rows over columns and cells over both", () => {
+  const md = `<!-- table widths: 160, 0; fit: page; colors: c1=gray_background, r2=blue, r3c2=red_background -->\n${ROWS}`;
+  exact(md);
+  const { fit, cells } = tableCells(md);
+  assert.equal(fit, true);
+  assert.deepEqual(cells, [
+    ["th:gray_background", "th"],
+    ["td:blue", "td:blue"],
+    ["td:gray_background", "td:red_background"],
+  ]);
+  // Written by hand: `default` takes a column's colour back off one cell; unknown colours are ignored.
+  assert.deepEqual(tableCells(`<!-- table colors: c1=green_background, r2c1=default, c2=chartreuse -->\n${ROWS}`).cells, [
+    ["th:green_background", "th"],
+    ["td", "td"],
+    ["td:green_background", "td"],
+  ]);
 });
 
 test("imported tables: multi-line cells use <br>, paragraph breaks <br><br>", () => {

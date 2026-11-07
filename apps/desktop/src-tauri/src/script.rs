@@ -1,6 +1,6 @@
-//! Runs a shell code block from a page (Ctrl-E or its Run button): bash (zsh for `zsh` blocks) in
-//! the workspace folder, set up like a new terminal (the user's shell with its login and rc files),
-//! its output streamed back.
+//! Runs a shell or Python code block from a page (Ctrl-E or its Run button): bash (zsh for `zsh`
+//! blocks, python3 for `python`) in the workspace folder, set up like a new terminal (the user's
+//! shell with its login and rc files), its output streamed back.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -24,14 +24,18 @@ enum Startup {
     UserShell,
 }
 
-/// How a code block's language runs: its interpreter and startup; `None` for blocks that aren't
-/// shell scripts.
+/// Python: `python3` as the user's shell finds it (Homebrew, pyenv, a virtualenv's), `python` on Windows.
+const PYTHON: &str = if cfg!(windows) { "python" } else { "python3" };
+
+/// How a code block's language runs: its interpreter and startup; `None` for blocks that can't run.
 fn setup_for(language: &str) -> Option<(&'static str, Startup)> {
     match language {
         "bash" | "sh" => Some(("bash", Startup::Plain)),
         "bash-profile" => Some(("bash", Startup::Own)),
         "shell" => Some(("bash", Startup::UserShell)),
         "zsh" => Some(("zsh", Startup::Own)),
+        // Through the user's shell's login and rc files, so it's the Python they'd get in a terminal.
+        "python" | "py" => Some((PYTHON, Startup::UserShell)),
         _ => None,
     }
 }
@@ -60,21 +64,31 @@ fn command(language: &str, user_shell: &str, script: &str) -> Option<(Command, b
         Startup::Own => Some(interpreter),
         Startup::UserShell => Some(user_shell),
     };
-    let Some(startup_shell) = startup_shell else {
-        let mut cmd = Command::new(interpreter);
-        cmd.arg("-c").arg(script);
-        return Some((cmd, false));
+    let mut cmd = match startup_shell {
+        None => {
+            let mut cmd = Command::new(interpreter);
+            cmd.arg("-c").arg(script);
+            cmd
+        }
+        Some(startup_shell) => {
+            // After the rc files: run the script in this shell (where the aliases are; in a subshell,
+            // so an `exit` doesn't make a login shell say "logout"), or hand it to the block's
+            // interpreter, which inherits the environment.
+            let same = Path::new(startup_shell).file_name().is_some_and(|n| n == interpreter);
+            let then = if same { r#"(eval "$1")"# } else { r#"exec "$0" -c "$1""# };
+            let mut cmd = Command::new(startup_shell);
+            cmd.args(["-l", "-i", "-c"])
+                .arg(format!(r"printf '\036{STARTED_TAG}\036'; printf '\036{STARTED_TAG}\036' >&2; {then}"))
+                .args([interpreter, script]);
+            cmd
+        }
     };
-    // After the rc files: run the script in this shell (where the aliases are; in a subshell, so an
-    // `exit` doesn't make a login shell say "logout"), or hand it to the block's interpreter, which
-    // inherits the environment.
-    let same = Path::new(startup_shell).file_name().is_some_and(|n| n == interpreter);
-    let then = if same { r#"(eval "$1")"# } else { r#"exec "$0" -c "$1""# };
-    let mut cmd = Command::new(startup_shell);
-    cmd.args(["-l", "-i", "-c"])
-        .arg(format!(r"printf '\036{STARTED_TAG}\036'; printf '\036{STARTED_TAG}\036' >&2; {then}"))
-        .args([interpreter, script]);
-    Some((cmd, true))
+    if interpreter == PYTHON {
+        // Output as it's printed, not all at the end (Python buffers when it isn't on a terminal),
+        // and in UTF-8 whatever the locale.
+        cmd.env("PYTHONUNBUFFERED", "1").env("PYTHONIOENCODING", "utf-8");
+    }
+    Some((cmd, startup_shell.is_some()))
 }
 
 /// Runs `script` and sends its output (stdout and stderr, as they come) to `out`. Returns the exit
@@ -188,7 +202,7 @@ mod tests {
 
     #[test]
     fn refuses_other_languages() {
-        assert!(collect(&Running::default(), 1, "python", "print(1)").0.is_err());
+        assert!(collect(&Running::default(), 1, "ruby", "puts 1").0.is_err());
     }
 
     #[test]
@@ -248,6 +262,14 @@ mod tests {
     fn a_shell_block_inherits_the_users_shell_environment() {
         let (code, text) = in_terminal_setup("shell", "/bin/sh", &[(".profile", "export MYNOTE_RC=yes\necho chatter\n")], "echo \"$MYNOTE_RC ${BASH_VERSION:+in bash}\"");
         assert_eq!((code, text.as_str()), (Some(0), "yes in bash\n"));
+    }
+
+    #[test]
+    fn a_python_block_runs_python3_with_the_users_shell_environment() {
+        let script = "import os, sys\nprint(os.environ.get('MYNOTE_RC'), 'é')\nprint('err', file=sys.stderr)\nsys.exit(3)";
+        let (code, text) = in_terminal_setup("python", "/bin/sh", &[(".profile", "export MYNOTE_RC=yes\necho chatter\n")], script);
+        assert_eq!(code, Some(3));
+        assert!(text.contains("yes é\n") && text.contains("err\n") && !text.contains("chatter"), "{text:?}");
     }
 
     #[test]

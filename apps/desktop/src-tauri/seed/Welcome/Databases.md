@@ -13,6 +13,8 @@ A database is a page whose sub-pages are its rows. Each row's values are saved i
 - On an empty page, **Get started with** offers Table, Board and Calendar.
 - [[Import]] turns each Notion database into a MyNote database.
 
+On a database's own page, its views (table, board, calendar…) are one block among the page's text: write above or below them, as on any page, with headings, notes, callouts or checklists about the rows. Click the line under the views to start writing below. To move the views above or below the text, drag them by their `⋮⋮` handle, or drag text blocks past them. The views can't be deleted from their own page; delete the database from its `•••` menu instead.
+
 ## Views
 
 Each database can have several views. Every view keeps its own sorts, filters, column order and widths, hidden properties and calculations.
@@ -94,7 +96,7 @@ Try it with [[Design the database views]], [[Ship the MCP server]] or [[Sync vau
 
 ## How it's stored
 
-`Roadmap.md` has `type: database` in its frontmatter and a code block marked `database` that holds the properties and views as JSON. Each row is a file in the `Roadmap/` folder, with its values as frontmatter:
+`Roadmap.md` has `type: database` in its frontmatter and a code block marked `database` that holds the properties and views as JSON. Text blocks on the page sit above or below that code block, wherever they are on the page. Each row is a file in the `Roadmap/` folder, with its values as frontmatter:
 
 ```yaml
 ---

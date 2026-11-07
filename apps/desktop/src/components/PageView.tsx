@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 import { PageIcon } from "./PageIcon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { DatabaseView } from "../database/DatabaseView";
-import { defaultSchema, writeSchema } from "../database/model";
+import { bodyForEditor, bodyFromEditor, defaultSchema, hasSchema, withSchemaBlockOf, writeSchema } from "../database/model";
 import { Toggle } from "../database/PropertyMenu";
 import { RowProperties } from "../database/RowProperties";
 import { PluginPagePanels } from "../plugins/slots";
@@ -134,6 +133,12 @@ export function PageView(p: Props) {
     window.clearTimeout(timer.current);
     if (!pending.current) return;
     pending.current = false;
+    // A database page: its schema block as it is on disk now, which the views save on their own
+    // (a column added since must stay).
+    if (hasSchema(body.current)) {
+      const disk = splitNote(await api.readNote(pathRef.current).catch(() => "")).body;
+      if (hasSchema(disk)) body.current = withSchemaBlockOf(body.current, disk);
+    }
     const content = joinNote(fm.current, body.current);
     if (content === lastWritten.current) return setSaving(false);
     // Only the text changed: nothing else in the app needs to reload for this save.
@@ -199,10 +204,13 @@ export function PageView(p: Props) {
         .then((c) => {
           if (c === lastWritten.current || pending.current) return;
           const parts = splitNote(c);
-          // Frontmatter-only changes (e.g. a property edited in a table) keep the editor mounted.
-          if (parts.body === body.current) {
+          // Frontmatter-only changes (e.g. a property edited in a table) keep the editor mounted; so
+          // do a database's view and column changes, which only touch its schema block.
+          const sameText = hasSchema(parts.body) ? bodyForEditor(parts.body) === bodyForEditor(body.current) : parts.body === body.current;
+          if (sameText) {
             lastWritten.current = c;
             fm.current = parts.frontmatter;
+            body.current = parts.body;
             setDoc(parts);
           } else load(c);
         })
@@ -249,6 +257,36 @@ export function PageView(p: Props) {
   const parent = parentOf(path);
   const parentIsDb = !!parent && notes.find((n) => n.path === parent)?.kind === "database";
   const isDb = values.type === "database";
+  // The page's text: all of its body; on a database's own page, its views are a block in it.
+  const editor =
+    doc && doc !== "missing" ? (
+      <PageContext.Provider value={path}>
+        <Editor
+          key={`${path}:${editorKey}`}
+          editorRef={editorRef}
+          initial={isDb ? bodyForEditor(doc.body) : doc.body}
+          onChange={(md) => {
+            body.current = isDb ? bodyFromEditor(md, body.current) : md;
+            scheduleSave();
+          }}
+          onOpenLink={(target, newTab) => {
+            const hit = resolveWikiLink(target, notesRef.current);
+            if (hit) openPage(hit.path, { newTab });
+            else createPage(null, target.split("#")[0]).then(openPage);
+          }}
+          getNotes={() => notesRef.current}
+          createPage={async (t) => titleOf(await createPage(null, t))}
+          page={{
+            createSubpage: (title) => createPage(path, title),
+            findSubpage: (title) => {
+              const want = `${path.replace(/\.md$/, "")}/${title}.md`.toLowerCase();
+              return notesRef.current.find((n) => n.path.toLowerCase() === want)?.path;
+            },
+            createDatabase: () => createDatabase(path),
+          }}
+        />
+      </PageContext.Provider>
+    ) : null;
 
   if (doc === "missing") {
     return (
@@ -419,61 +457,29 @@ export function PageView(p: Props) {
             />
           )}
 
-          {isDb ? (
-            <div className="mt-4">
-              <DatabaseView path={path} />
-            </div>
-          ) : (
-            <div className="relative mt-2">
-              {/* relative: the block handle positions against this box, so it scrolls with the text */}
-              {doc && (
-                <PageContext.Provider value={path}>
-                <Editor
-                  key={`${path}:${editorKey}`}
-                  editorRef={editorRef}
-                  initial={doc.body}
-                  onChange={(md) => {
-                    body.current = md;
-                    scheduleSave();
-                  }}
-                  onOpenLink={(target, newTab) => {
-                    const hit = resolveWikiLink(target, notesRef.current);
-                    if (hit) openPage(hit.path, { newTab });
-                    else createPage(null, target.split("#")[0]).then(openPage);
-                  }}
-                  getNotes={() => notesRef.current}
-                  createPage={async (t) => titleOf(await createPage(null, t))}
-                  page={{
-                    createSubpage: (title) => createPage(path, title),
-                    findSubpage: (title) => {
-                      const want = `${path.replace(/\.md$/, "")}/${title}.md`.toLowerCase();
-                      return notesRef.current.find((n) => n.path.toLowerCase() === want)?.path;
-                    },
-                    createDatabase: () => createDatabase(path),
-                  }}
-                />
-                </PageContext.Provider>
-              )}
-              {emptyBody && (
-                <EmptyPageStarters
-                  onDatabase={async (type) => {
-                    const schema = defaultSchema();
-                    schema.views = [{ ...schema.views[0], type, name: type === "table" ? "Table" : type === "board" ? "Board" : "Calendar" }];
-                    if (type === "board") schema.views[0].groupBy = "Status";
-                    if (type === "calendar") {
-                      schema.properties.push({ name: "Date", type: "date" });
-                      schema.views[0].dateProperty = "Date";
-                    }
-                    fm.current = patchFrontmatter(fm.current, { type: "database" });
-                    body.current = writeSchema("", schema);
-                    pending.current = true;
-                    await flush();
-                    load(joinNote(fm.current, body.current));
-                  }}
-                />
-              )}
-            </div>
-          )}
+          {/* On a database's own page the views are a block in the editor (DatabaseViews). */}
+          <div className="relative mt-2">
+            {/* relative: the block handle positions against this box, so it scrolls with the text */}
+            {editor}
+            {emptyBody && (
+              <EmptyPageStarters
+                onDatabase={async (type) => {
+                  const schema = defaultSchema();
+                  schema.views = [{ ...schema.views[0], type, name: type === "table" ? "Table" : type === "board" ? "Board" : "Calendar" }];
+                  if (type === "board") schema.views[0].groupBy = "Status";
+                  if (type === "calendar") {
+                    schema.properties.push({ name: "Date", type: "date" });
+                    schema.views[0].dateProperty = "Date";
+                  }
+                  fm.current = patchFrontmatter(fm.current, { type: "database" });
+                  body.current = writeSchema("", schema);
+                  pending.current = true;
+                  await flush();
+                  load(joinNote(fm.current, body.current));
+                }}
+              />
+            )}
+          </div>
 
           {backlinks.length > 0 && !isDb && (
             <section className="mt-16 border-t border-line pt-4">

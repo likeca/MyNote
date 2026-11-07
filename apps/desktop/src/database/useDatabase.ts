@@ -39,8 +39,6 @@ import {
 
 type State = {
   schema: Schema;
-  pageFrontmatter: string;
-  pageBody: string;
   rows: Row[];
   /** Databases this one relates to (itself included), for two-way relations and rollups. */
   related: Map<string, RelatedDatabase>;
@@ -84,14 +82,14 @@ export function useDatabase(path: string, scope?: string) {
   const load = useCallback(async () => {
     try {
       const [page, raw] = await Promise.all([api.readNote(path), api.databaseRows(path)]);
-      const { frontmatter, body } = splitNote(page);
+      const { body } = splitNote(page);
       const schema = parseSchema(body);
       const targets = new Set(schema.properties.filter((p) => p.type === "relation").map(resolve));
       const related = new Map<string, RelatedDatabase>();
       for (const t of targets) {
         if (t && t !== path) await readDatabase(t).then((db) => related.set(t, db), () => {});
       }
-      setState(withRows({ schema, pageFrontmatter: frontmatter, pageBody: body, related }, raw.map(toRow)));
+      setState(withRows({ schema, related }, raw.map(toRow)));
       setMissing(false);
     } catch {
       setMissing(true);
@@ -123,15 +121,22 @@ export function useDatabase(path: string, scope?: string) {
     [path],
   );
 
+  // Saves one after another, each from the page as it is on disk: the page's own text (typed above
+  // the views), title and icon are saved by the page, so only the schema block is replaced here.
+  const saving = useRef<Promise<void>>(Promise.resolve());
   const saveSchema = useCallback(
     async (schema: Schema) => {
       const s = latest.current;
       if (!s) return;
-      const pageBody = writeSchema(s.pageBody, schema);
-      const next = { ...s, schema, pageBody };
+      const next = { ...s, schema };
       latest.current = next;
       setState(next);
-      await api.writeNote(path, joinNote(s.pageFrontmatter, pageBody));
+      const write = async () => {
+        const page = splitNote(await api.readNote(path));
+        await api.writeNote(path, joinNote(page.frontmatter, writeSchema(page.body, latest.current?.schema ?? schema)));
+      };
+      saving.current = saving.current.then(write, write);
+      await saving.current;
     },
     [path],
   );

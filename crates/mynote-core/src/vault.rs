@@ -948,12 +948,18 @@ pub fn read_asset(vault: &Path, rel: &str) -> Result<Vec<u8>, String> {
     fs::read(resolve(vault, rel)?).map_err(|e| e.to_string())
 }
 
-/// Replaces an existing file in `.assets/` (a diagram edited in place); nothing else can be written this way.
+/// Replaces an existing file in `.assets/` or a page's folder in it (a diagram edited in place, an
+/// attachment edited in its tab); nothing else can be written this way.
 pub fn write_asset(vault: &Path, rel: &str, bytes: &[u8]) -> Result<(), String> {
     let abs = resolve(vault, rel)?;
-    let is_asset = rel.strip_prefix(".assets/").is_some_and(|name| !name.contains('/'));
-    // `symlink_metadata`: a link in `.assets/` mustn't lead the write elsewhere.
-    if !is_asset || !fs::symlink_metadata(&abs).is_ok_and(|m| m.is_file()) {
+    // No link anywhere on the way (`symlink_metadata` doesn't follow one): a link in `.assets/`
+    // mustn't lead the write elsewhere. The file itself must already be there.
+    let mut at = vault.to_path_buf();
+    let unlinked = Path::new(rel).components().all(|c| {
+        at.push(c);
+        fs::symlink_metadata(&at).is_ok_and(|m| !m.file_type().is_symlink())
+    });
+    if !rel.starts_with(".assets/") || !unlinked || !fs::metadata(&abs).is_ok_and(|m| m.is_file()) {
         return Err(format!("not an asset: {rel}"));
     }
     fs::write(abs, bytes).map_err(|e| e.to_string())
@@ -1244,10 +1250,16 @@ mod tests {
             assert!(write_asset(&dir, rel, b"x").is_err(), "{rel}");
         }
         assert_eq!(fs::read_to_string(dir.join("Page.md")).unwrap(), "text");
+        // A file in a page's attachment folder is edited in its tab, but a linked folder can't lead out.
+        let attached = save_attachment(&dir, Some("Page.md"), "notes.json", b"{}").unwrap();
+        write_asset(&dir, &attached, b"{\"a\":1}").unwrap();
+        assert_eq!(read_asset(&dir, &attached).unwrap(), b"{\"a\":1}");
         #[cfg(unix)]
         {
             std::os::unix::fs::symlink(dir.join("Page.md"), dir.join(".assets/link.svg")).unwrap();
             assert!(write_asset(&dir, ".assets/link.svg", b"x").is_err());
+            std::os::unix::fs::symlink(&dir, dir.join(".assets/out")).unwrap();
+            assert!(write_asset(&dir, ".assets/out/Page.md", b"x").is_err());
             assert_eq!(fs::read_to_string(dir.join("Page.md")).unwrap(), "text");
         }
         let _ = fs::remove_dir_all(&dir);

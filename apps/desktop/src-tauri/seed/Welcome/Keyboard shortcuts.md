@@ -23,21 +23,21 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 
 ## Writing
 
-| Shortcut         | What it does                                                |
-| ---------------- | ----------------------------------------------------------- |
-| `/`              | Open the block menu                                         |
-| `[[`             | Link to a page                                              |
-| `@`              | Mention a page or a date                                    |
-| `⌘B`             | Bold                                                        |
-| `⌘I`             | Italic                                                      |
-| `⌘⇧S`            | Strikethrough                                               |
-| `⌘E`             | Inline code                                                 |
-| `⌘⇧H`            | Highlight in yellow                                         |
-| `⌘Z` and `⌘⇧Z`   | Undo and redo                                               |
-| `Tab` and `⇧Tab` | Indent and outdent a list item, or move between table cells |
-| `⌘D`             | Duplicate the current block                                 |
-| `⌘⇧E`            | Inline equation, or turn the selected text into one         |
-| `Ctrl E`         | Run the line the cursor is on, in a shell code block        |
+| Shortcut         | What it does                                                   |
+| ---------------- | -------------------------------------------------------------- |
+| `/`              | Open the block menu                                            |
+| `[[`             | Link to a page                                                 |
+| `@`              | Mention a page or a date                                       |
+| `⌘B`             | Bold                                                           |
+| `⌘I`             | Italic                                                         |
+| `⌘⇧S`            | Strikethrough                                                  |
+| `⌘E`             | Inline code                                                    |
+| `⌘⇧H`            | Highlight in yellow                                            |
+| `⌘Z` and `⌘⇧Z`   | Undo and redo                                                  |
+| `Tab` and `⇧Tab` | Indent and outdent a list item, or move between table cells    |
+| `⌘D`             | Duplicate the current block                                    |
+| `⌘⇧E`            | Inline equation, or turn the selected text into one            |
+| `Ctrl E`         | Run the line the cursor is on, in a shell or Python code block |
 
 ## Turn into
 

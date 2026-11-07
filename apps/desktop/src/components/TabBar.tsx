@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, ChevronsRight, FileText, PanelLeft, Puzzle, Plus, SquareTerminal, Table2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsRight, FileCode, FileText, PanelLeft, Puzzle, Plus, SquareTerminal, Table2, X } from "lucide-react";
 import { useState } from "react";
 import type { NoteMeta } from "../lib/api";
 import { PageIcon } from "./PageIcon";
 import { isTerminalPath } from "./TerminalView";
+import { fileName, fileOfTab, isFileTab } from "../lib/fileTabs";
 import { parseViewPath, useContributions } from "../plugins/runtime";
 import { MenuDivider, MenuItem, Popover } from "./Popover";
 
@@ -71,12 +72,15 @@ export function TabBar(props: Props) {
           const plugin = parseViewPath(tab.path);
           const view = plugin && views.find((v) => v.pluginId === plugin.pluginId && v.id === plugin.viewId);
           const terminal = isTerminalPath(tab.path);
+          const file = isFileTab(tab.path);
           // Terminals are numbered once there are several.
           const title = terminal
             ? `Terminal${terminalTabs.length > 1 ? ` ${terminalTabs.indexOf(tab) + 1}` : ""}`
-            : plugin
-              ? (view?.title ?? plugin.viewId)
-              : (note?.title ?? tab.path.split("/").pop()!.replace(/\.md$/, ""));
+            : file
+              ? fileName(fileOfTab(tab.path))
+              : plugin
+                ? (view?.title ?? plugin.viewId)
+                : (note?.title ?? tab.path.split("/").pop()!.replace(/\.md$/, ""));
           const on = i === active;
           return (
             <div
@@ -96,6 +100,8 @@ export function TabBar(props: Props) {
               <span className="grid size-4 shrink-0 place-items-center text-faint">
                 {terminal ? (
                   <SquareTerminal size={14} />
+                ) : file ? (
+                  <FileCode size={14} />
                 ) : plugin ? (
                   (view?.icon ?? <Puzzle size={14} />)
                 ) : note?.icon ? (

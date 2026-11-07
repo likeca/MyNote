@@ -13,7 +13,6 @@ import { Extension, Mark, Node, mergeAttributes, type Editor as TiptapEditor, ty
 import { CodeBlock as TiptapCodeBlock } from "@tiptap/extension-code-block";
 import { Details, DetailsSummary } from "@tiptap/extension-details";
 import Image from "@tiptap/extension-image";
-import { Table } from "@tiptap/extension-table";
 import { Fragment, type Node as PMNode } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
@@ -53,11 +52,13 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { IconPicker } from "../components/LazyIconPicker";
 import { MenuItem, Popover } from "../components/Popover";
 import { DatabaseView } from "../database/DatabaseView";
+import { VIEWS_MARKER } from "../database/model";
 import { api } from "../lib/api";
 import { COLORS, bgColor, textColor } from "../lib/colors";
 import { resolveWikiLink } from "../lib/tree";
 import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
+import { fileTab, opensInEditor } from "../lib/fileTabs";
 import { codeHighlight } from "./highlight";
 import { isEditableDiagram, openDiagramEditor } from "./drawio";
 
@@ -468,58 +469,6 @@ export const ToggleSummary = DetailsSummary.extend({
   },
 });
 
-// ---------- tables ----------
-
-/**
- * Column widths dragged in the editor are kept in a comment just above the table, which other
- * Markdown apps ignore: `<!-- table widths: 160, 0, 240 -->` (0 for a column left to fit its text).
- */
-const WIDTHS = /^<!-- table widths: ([\d, ]+) -->[ \t]*\n/;
-const base = Table.config;
-
-export const WidthTable = Table.extend({
-  markdownTokenizer: {
-    name: "table",
-    level: "block",
-    start: (src: string) => {
-      const comment = src.search(/^<!-- table widths:/m);
-      const table = (base.markdownTokenizer!.start as (src: string) => number)(src);
-      return comment >= 0 && (table < 0 || comment < table) ? comment : table;
-    },
-    tokenize(src, tokens, helper) {
-      const m = WIDTHS.exec(src);
-      const rest = m ? src.slice(m[0].length) : src;
-      if (!m) return base.markdownTokenizer!.tokenize(src, tokens, helper);
-      // The stock tokenizer only takes tables needing pipe escapes and leaves the rest to marked's.
-      const token = base.markdownTokenizer!.tokenize(rest, tokens, helper) ?? helper.blockTokens(rest)[0];
-      if (token?.type !== "table") return undefined;
-      return { ...token, raw: m[0] + token.raw, widths: m[1].split(",").map((w) => Number(w.trim()) || 0) };
-    },
-  },
-  parseMarkdown(token, h) {
-    const table = this.parent!(token, h) as JSONContent;
-    const widths = token.widths as number[] | undefined;
-    if (widths?.some((w) => w > 0)) {
-      for (const row of table.content ?? []) {
-        row.content?.forEach((cell, i) => {
-          if (widths[i] > 0) cell.attrs = { ...cell.attrs, colwidth: [widths[i]] };
-        });
-      }
-    }
-    return table;
-  },
-  renderMarkdown(node, h, ctx) {
-    const md = this.parent!(node, h, ctx) as string;
-    const first = ((node.content ?? []) as JSONContent[])[0]?.content ?? [];
-    const widths = first.map((c) => (c.attrs?.colwidth as number[] | null)?.[0] ?? 0);
-    // Straight above the table, after the blank lines the serializer puts before it (and only once,
-    // should this run on output that already has it).
-    const lead = /^\n*/.exec(md)![0];
-    if (!widths.some((w) => w > 0) || md.startsWith("<!-- table widths", lead.length)) return md;
-    return `${lead}<!-- table widths: ${widths.join(", ")} -->\n${md.slice(lead.length)}`;
-  },
-});
-
 // ---------- columns ----------
 
 /** `<div class="column">`, optionally with its share of the row: `data-width="0.8"` (Notion's ratio). */
@@ -782,6 +731,63 @@ export const DatabaseEmbed = Node.create({
   renderMarkdown: (node) => `![[${node.attrs?.target}]]`,
 });
 
+/** How many database-views blocks a document holds (one on a database's own page, else none). */
+function viewsBlocks(doc: PMNode) {
+  let n = 0;
+  doc.descendants((node) => {
+    if (node.type.name === "databaseViews") n++;
+    return !node.isTextblock;
+  });
+  return n;
+}
+
+/**
+ * On a database's own page: its views (table, board, calendar…) as one block among the page's
+ * text, so text can sit above or below them, and either can be dragged. Saved as the page's schema
+ * block (see `bodyFromEditor`); here it's just a placeholder line. There's always exactly one:
+ * it can't be deleted, cut or duplicated, and none can be pasted into another page.
+ */
+export const DatabaseViews = Node.create({
+  name: "databaseViews",
+  group: "block",
+  atom: true,
+  selectable: true,
+  draggable: true,
+  parseHTML() {
+    return [{ tag: "div[data-database-views]" }];
+  },
+  renderHTML() {
+    return ["div", { "data-database-views": "" }];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(DatabaseViewsView, { stopEvent: ({ event }) => !event.type.startsWith("drag"), ignoreMutation: () => true });
+  },
+  addProseMirrorPlugins() {
+    // Moving it (a drag deletes and inserts in one step) keeps the count; anything else is refused.
+    return [new Plugin({ filterTransaction: (tr, state) => !tr.docChanged || viewsBlocks(tr.doc) === viewsBlocks(state.doc) })];
+  },
+  markdownTokenizer: {
+    name: "databaseViews",
+    level: "block",
+    start: (src: string) => src.indexOf(VIEWS_MARKER),
+    tokenize(src) {
+      const m = new RegExp(`^${VIEWS_MARKER}[ \\t]*(?:\\n|$)`).exec(src);
+      return m ? { type: "databaseViews", raw: m[0] } : undefined;
+    },
+  },
+  parseMarkdown: () => ({ type: "databaseViews" }),
+  renderMarkdown: () => VIEWS_MARKER,
+});
+
+function DatabaseViewsView() {
+  const page = useContext(PageContext);
+  return (
+    <NodeViewWrapper data-database-views contentEditable={false} className="my-4">
+      {page && <DatabaseView path={page} />}
+    </NodeViewWrapper>
+  );
+}
+
 /** The vault path of the page an editor shows, for blocks that behave differently by page. */
 export const PageContext = createContext<string | null>(null);
 
@@ -848,18 +854,18 @@ export const LANGUAGES: [string, string][] = [
 /** What people type after ``` for a menu language (the menu shows and ticks the language it stands for). */
 const ALIASES: Record<string, string> = { js: "javascript", ts: "typescript", sh: "bash", py: "python", rs: "rust", html: "xml", yml: "yaml", toml: "ini", jsx: "javascript", tsx: "typescript" };
 
-/** Shell blocks run with Ctrl-E or their Run button (desktop only). The output shows under the block and isn't saved. */
-const SHELLS: Record<string, true> = { bash: true, "bash-profile": true, sh: true, shell: true, zsh: true };
-/** What a run of each shell loads from the user's setup (see script.rs), shown in the language menu. */
-const RUN_SETUP: Record<string, string> = { "bash-profile": "~/.bash_profile, ~/.profile", shell: "PATH, exports", zsh: "~/.zshrc" };
-const runnable = (language: unknown) => typeof language === "string" && SHELLS[language] === true && currentPlatform() === "desktop";
+/** Shell and Python blocks run with Ctrl-E or their Run button (desktop only). The output shows under the block and isn't saved. */
+const RUNNABLE: Record<string, true> = { bash: true, "bash-profile": true, sh: true, shell: true, zsh: true, python: true, py: true };
+/** What a run of each loads from the user's setup (see script.rs), shown in the language menu. */
+const RUN_SETUP: Record<string, string> = { "bash-profile": "~/.bash_profile, ~/.profile", shell: "PATH, exports", zsh: "~/.zshrc", python: "python3, your PATH" };
+const runnable = (language: unknown) => typeof language === "string" && RUNNABLE[language] === true && currentPlatform() === "desktop";
 /** The code blocks on screen that can run, so Ctrl-E finds the one with the cursor. */
 const runners = new Set<{ editor: TiptapEditor; pos: () => number | undefined; runLine: () => void }>();
 /** Only the end of very long output is kept, so a chatty script can't grow the page without bound. */
 const MAX_OUTPUT = 200_000;
 let runIds = 0;
 
-/** Ctrl-E in a shell block runs the line the cursor is on. Ahead of Tiptap's own Ctrl-E (end of block, on macOS). */
+/** Ctrl-E in a shell or Python block runs the line the cursor is on. Ahead of Tiptap's own Ctrl-E (end of block, on macOS). */
 const RunShortcut = Extension.create({
   name: "codeBlockRun",
   priority: 1000,
@@ -889,7 +895,7 @@ export const CodeBlock = TiptapCodeBlock.extend({
   },
 }).configure({ defaultLanguage: null, enableTabIndentation: true });
 
-/** A run of a shell block (or one of its lines): its output so far, then its exit code (null when stopped) or why it couldn't start. */
+/** A run of a shell or Python block (or one of its lines): its output so far, then its exit code (null when stopped) or why it couldn't start. */
 type ScriptRun = { id: number; line?: number; output: string; exit?: number | null; error?: string };
 
 /** The line of a code block at `pos` that the cursor is on (1-based), or null when the cursor is elsewhere. */
@@ -948,7 +954,9 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
   };
   const runLine = () => {
     const only = cursorLine(editor, getPos());
-    if (only?.text.trim()) start(only);
+    if (!only?.text.trim()) return;
+    // A Python line taken out of its `for` or `def` would be an IndentationError with its indent.
+    start(lang === "python" ? { ...only, text: only.text.trimStart() } : only);
   };
   const runLineRef = useRef(runLine);
   runLineRef.current = runLine;
@@ -1279,12 +1287,13 @@ export function formatFileSize(bytes: number) {
 }
 
 /**
- * An attached file: its icon, name and size. Click opens it; ⌘-click shows it in Finder. Its bin
- * (on hover) removes it from the page, and with it the file (see FileAttachment's plugin); undo
- * brings both back.
+ * An attached file: its icon, name and size. Click opens it: text and code in a tab with a code
+ * editor, anything else in its own app; ⌘-click shows it in Finder. Its bin (on hover) removes it
+ * from the page, and with it the file (see FileAttachment's plugin); undo brings both back.
  */
 function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
   const { src, name } = node.attrs as { src: string; name: string };
+  const { openPage } = useVault();
   // undefined: not known (yet, or this app can't tell); null: the file isn't there.
   const [size, setSize] = useState<number | null | undefined>(undefined);
   useEffect(() => {
@@ -1299,9 +1308,13 @@ function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
   }, [src]);
   const missing = size === null;
   const Icon = ATTACHMENT_ICONS.find(([re]) => re.test(name) || re.test(src))?.[1] ?? FileGeneric;
+  // Text and code open in a tab of their own, in a code editor (desktop); the rest in their own app.
+  const inTab = !missing && currentPlatform() === "desktop" && opensInEditor(name || src);
   const open = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!missing) void api.openAttachment(assetPath(src), e.metaKey).catch(() => setSize(null));
+    if (missing) return;
+    if (inTab && !e.metaKey) return openPage(fileTab(assetPath(src)), { newTab: true });
+    void api.openAttachment(assetPath(src), e.metaKey).catch(() => setSize(null));
   };
   const remove = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1314,7 +1327,7 @@ function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
       contentEditable={false}
       data-attachment
       onClick={open}
-      title={missing ? `${src}\nThis file isn't in the workspace` : `${name}\nClick to open · ⌘-click to show in Finder`}
+      title={missing ? `${src}\nThis file isn't in the workspace` : `${name}\nClick to open${inTab ? " in a tab" : ""} · ⌘-click to show in Finder`}
       className={`group/att relative mx-px inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-line bg-side px-2 py-0.5 align-middle text-[0.9em] leading-normal hover:bg-hover ${
         selected ? "ring-2 ring-[var(--blue)]/50" : ""
       } ${missing ? "opacity-60" : ""}`}

@@ -7,7 +7,7 @@
  */
 export function normalizeMarkdown(md: string): string {
   const body = md
-    .replace(/\n{3,}(?=\||<!-- table widths)/g, "\n\n")
+    .replace(/\n{3,}(?=\||<!-- table )/g, "\n\n")
     .replace(/^(\|.*\|)\n{3,}/gm, "$1\n\n")
     .replace(/^\n+/, "")
     .replace(/(?:\s|&nbsp;)+$/, "");

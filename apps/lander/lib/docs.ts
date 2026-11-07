@@ -132,8 +132,8 @@ function translate(source: string) {
         const tone = CALLOUT_COLORS.has(color) ? color : "gray";
         return `<div class="callout callout-${tone}"><span class="callout-icon">${icon || "💡"}</span><div class="callout-body">\n\n${inner}\n\n</div></div>\n`;
       })
-      // Column widths the app stores for tables.
-      .replace(/<!-- table widths:[^>]*-->/g, "")
+      // What the app stores about a table beyond its cells (column widths, headers, colours).
+      .replace(/<!-- table (?:widths|header|fit|colors):[^>]*-->/g, "")
       .replace(/\u0000(\d+)\u0000/g, (_, i: string) => code[Number(i)])
   );
 }

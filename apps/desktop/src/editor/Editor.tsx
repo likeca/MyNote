@@ -14,10 +14,6 @@ import { EditorContent, useEditor, useEditorState, type Editor as TiptapEditor }
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   ArrowUpRight,
   Bold,
   ChevronDown,
@@ -32,10 +28,6 @@ import {
   Heading3,
   Italic,
   Lightbulb,
-  Merge,
-  MoveHorizontal,
-  PanelLeft,
-  PanelTop,
   Link2,
   List,
   ListOrdered,
@@ -44,7 +36,6 @@ import {
   Plus,
   Quote,
   RefreshCw,
-  Split,
   SquareCode,
   Strikethrough,
   Table2,
@@ -54,9 +45,12 @@ import {
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { PageIcon } from "../components/PageIcon";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
-import { COLORS, bgColor, colorLabel, textColor } from "../lib/colors";
+import { bgColor, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
-import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, FileAttachment, ImageBlock, PageContext, Toggle, ToggleHeadingIcon, ToggleSummary, WidthTable, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
+import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, DatabaseViews, FileAttachment, ImageBlock, PageContext, Toggle, ToggleHeadingIcon, ToggleSummary, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
+import { ColorList } from "./ColorList";
+import { ColorTableCell, ColorTableHeader, SimpleTable, cellColor, colorTable } from "./table";
+import { TableControls, TableMenu, TableOptions } from "./TableControls";
 import { normalizeMarkdown } from "./markdown";
 import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
@@ -140,9 +134,12 @@ export function contentExtensions() {
     }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    // Columns resize by dragging their right border; widths are kept in the Markdown (WidthTable).
-    TableKit.configure({ table: false }),
-    WidthTable.configure({ resizable: true, cellMinWidth: 80, lastColumnResizable: true }),
+    // Notion's simple tables: headers, cell colours, fit to page width and column widths dragged by
+    // their right border, all kept in the Markdown (table.ts).
+    TableKit.configure({ table: false, tableCell: false, tableHeader: false }),
+    ColorTableCell,
+    ColorTableHeader,
+    SimpleTable.configure({ resizable: true, cellMinWidth: 80, lastColumnResizable: true }),
     ImageBlock,
     FileAttachment,
     CodeBlock,
@@ -156,6 +153,7 @@ export function contentExtensions() {
     ColumnList,
     Column,
     DatabaseEmbed,
+    DatabaseViews,
     MathAwareMarkdown.configure({ indentation: { style: "space", size: 2 } }),
     WikiLink,
   ];
@@ -436,6 +434,7 @@ function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink:
       </DragHandle>
       {menu && <BlockMenu editor={editor} {...menu} onOpenLink={onOpenLink} onClose={() => setMenu(null)} />}
       {tableMenu && <TableMenu editor={editor} at={tableMenu} onClose={() => setTableMenu(null)} />}
+      <TableControls editor={editor} />
     </>
   );
 }
@@ -471,10 +470,12 @@ const NESTED: NestedOptions = {
       },
     },
     // A table moves as a whole; its rows, cells and the text in them get no handles of their own.
+    // ($pos is where the pointer is, the same for every candidate: only what's above this one counts,
+    // or the table would rule itself out too.)
     {
       id: "noTableInsides",
-      evaluate: ({ $pos }) => {
-        for (let d = $pos.depth; d > 0; d--) if ($pos.node(d).type.name === "table") return 1000;
+      evaluate: ({ $pos, depth }) => {
+        for (let d = depth - 1; d > 0; d--) if ($pos.node(d).type.name === "table") return 1000;
         return 0;
       },
     },
@@ -505,51 +506,6 @@ function handleOffset(dom: HTMLElement, type: string): { x: number; y: number } 
   return { x, y: Math.max(0, Math.round(top + lineHeight / 2 - HANDLE_HEIGHT / 2)) };
 }
 
-/** Right-click menu inside a table: rows, columns, headers, merging and the table itself. */
-function TableMenu({ editor, at, onClose }: { editor: TiptapEditor; at: DOMRect; onClose: () => void }) {
-  const run = (fn: (c: ReturnType<TiptapEditor["chain"]>) => ReturnType<TiptapEditor["chain"]>) => () => {
-    fn(editor.chain().focus()).run();
-    onClose();
-  };
-  const multi = editor.state.selection instanceof CellSelection;
-  return (
-    <Popover anchor={at} onClose={onClose} className="w-56 p-1">
-      <MenuSection label="Row" />
-      <MenuItem icon={<ArrowUp size={15} />} label="Insert row above" onClick={run((c) => c.addRowBefore())} />
-      <MenuItem icon={<ArrowDown size={15} />} label="Insert row below" onClick={run((c) => c.addRowAfter())} />
-      <MenuItem icon={<Trash2 size={15} />} label="Delete row" danger onClick={run((c) => c.deleteRow())} />
-      <MenuDivider />
-      <MenuSection label="Column" />
-      <MenuItem icon={<ArrowLeft size={15} />} label="Insert column left" onClick={run((c) => c.addColumnBefore())} />
-      <MenuItem icon={<ArrowRight size={15} />} label="Insert column right" onClick={run((c) => c.addColumnAfter())} />
-      <MenuItem icon={<Trash2 size={15} />} label="Delete column" danger onClick={run((c) => c.deleteColumn())} />
-      <MenuDivider />
-      <MenuItem icon={<PanelTop size={15} />} label="Header row" onClick={run((c) => c.toggleHeaderRow())} />
-      <MenuItem icon={<PanelLeft size={15} />} label="Header column" onClick={run((c) => c.toggleHeaderColumn())} />
-      {multi && <MenuItem icon={<Merge size={15} />} label="Merge cells" onClick={run((c) => c.mergeCells())} />}
-      {!multi && <MenuItem icon={<Split size={15} />} label="Split cell" onClick={run((c) => c.splitCell())} />}
-      <MenuItem icon={<MoveHorizontal size={15} />} label="Reset column widths" onClick={() => (resetWidths(editor), onClose())} />
-      <MenuDivider />
-      <MenuItem icon={<Trash2 size={15} />} label="Delete table" danger onClick={run((c) => c.deleteTable())} />
-    </Popover>
-  );
-}
-
-/** Drops the dragged widths of the table holding the cursor, so its columns fit their text again. */
-function resetWidths(editor: TiptapEditor) {
-  const { $from } = editor.state.selection;
-  for (let d = $from.depth; d > 0; d--) {
-    if ($from.node(d).type.name !== "table") continue;
-    const start = $from.before(d);
-    const tr = editor.state.tr;
-    $from.node(d).descendants((n, pos) => {
-      if (n.attrs.colwidth) tr.setNodeMarkup(start + 1 + pos, undefined, { ...n.attrs, colwidth: null });
-    });
-    editor.view.dispatch(tr);
-    return;
-  }
-}
-
 const NODE_LABELS: Record<string, string> = {
   paragraph: "Text",
   bulletList: "Bulleted list",
@@ -563,6 +519,7 @@ const NODE_LABELS: Record<string, string> = {
   callout: "Callout",
   columnList: "Columns",
   databaseEmbed: "Database",
+  databaseViews: "Database views",
   table: "Table",
   image: "Image",
   blockEquation: "Equation",
@@ -585,6 +542,8 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
     onClose();
   };
   const q = query.toLowerCase();
+  // A database page's own views: they only move (see DatabaseViews).
+  const fixed = node.type.name === "databaseViews";
   const show = (label: string) => label.toLowerCase().includes(q);
   const label =
     node.type.name === "heading" ? `Heading ${node.attrs.level}` : node.type.name === "details" && node.attrs.level ? `Toggle heading ${node.attrs.level}` : (NODE_LABELS[node.type.name] ?? node.type.name);
@@ -607,17 +566,19 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
         </>
       )}
       <MenuSection label={label} />
-      {show("Turn into") && (
+      {!fixed && node.type.name !== "table" && show("Turn into") && (
         <MenuItem icon={<RefreshCw size={15} />} label="Turn into" right={<ChevronRight size={14} className="text-faint" />} onClick={(e) => setSub({ kind: "turn", el: e.currentTarget })} />
       )}
-      {show("Color") && (
+      {!fixed && show("Color") && (
         <MenuItem icon={<Palette size={15} />} label="Color" right={<ChevronRight size={14} className="text-faint" />} onClick={(e) => setSub({ kind: "color", el: e.currentTarget })} />
       )}
+      {node.type.name === "table" && !q && <TableOptions editor={editor} table={{ node, pos }} onDone={onClose} />}
+      {fixed && <p className="px-2 py-1.5 text-xs leading-relaxed text-faint">Drag ⋮⋮ to move the views above or below the page's text.</p>}
       <MenuDivider />
-      {show("Duplicate") && (
+      {!fixed && show("Duplicate") && (
         <MenuItem icon={<Copy size={15} />} label="Duplicate" hint="⌘D" onClick={() => finish(() => editor.chain().insertContentAt(pos + node.nodeSize, node.toJSON()).run())} />
       )}
-      {show("Delete") && (
+      {!fixed && show("Delete") && (
         <MenuItem
           icon={<Trash2 size={15} />}
           label="Delete"
@@ -654,6 +615,8 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
               if (node.type.name === "callout") {
                 const color = attrs.bg ?? attrs.color ?? "gray";
                 editor.chain().command(({ tr }) => (tr.setNodeMarkup(pos, undefined, { ...node.attrs, color }), true)).run();
+              } else if (node.type.name === "table") {
+                colorTable(editor, { node, pos }, cellColor(attrs));
               } else {
                 selectBlock();
                 editor.chain().focus().setColor(attrs).setTextSelection(pos + node.nodeSize - 1).run();
@@ -661,61 +624,6 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
             })
           }
         />
-      )}
-    </Popover>
-  );
-}
-
-function ColorList({
-  anchor,
-  placement,
-  onPick,
-  onClose,
-  current,
-  only,
-}: {
-  anchor: HTMLElement;
-  placement?: "bottom-start" | "right-start";
-  onPick: (attrs: { color?: string; bg?: string }) => void;
-  onClose: () => void;
-  current?: { color?: string | null; bg?: string | null };
-  /** Show just text colours or just backgrounds (the selection toolbar has a button for each). */
-  only?: "text" | "bg";
-}) {
-  return (
-    <Popover anchor={anchor} placement={placement} onClose={onClose} className="max-h-[70vh] w-56 overflow-y-auto p-1">
-      {only !== "bg" && (
-        <>
-      <MenuSection label="Text color" />
-      {COLORS.map((c) => (
-        <MenuItem
-          key={`t-${c}`}
-          icon={
-            <span className="grid size-5 place-items-center rounded border border-line text-sm font-medium" style={{ color: textColor(c) }}>
-              A
-            </span>
-          }
-          label={c === "default" ? "Default text" : `${colorLabel(c)} text`}
-          right={(current?.color ?? "default") === c ? <span className="text-muted">✓</span> : null}
-          onClick={() => onPick({ color: c })}
-        />
-      ))}
-        </>
-      )}
-      {!only && <MenuDivider />}
-      {only !== "text" && (
-        <>
-      <MenuSection label="Background color" />
-      {COLORS.map((c) => (
-        <MenuItem
-          key={`b-${c}`}
-          icon={<span className="size-5 rounded border border-line" style={{ background: bgColor(c) }} />}
-          label={c === "default" ? "Default background" : `${colorLabel(c)} background`}
-          right={(current?.bg ?? "default") === c ? <span className="text-muted">✓</span> : null}
-          onClick={() => onPick({ bg: c })}
-        />
-      ))}
-        </>
       )}
     </Popover>
   );
@@ -766,6 +674,8 @@ function FormatMenu({ editor }: { editor: TiptapEditor }) {
         !view.dragging &&
         !(state.selection instanceof NodeSelection) &&
         !(state.selection instanceof NodeRangeSelection) &&
+        // A whole row or column (from its handle) has its own menu.
+        !(state.selection instanceof CellSelection && (state.selection.isRowSelection() || state.selection.isColSelection())) &&
         !e.isActive("codeBlock") &&
         !e.isActive("wikiLink") &&
         !e.isActive("databaseEmbed") &&

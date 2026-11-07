@@ -311,8 +311,35 @@ export function writeSchema(body: string, schema: Schema): string {
   return FENCE.test(body) ? body.replace(FENCE, () => block) : `${body.trimEnd()}${body.trim() ? "\n\n" : ""}${block}\n`;
 }
 
-/** The database page body without its schema block, i.e. its description. */
-export const descriptionOf = (body: string) => body.replace(FENCE, "").trim();
+/** Whether a page body holds a database's schema block. */
+export const hasSchema = (body: string) => FENCE.test(body);
+
+/**
+ * On a database's own page, the editor holds the page's text blocks and, among them, its views as
+ * one block: this line stands for them in the editor's Markdown. The schema block itself (which the
+ * views save on their own) never goes through the editor.
+ */
+export const VIEWS_MARKER = "<!-- database views -->";
+
+/** A database page's body for its editor: the schema block becomes the views' line. */
+export const bodyForEditor = (body: string) => body.replace(FENCE, VIEWS_MARKER);
+
+/**
+ * The page body from its editor's Markdown, `body`'s schema block where the views are (or at the
+ * end, should their line be gone). Text above and below the views stays where it is.
+ */
+export function bodyFromEditor(md: string, body: string): string {
+  const block = FENCE.exec(body)?.[0];
+  if (!block) return md;
+  const text = md.includes(VIEWS_MARKER) ? md.replace(VIEWS_MARKER, () => block) : `${md.trimEnd()}${md.trim() ? "\n\n" : ""}${block}`;
+  return `${text.trim()}\n`;
+}
+
+/** `body` with the schema block of `from` (the page on disk, which the views keep up to date). */
+export function withSchemaBlockOf(body: string, from: string): string {
+  const block = FENCE.exec(from)?.[0];
+  return block && FENCE.test(body) ? body.replace(FENCE, () => block) : body;
+}
 
 export function toRow(raw: RawRow): Row {
   const { frontmatter, body } = splitNote(raw.content);

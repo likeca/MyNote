@@ -451,6 +451,16 @@ pre {
   content: none;
 }
 
+/* On a database's own page, the empty line under its views says it takes text, cursor or not. */
+.mynote-prose>.node-databaseViews+p:last-child:not(.has-focus):has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: "Write something, or press '/' for commands…";
+  color: var(--faint);
+  opacity: 0.7;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 .mynote-prose h1,
 .mynote-prose h2,
 .mynote-prose h3 {
@@ -745,7 +755,7 @@ pre {
 
 .mynote-prose th,
 .mynote-prose td {
-  border: 1px solid var(--line-strong);
+  border: 2px solid var(--line-strong);
   padding: 7px 9px;
   text-align: left;
   vertical-align: top;
@@ -762,8 +772,24 @@ pre {
   min-height: 0;
 }
 
+/* Cell colours (table.ts): a text colour, or a background that wins over a header's. */
+.mynote-prose :is(td, th)[data-color$="_background"] {
+  background: var(--cell-bg);
+}
+
+.mynote-prose :is(td, th)[data-color]:not([data-color$="_background"]) {
+  color: var(--cell-fg);
+}
+
+/* Selected cells tint over their colour rather than hiding it. */
 .mynote-prose .selectedCell {
-  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 9999px var(--accent-soft);
+}
+
+/* Fit to page width: the columns share the page, keeping their dragged proportions. */
+.mynote-prose table[data-fit] {
+  width: 100% !important;
+  table-layout: fixed;
 }
 
 /* Callout */
@@ -1023,12 +1049,21 @@ pre {
   outline: none;
 }
 
-/* Embedded databases manage their own selection; tinting the whole table looks broken. A selected
-   image or equation has a ring around it instead: its block spans the page, so a tint would overhang it. */
+/* Databases (embedded, or a database page's own views) manage their own selection; tinting the
+   whole table looks broken. A selected image or equation has a ring around it instead: its block
+   spans the page, so a tint would overhang it. */
 .mynote-prose>.node-databaseEmbed.ProseMirror-selectednode,
+.mynote-prose>.node-databaseViews.ProseMirror-selectednode,
 .mynote-prose>.node-image.ProseMirror-selectednode,
 .mynote-prose>.node-blockEquation.ProseMirror-selectednode {
   background: transparent !important;
+}
+
+/* Selected as a whole, a database's contents aren't highlighted text either (the page opens with
+   the cursor on its first block, which on a database page is often the views). */
+.mynote-prose>.node-databaseEmbed.ProseMirror-selectednode ::selection,
+.mynote-prose>.node-databaseViews.ProseMirror-selectednode ::selection {
+  background: transparent;
 }
 
 /* A block equation's own padding spaces it; KaTeX's display margin would double that. */

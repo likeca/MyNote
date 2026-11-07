@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { message, open as openDialog } from "@tauri-apps/plugin-dialog";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentsDialog } from "./components/AgentsDialog";
 import { SettingsDialog, type Section } from "./components/SettingsDialog";
 import { CommandPalette } from "./components/CommandPalette";
@@ -12,6 +12,7 @@ import { Toast, type ToastData } from "./components/Toast";
 import { PageView } from "./components/PageView";
 import { TabBar } from "./components/TabBar";
 import { TerminalView, isTerminalPath, newTerminalPath } from "./components/TerminalView";
+import { fileOfTab, isFileTab } from "./lib/fileTabs";
 import { Sidebar } from "./components/Sidebar";
 import { api, type AiPolicy, type NoteMeta, type RepoStatus, type VaultInfo } from "./lib/api";
 import { aiAccess } from "./lib/ai";
@@ -24,6 +25,9 @@ import { loadIcons } from "./components/PageIcon";
 import { VaultContext, type VaultContextValue } from "./lib/vault";
 import { useFullscreen } from "./lib/window";
 import { useApplySettings, zoomText } from "./lib/settings";
+
+// Monaco is big: it loads with the first file opened in a tab.
+const FileEditor = lazy(() => import("./components/FileEditor"));
 
 const store = {
   get: (k: string) => {
@@ -67,8 +71,8 @@ export default function App() {
   const [notes, setNotes] = useState<NoteMeta[]>([]);
   const [tabs, setTabs] = useState<Tabs>({ list: [], active: 0 });
   const openPath = current(tabs.list[tabs.active]);
-  /** The open page, when the tab shows one (not a plugin's view or a terminal). */
-  const pagePath = openPath?.startsWith("@plugin/") || isTerminalPath(openPath) ? undefined : openPath;
+  /** The open page, when the tab shows one (not a plugin's view, a terminal or a file). */
+  const pagePath = openPath?.startsWith("@plugin/") || isTerminalPath(openPath) || isFileTab(openPath) ? undefined : openPath;
   const [recents, setRecents] = useState<string[]>([]);
   const [peekPath, setPeekPath] = useState<string | null>(null);
   const [status, setStatus] = useState<RepoStatus | null>(null);
@@ -141,7 +145,7 @@ export default function App() {
       // Library tabs from before the Media Library plugin ("@library") and its first name (creator-studio).
       const saved = readList(`tabs:${info.path}`)
         .map((p) => (p === "@library" || p === "@plugin/creator-studio/library" ? "@plugin/media-library/library" : p))
-        .filter((p) => p.startsWith("@plugin/") || exists(p));
+        .filter((p) => p.startsWith("@plugin/") || isFileTab(p) || exists(p));
       const last = store.get(`open:${info.path}`);
       const first = [last, n.find((x) => x.title === "Welcome")?.path, n[0]?.path].find((p): p is string => !!p && exists(p));
       const paths = saved.length ? saved : first ? [first] : [];
@@ -222,6 +226,9 @@ export default function App() {
       reveal(path);
       setTabs((t) => {
         if (!t.list.length) return { list: [newTab(path)], active: 0 };
+        // A file opens once: clicking it again goes to its tab.
+        const shown = isFileTab(path) ? t.list.findIndex((tab) => current(tab) === path) : -1;
+        if (shown >= 0) return { ...t, active: shown };
         if (opts?.newTab || isTerminalPath(current(t.list[t.active])))
           return { list: [...t.list.slice(0, t.active + 1), newTab(path), ...t.list.slice(t.active + 1)], active: t.active + 1 };
         return withActive(t, (tab) => (current(tab) === path ? tab : { ...tab, stack: [...tab.stack.slice(0, tab.index + 1), path], index: tab.index + 1 }));
@@ -234,9 +241,9 @@ export default function App() {
     () => setTabs((t) => ({ list: [...t.list.slice(0, t.active + 1), newTab(newTerminalPath()), ...t.list.slice(t.active + 1)], active: t.active + 1 })),
     [],
   );
-  /** ⌘T: the current page again in a new tab; from a terminal, the last page. */
+  /** ⌘T: the current page again in a new tab; from a terminal or a file, the last page. */
   const newPageTab = () => {
-    const path = isTerminalPath(openPath) ? (recents[0] ?? notes[0]?.path) : openPath;
+    const path = isTerminalPath(openPath) || isFileTab(openPath) ? (recents[0] ?? notes[0]?.path) : openPath;
     if (path) openPage(path, { newTab: true });
   };
   useEffect(() => {
@@ -395,6 +402,9 @@ export default function App() {
       if (e.key === "Escape" && peekPath && !document.querySelector("[data-popover]")) setPeekPath(null);
       if (!e.metaKey && !e.ctrlKey) return;
       const key = e.key.toLowerCase();
+      // In a file's editor, ⌘S saves the file, ⌘K starts a chord and ⌘[ ⌘] indent: the editor's, as in VS Code.
+      const inFileEditor = e.target instanceof Element && !!e.target.closest("[data-file-editor]");
+      if (inFileEditor && ["s", "k", "[", "]"].includes(key)) return;
       if (key === "k" || key === "p") (e.preventDefault(), setPalette((v) => !v));
       if (key === "n" && !e.altKey) (e.preventDefault(), createHere().then(openPage));
       if (key === "\\") (e.preventDefault(), setSidebar((v) => !v), setSidebarPeek(false));
@@ -596,7 +606,7 @@ export default function App() {
             />
           )}
           <div className="relative flex min-h-0 flex-1">
-          {isTerminalPath(openPath) ? null : openPath && parseViewPath(openPath) ? (
+          {isTerminalPath(openPath) || isFileTab(openPath) ? null : openPath && parseViewPath(openPath) ? (
             <PluginView path={openPath} onOpenSettings={() => setSettings("plugins")} />
           ) : pagePath ? (
             <PageView
@@ -619,6 +629,12 @@ export default function App() {
           {tabs.list.map(current).filter((p): p is string => isTerminalPath(p)).map((path) => (
             <TerminalView key={path} active={path === openPath} />
           ))}
+          {/* So do file editors, keeping their undo and scroll position. */}
+          <Suspense fallback={null}>
+            {tabs.list.map(current).filter((p): p is string => isFileTab(p)).map((path) => (
+              <FileEditor key={path} path={fileOfTab(path)} active={path === openPath} />
+            ))}
+          </Suspense>
 
           {peekPath && (
             <div className="peek-panel absolute inset-y-0 right-0 z-30 flex w-[min(720px,62%)] border-l border-line bg-surface shadow-peek">

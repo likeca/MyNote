@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { allProperties, applyView, filterDefaults, moveProperty, calculate, parseSchema, toRow, writeSchema, defaultSchema, visibleProperties } from "../src/database/model.ts";
+import { allProperties, applyView, bodyForEditor, bodyFromEditor, filterDefaults, moveProperty, calculate, parseSchema, toRow, withSchemaBlockOf, writeSchema, defaultSchema, visibleProperties } from "../src/database/model.ts";
 import { patchFrontmatter } from "../src/lib/frontmatter.ts";
 
 const schema = {
@@ -56,6 +56,25 @@ test("schema block is written into and read back from the page body", () => {
   const body = writeSchema("A description.\n", defaultSchema());
   assert.match(body, /^A description\.\n\n```database\n/);
   assert.deepEqual(parseSchema(body).properties.map((p) => p.name), ["Status", "Tags"]);
+});
+
+test("a database page's text can sit above and below its views, wherever they're dragged", () => {
+  const block = writeSchema("", defaultSchema()).trim();
+  const body = `## Plan\n\n${block}\n\nNotes below.\n`;
+  // The editor sees the views as one line, and gives the same page back.
+  assert.equal(bodyForEditor(body), "## Plan\n\n<!-- database views -->\n\nNotes below.\n");
+  assert.equal(bodyFromEditor(bodyForEditor(body), body), body);
+  // A new database (just its schema) too.
+  assert.equal(bodyFromEditor(bodyForEditor(`${block}\n`), `${block}\n`), `${block}\n`);
+  // Views dragged to the top: the schema block moves with them; the text keeps its order.
+  assert.equal(bodyFromEditor("<!-- database views -->\n\n## Plan\n\nNotes below.\n", body), `${block}\n\n## Plan\n\nNotes below.\n`);
+  // Without the views' line the schema still isn't lost: it goes at the end.
+  assert.equal(bodyFromEditor("Only text.\n", body), `Only text.\n\n${block}\n`);
+  // Saving takes the schema on disk (a column added there meanwhile) and keeps the page's layout.
+  const disk = writeSchema(body, { ...defaultSchema(), properties: [...defaultSchema().properties, { name: "Due", type: "date" }] });
+  const saved = withSchemaBlockOf(`Edited.\n\n${block}\n\nNotes below.\n`, disk);
+  assert.deepEqual(parseSchema(saved).properties.map((p) => p.name), ["Status", "Tags", "Due"]);
+  assert.equal(bodyForEditor(saved), "Edited.\n\n<!-- database views -->\n\nNotes below.\n");
 });
 
 test("frontmatter patches keep other keys and formatting", () => {
