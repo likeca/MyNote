@@ -46,6 +46,8 @@ export const api = {
   writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
   /** Saves an attached text file edited in its tab. */
   writeAssetText: (path: string, text: string) => invoke<void>("write_asset_text", { path, text }),
+  /** A web page's title, its site's icon and (GitHub) its owner's avatar, as `data:` URLs, for link mentions (desktop only). */
+  linkPreview: (url: string) => invoke<{ title: string | null; icon: string | null; avatar: string | null }>("link_preview", { url }),
   /** Attaches a file picked on disk: copies it into `page`'s attachment folder; returns its vault path. */
   attachFile: (path: string, page: string | null) => invoke<string>("attach_file", { path, page }),
   /** Attaches a dropped or pasted file to `page`, sent as raw bytes; returns its vault path. */

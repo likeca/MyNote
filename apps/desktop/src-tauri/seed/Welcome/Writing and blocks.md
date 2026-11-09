@@ -170,6 +170,7 @@ Each column holds any blocks you like, such as lists, callouts or code.
 - `/Link to page` links to a page that already exists, the same as typing `[[`. See [[Links and backlinks]].
 - `/Database – Inline` creates a database and shows it inside the page. `/Database – Full page` creates it as a sub-page. See [[Databases]].
 - `/Date or reminder` inserts today's date.
+- Paste a web address on its own and it becomes a mention, as in Notion: the site's icon and the page's title, fetched by the desktop app. A GitHub repository shows as its name with its owner's avatar after it. Click a mention to open the page. Press `⌘Z` straight after pasting to keep the plain link instead, or paste onto selected text to link that text.
 
 ## How blocks are stored
 
@@ -195,6 +196,7 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Block equation  | `$$` lines around the LaTeX                              |
 | Inline equation | `$x^2$`                                                  |
 | Page link       | `[[Ideas]]`                                              |
+| Link mention    | `[Title](https://… "mention")`                           |
 | Inline database | `![[Roadmap]]`                                           |
 | Colour          | `<span data-color="red">…</span>`                        |
 

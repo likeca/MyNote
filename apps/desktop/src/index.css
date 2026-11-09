@@ -997,6 +997,23 @@ pre {
   text-decoration-style: dashed;
 }
 
+/* A link mention (a pasted URL as its site's icon and page title), styled as a page link; faint
+   while its title is being fetched. */
+.mynote-prose .link-mention.loading {
+  opacity: 0.6;
+}
+
+/* Whose page it is, after the title (a GitHub repository's owner), round as Notion draws it. */
+.mynote-prose .link-mention-avatar {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-left: 0.3em;
+  border-radius: 50%;
+  vertical-align: -0.15em;
+  object-fit: cover;
+}
+
 /* A line that is just a page link reads as a block (a "link to page"): one row, icon centred on the
    first line, wrapped title aligned under itself, and the whole row highlights on hover. */
 /* A flex row, so ProseMirror's zero-size cursor helpers around the link (forced inline) can't add empty lines. */

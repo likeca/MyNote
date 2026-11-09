@@ -333,6 +333,29 @@ test("links to files in _assets/ are attachments; images and other links stay as
   assert.deepEqual(kinds("[x](my_assets/x.pdf)"), ["link:x"]);
 });
 
+test("a link titled \"mention\" is a link mention; other links stay links", () => {
+  const kinds = (md) => {
+    const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+    const editor = new Editor({ extensions, content: md, contentType: "markdown" });
+    const found = [];
+    editor.state.doc.descendants((n) => {
+      if (n.type.name === "linkMention") found.push(`mention:${n.attrs.title}→${n.attrs.href}`);
+      if (n.isText && n.marks.some((m) => m.type.name === "link")) found.push(`link:${n.text}`);
+    });
+    editor.destroy();
+    return found;
+  };
+  const md = 'See [Example Domain](https://example.com/ "mention") and [a site](https://example.org).\n';
+  exact(md);
+  assert.deepEqual(kinds(md), ["mention:Example Domain→https://example.com/", "link:a site"]);
+  // Brackets in its title are escaped; an address with brackets or spaces goes in <…>.
+  const odd = '[Foo \\[bar\\]](<https://en.wikipedia.org/wiki/Foo_(bar)> "mention")\n';
+  exact(odd);
+  assert.deepEqual(kinds(odd), ["mention:Foo [bar]→https://en.wikipedia.org/wiki/Foo_(bar)"]);
+  // In a list, and twice on a line.
+  exact('- [A](https://a.example "mention") and [B](https://b.example "mention")\n');
+});
+
 test("equations: $$ blocks and $…$ inline are LaTeX; prices and escaped dollars stay text", () => {
   const kinds = (md) => {
     const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));

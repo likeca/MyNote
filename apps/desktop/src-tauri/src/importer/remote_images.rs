@@ -141,7 +141,7 @@ pub(super) fn fetch(url: &str) -> Option<Image> {
 }
 
 /// The extension for image bytes, from their signature; None for anything else (e.g. an error page).
-fn image_ext(b: &[u8]) -> Option<&'static str> {
+pub(crate) fn image_ext(b: &[u8]) -> Option<&'static str> {
     let head = String::from_utf8_lossy(&b[..b.len().min(512)]).to_lowercase();
     Some(match b {
         [0x89, b'P', b'N', b'G', ..] => "png",

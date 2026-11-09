@@ -1,6 +1,7 @@
 mod importer;
 mod legacy;
 mod library;
+mod link_preview;
 mod login_path;
 mod script;
 mod seed;
@@ -996,7 +997,8 @@ pub fn run() {
             terminal_write,
             terminal_resize,
             terminal_close,
-            set_dock_icon
+            set_dock_icon,
+            link_preview::link_preview
         ])
         .run(tauri::generate_context!())
         .expect("error while running MyNote");

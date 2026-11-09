@@ -56,6 +56,7 @@ import { normalizeMarkdown } from "./markdown";
 import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
 import { BlockSelect, deleteBlocks, selectedBlocks } from "./blockSelect";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
+import { LinkMention } from "./LinkMention";
 import { WikiLink } from "./WikiLink";
 
 type Props = PageLinkOptions & {
@@ -158,6 +159,7 @@ export function contentExtensions() {
     DatabaseViews,
     MathAwareMarkdown.configure({ indentation: { style: "space", size: 2 } }),
     WikiLink,
+    LinkMention,
   ];
 }
 

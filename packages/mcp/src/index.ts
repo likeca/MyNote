@@ -49,6 +49,7 @@ Conventions:
 - Images are "![description](link)"; "![description|320](link)" shows one 320 pixels wide (Obsidian's syntax).
 - Maths is LaTeX: "$x^2$" in a sentence, and a block equation as "$$" on its own line, the LaTeX, then "$$". A "$" that isn't maths stays as typed when it can't pair up ("$5 and $10"); otherwise escape it as "\\$".
 - Files attached to a page are links into an "_assets" folder in the page's own folder (next to its sub-pages), e.g. "[Q3 Report.pdf](Projects/Launch%20plan/_assets/Q3%20Report.pdf)" for "Projects/Launch plan.md" (spaces written %20). rename_note and move_note take them along with the page's folder, and delete_note takes them to the Trash with the page.
+- A web link titled "mention", '[Page title](https://example.com/page "mention")', shows as a mention: the site's icon and the page's title. An ordinary "[text](https://…)" is a plain link.
 - Rich blocks use readable HTML-ish syntax: <span data-color="red" data-bg="yellow">text</span> for colours,
   "> [!yellow] 💡" callouts, <details><summary>Title</summary> … </details> toggles (a toggle heading's title is a
   heading: <summary><h2>Title</h2></summary>, levels 1–3),

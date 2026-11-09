@@ -6,7 +6,7 @@
 //! one pipeline; only reading a page differs (`notion_html` converts the HTML export's pages).
 
 mod notion_html;
-mod remote_images;
+pub(crate) mod remote_images;
 
 use crate::vault::{children_dir, sanitize_title, unique_path, write_note};
 use regex::Regex;
