@@ -1,7 +1,7 @@
 //! Importers for Notion exports ("Markdown & CSV" or "HTML") and Obsidian vaults.
 //!
 //! Everything is imported under one new top-level page so the rest of the workspace is
-//! untouched. Pages become Markdown files, images go to `.assets/`, and Notion databases
+//! untouched. Pages become Markdown files, images go to `_assets/`, and Notion databases
 //! (CSV files) become MyNote databases with typed properties. Both Notion formats share
 //! one pipeline; only reading a page differs (`notion_html` converts the HTML export's pages).
 
@@ -39,21 +39,21 @@ fn stamp() -> u128 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis())
 }
 
-/// Copies a file into `.assets/<batch>/`, flattening its path, and returns its workspace path.
+/// Copies a file into `_assets/<batch>/`, flattening its path, and returns its workspace path.
 fn copy_asset(vault: &Path, batch: &str, src: &Path, rel_hint: &str, used: &mut HashSet<String>) -> Option<String> {
     let (rel, dest) = asset_slot(vault, batch, rel_hint, used)?;
     fs::copy(src, &dest).ok()?;
     Some(rel)
 }
 
-/// Writes `bytes` into `.assets/<batch>/` under a name made from `rel_hint`; returns its workspace path.
+/// Writes `bytes` into `_assets/<batch>/` under a name made from `rel_hint`; returns its workspace path.
 fn store_asset(vault: &Path, batch: &str, bytes: &[u8], rel_hint: &str, used: &mut HashSet<String>) -> Option<String> {
     let (rel, dest) = asset_slot(vault, batch, rel_hint, used)?;
     fs::write(&dest, bytes).ok()?;
     Some(rel)
 }
 
-/// A free `.assets/<batch>/<name>` for an asset (its folder created): workspace path and file path.
+/// A free `_assets/<batch>/<name>` for an asset (its folder created): workspace path and file path.
 fn asset_slot(vault: &Path, batch: &str, rel_hint: &str, used: &mut HashSet<String>) -> Option<(String, PathBuf)> {
     let flat: String = rel_hint
         .chars()
@@ -69,10 +69,10 @@ fn asset_slot(vault: &Path, batch: &str, rel_hint: &str, used: &mut HashSet<Stri
         let ext = name.rfind('.').filter(|&i| name.len() - i <= 10).map_or("", |i| &name[i..]).to_string();
         name = format!("{}{ext}", name[..MAX - ext.len()].trim_end_matches(['-', '.']));
     }
-    let mut candidate = format!(".assets/{batch}/{name}");
+    let mut candidate = format!("_assets/{batch}/{name}");
     let mut n = 2;
     while !used.insert(candidate.clone()) {
-        candidate = format!(".assets/{batch}/{n}-{name}");
+        candidate = format!("_assets/{batch}/{n}-{name}");
         n += 1;
     }
     let dest = vault.join(&candidate);
@@ -1098,7 +1098,7 @@ struct NotionCtx {
     /// Export path (lowercased) of every .md/.csv -> page.
     by_path: HashMap<String, usize>,
     by_id: HashMap<String, usize>,
-    /// Export path (lowercased) of every attachment -> its `.assets/` path.
+    /// Export path (lowercased) of every attachment -> its `_assets/` path.
     assets: HashMap<String, String>,
     /// How many pages (imported and already in the workspace) have each title, lowercased.
     title_count: HashMap<String, usize>,
@@ -1159,7 +1159,7 @@ impl NotionCtx {
         (name.ext.as_deref() == Some("csv") || name.ext.as_deref() == Some(page_ext)).then_some(Target::Missing)
     }
 
-    /// Rewrites Notion's relative links: pages -> wikilinks, attachments -> `.assets/` paths,
+    /// Rewrites Notion's relative links: pages -> wikilinks, attachments -> `_assets/` paths,
     /// a line that is just a database (or a linked view of one) -> an inline database embed.
     fn convert_links(&self, text: &str, from_dir: &str, me: Option<usize>, notes: &mut Vec<String>) -> String {
         let lines: Vec<&str> = text.split('\n').collect();
@@ -1989,7 +1989,7 @@ mod tests {
         assert!(!ws.join("My Vault/.obsidian").exists());
         let plan = fs::read_to_string(ws.join("My Vault/Projects/Plan.md")).unwrap();
         assert!(plan.starts_with("---\ntags: [work]\n---\nSee [[Ideas]]."), "{plan}");
-        assert!(plan.contains("![diagram.png](.assets/obsidian-"), "{plan}");
+        assert!(plan.contains("![diagram.png](_assets/obsidian-"), "{plan}");
         assert!(plan.contains("> [!green] 💡\n> **Remember**\n> Ship it"), "{plan}");
         let _ = fs::remove_dir_all(&base);
     }
@@ -2261,7 +2261,7 @@ mod tests {
         let notes = read("Private & Shared/Notes.md");
         assert!(notes.contains("See [[Library 2|Library]], [[Chapter 1 Intro (1950 - now)|Chapter 1: Intro (1950 - now)]] and Gone."), "{notes}");
         assert!(notes.starts_with("> [!gray] 💡\n> Tip with a list:\n>\n> - one\n>   - nested\n\n- [x] done\n- [ ] todo\n  - [ ] sub\n\n1. first\n   1. inner\n\n```bash\n| not | a table |\n```"), "{notes}");
-        assert!(notes.contains("![image.png](.assets/notion-") && notes.contains("[Contract.pdf](.assets/notion-") && notes.contains("\n---\n"), "{notes}");
+        assert!(notes.contains("![image.png](_assets/notion-") && notes.contains("[Contract.pdf](_assets/notion-") && notes.contains("\n---\n"), "{notes}");
 
         // Titles come from the H1 (sanitised for the file system) when the file name mangled it.
         assert_eq!(read("Private & Shared/@May 6, 2026 4 09 PM.md"), "Meeting notes.\n");
@@ -2312,14 +2312,14 @@ mod tests {
     /// editor saves every one of them back unchanged). `UPDATE_FIXTURES=1` rewrites them.
     fn check_fixtures(out: &Path, dir: &str) {
         let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures").join(dir);
-        let stamp = Regex::new(r"\.assets/notion-\d+/").unwrap();
+        let stamp = Regex::new(r"_assets/notion-\d+/").unwrap();
         let pages: BTreeMap<String, String> = WalkDir::new(out)
             .into_iter()
             .filter_map(Result::ok)
             .filter(|e| e.path().extension().is_some_and(|x| x == "md"))
             .map(|e| {
                 let rel = e.path().strip_prefix(out).unwrap().to_string_lossy().replace('\\', "/");
-                (rel, stamp.replace_all(&fs::read_to_string(e.path()).unwrap(), ".assets/notion-0/").into_owned())
+                (rel, stamp.replace_all(&fs::read_to_string(e.path()).unwrap(), "_assets/notion-0/").into_owned())
             })
             .collect();
         if std::env::var_os("UPDATE_FIXTURES").is_some() {
@@ -2514,7 +2514,7 @@ if (a &lt; 2) {}</code></pre>"#,
         let report = import_notion_with(&ws, &export, Some(&fake)).unwrap();
         let hq = fs::read_to_string(ws.join("Notion import/Team HQ/HQ.md")).unwrap();
         let cover = hq.lines().find_map(|l| l.strip_prefix("cover: ")).unwrap();
-        assert!(cover.starts_with(".assets/notion-") && cover.ends_with("web-met_william_turner_1835.jpg"), "{cover}");
+        assert!(cover.starts_with("_assets/notion-") && cover.ends_with("web-met_william_turner_1835.jpg"), "{cover}");
         assert_eq!(fs::read(ws.join(cover)).unwrap(), [0xFF, 0xD8, 0xFF, 0xE0]);
         assert_eq!(report.assets, 5);
         let _ = fs::remove_dir_all(&base);
@@ -2537,7 +2537,7 @@ if (a &lt; 2) {}</code></pre>"#,
         assert_eq!(read("Team HQ/HQ/Gamma.md"), "Gamma page.\n");
 
         let launch = read("Team HQ/Launch.md");
-        assert!(launch.starts_with("---\nicon: 🚀\ncover: .assets/notion-"), "{launch}");
+        assert!(launch.starts_with("---\nicon: 🚀\ncover: _assets/notion-"), "{launch}");
         for part in [
             "Some <span data-color=\"green\">green **bold**</span> text, *italics*, ~~gone~~, `code_span` and a\\_b.  \nNext line.",
             "<span data-color=\"purple\">A purple paragraph.</span>",
@@ -2546,8 +2546,8 @@ if (a &lt; 2) {}</code></pre>"#,
             "1. first\n   1. inner\n2. second\n\n- bullet\n  - nested\n- bullet two",
             "```jsx\nconst a = 1;\nif (a < 2) {}\n```",
             "> Ship *small*.  \n> Ship often.\n\n---",
-            "![diagram.png](.assets/notion-",
-            "[spec.pdf](.assets/notion-",
+            "![diagram.png](_assets/notion-",
+            "[spec.pdf](_assets/notion-",
             "[A post](https://example.com/post)",
             "Mail [team@example.com](mailto:team@example.com) or visit [https://example.com/docs](https://example.com/docs).",
         ] {
@@ -2570,7 +2570,7 @@ if (a &lt; 2) {}</code></pre>"#,
         assert_eq!(prop("Owner")["type"], "select", "a property only the row pages have, typed from its values");
 
         let row = read("Team HQ/Tasks/Write docs.md");
-        assert!(row.starts_with("---\nicon: .assets/notion-"), "{row}");
+        assert!(row.starts_with("---\nicon: _assets/notion-"), "{row}");
         assert!(row.ends_with("order: 1\nStatus: Done\nPriority: High\nTags: [Docs, Web]\nDue: 2026-10-04\nDone: true\nBudget: 1000\nProject: Launch\nOwner: Ada\n---\nThe body.\n"), "{row}");
         assert_eq!(read("Team HQ/Tasks/Ship it.md"), "---\nicon: lucide:Rocket:blue\norder: 2\nStatus: To Do\nPriority: Low\nDone: false\nBudget: 0\n---\n");
 
@@ -2602,7 +2602,7 @@ if (a &lt; 2) {}</code></pre>"#,
         fs::write(export.join("Page/saved.html"), "<p>an attachment</p>").unwrap();
         let report = import_notion_with(&ws, &export, None).unwrap();
         assert_eq!((report.pages, report.assets), (1, 1));
-        assert!(fs::read_to_string(ws.join("Notion import/Page.md")).unwrap().contains("[saved](.assets/notion-"));
+        assert!(fs::read_to_string(ws.join("Notion import/Page.md")).unwrap().contains("[saved](_assets/notion-"));
         let _ = fs::remove_dir_all(&base);
     }
 
@@ -2691,14 +2691,14 @@ if (a &lt; 2) {}</code></pre>"#,
             }
             let (fm, body) = crate::vault::split_frontmatter(&text);
             if let Some(icon) = crate::vault::fm_value(fm, "icon") {
-                let kind = if icon.starts_with("lucide:") { "lucide" } else if icon.starts_with(".assets/") { "image (.assets)" } else if icon.starts_with("http") { "image (link)" } else { "emoji" };
+                let kind = if icon.starts_with("lucide:") { "lucide" } else if icon.starts_with("_assets/") { "image (assets)" } else if icon.starts_with("http") { "image (link)" } else { "emoji" };
                 count(format!("icon: {kind}"), 1);
             }
             if crate::vault::fm_value(fm, "order").is_some() {
                 count("ordered among siblings".into(), 1);
             }
             if let Some(cover) = crate::vault::fm_value(fm, "cover") {
-                count(format!("cover: {}", if cover.starts_with(".assets/") { "image (.assets)" } else { "link" }), 1);
+                count(format!("cover: {}", if cover.starts_with("_assets/") { "image (assets)" } else { "link" }), 1);
             }
             count("colour spans (text)".into(), body.matches("<span data-color=").count());
             count("colour spans (highlight)".into(), body.matches(" data-bg=").count());

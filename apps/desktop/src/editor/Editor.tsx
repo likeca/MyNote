@@ -47,12 +47,14 @@ import { PageIcon } from "../components/PageIcon";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
 import { bgColor, textColor } from "../lib/colors";
 import { wantsNewTab } from "../lib/nav";
+import { OwnDatabase } from "../lib/vault";
 import { Callout, CodeBlock, ColorMark, Column, ColumnList, DatabaseEmbed, DatabaseViews, FileAttachment, ImageBlock, PageContext, Toggle, ToggleHeadingIcon, ToggleSummary, toggleLevel, turnIntoToggle, unwrapToggle } from "./blocks";
 import { ColorList } from "./ColorList";
 import { ColorTableCell, ColorTableHeader, SimpleTable, cellColor, colorTable } from "./table";
 import { TableControls, TableMenu, TableOptions } from "./TableControls";
 import { normalizeMarkdown } from "./markdown";
 import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
+import { BlockSelect, deleteBlocks, selectedBlocks } from "./blockSelect";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { WikiLink } from "./WikiLink";
 
@@ -179,6 +181,7 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       // Marks the block holding the cursor; only that one shows its placeholder (index.css).
       Focus.configure({ className: "has-focus", mode: "deepest" }),
       BlockKeys,
+      BlockSelect,
       SlashCommand.configure({ page }),
       PageLinkSuggestion.configure({ getNotes, createPage }),
       MentionSuggestion.configure({ getNotes, createPage }),
@@ -202,6 +205,11 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
   useEffect(() => {
     if (editor) editor.storage.fileAttachment.page = pagePath;
   }, [editor, pagePath]);
+  // On a database's own page, deleting its views deletes the database (see DatabaseViews).
+  const ownDatabase = useContext(OwnDatabase);
+  useEffect(() => {
+    if (editor) editor.storage.databaseViews.remove = ownDatabase?.remove ?? null;
+  }, [editor, ownDatabase]);
 
   useEffect(() => {
     if (!editorRef) return;
@@ -348,7 +356,14 @@ function SubpagePrompt({ editor, page }: { editor: TiptapEditor; page: PageActio
 
 // ---------- block handle ----------
 
-export type MenuAt = { el: HTMLElement | DOMRect; node: PMNode; pos: number; link?: string };
+/** `blocks`: several selected blocks the menu acts on together (see blockSelect.ts). */
+export type MenuAt = { el: HTMLElement | DOMRect; node: PMNode; pos: number; link?: string; blocks?: NodeRangeSelection };
+
+/** The block selection, when it holds `pos` (a block's start or a place inside one). */
+const selectionHolding = (editor: TiptapEditor, pos: number) => {
+  const sel = editor.state.selection;
+  return sel instanceof NodeRangeSelection && pos >= sel.from && pos < sel.to ? sel : undefined;
+};
 
 function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink: Props["onOpenLink"] }) {
   const target = useRef<{ node: PMNode; pos: number } | null>(null);
@@ -377,10 +392,12 @@ function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink:
       if (!target.current) return;
       const sel = editor.state.selection;
       const at = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
-      if (!sel.empty && !(sel instanceof NodeSelection) && at && at.pos >= sel.from && at.pos <= sel.to) return;
+      // Inside selected blocks: their menu, for all of them.
+      const blocks = at ? selectionHolding(editor, at.pos) : undefined;
+      if (!blocks && !sel.empty && !(sel instanceof NodeSelection) && at && at.pos >= sel.from && at.pos <= sel.to) return;
       e.preventDefault();
       const link = t.closest<HTMLElement>("[data-wikilink]")?.dataset.target;
-      setMenu({ el: new DOMRect(e.clientX, e.clientY, 0, 0), ...target.current, link });
+      setMenu({ el: new DOMRect(e.clientX, e.clientY, 0, 0), ...target.current, link, blocks });
     };
     dom.addEventListener("contextmenu", onContextMenu);
     return () => dom.removeEventListener("contextmenu", onContextMenu);
@@ -427,7 +444,7 @@ function BlockHandle({ editor, onOpenLink }: { editor: TiptapEditor; onOpenLink:
           <div
             role="button"
             title="Drag to move · Click to open menu"
-            onClick={(e) => target.current && setMenu({ el: e.currentTarget, ...target.current })}
+            onClick={(e) => target.current && setMenu({ el: e.currentTarget, ...target.current, blocks: selectionHolding(editor, target.current.pos) })}
             className="block-grip grid h-6 w-[18px] cursor-grab place-items-center rounded text-faint hover:bg-hover hover:text-muted"
           >
             <GripVertical size={16} />
@@ -528,16 +545,21 @@ const NODE_LABELS: Record<string, string> = {
   horizontalRule: "Divider",
 };
 
-export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: MenuAt & { editor: TiptapEditor; onOpenLink: Props["onOpenLink"]; onClose: () => void }) {
+export function BlockMenu({ editor, el, node, pos, link, blocks, onOpenLink, onClose }: MenuAt & { editor: TiptapEditor; onOpenLink: Props["onOpenLink"]; onClose: () => void }) {
   const [sub, setSub] = useState<{ kind: "turn" | "color"; el: HTMLElement } | null>(null);
   const [query, setQuery] = useState("");
-  // The block's text, from its first line to its last: the title of a toggle, the items of a list.
-  // (Positions just inside a toggle or list aren't in any text, and conversions then act on the wrong block.)
+  // Several blocks selected (see blockSelect.ts) and this one among them: the menu is for them all.
+  const many = blocks && selectedBlocks(blocks).length > 1 ? blocks : null;
+  const [first, last] = many ? [many.from, many.to] : [pos, pos + node.nodeSize];
+  // The blocks' text, from the first line to the last: the title of a toggle, the items of a list.
+  // (Positions just inside a toggle or list aren't in any text, and conversions then act on the
+  // wrong block.) Returns where the text ends.
   const selectBlock = () => {
     const { doc } = editor.state;
-    const from = Selection.near(doc.resolve(pos + 1)).from;
-    const to = Math.max(from, Selection.near(doc.resolve(pos + node.nodeSize - 1), -1).to);
+    const from = Selection.near(doc.resolve(first + 1)).from;
+    const to = Math.max(from, Selection.near(doc.resolve(last - 1), -1).to);
     editor.chain().focus().setTextSelection({ from, to }).run();
+    return to;
   };
   const finish = (fn: () => void) => {
     fn();
@@ -545,10 +567,16 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
   };
   const q = query.toLowerCase();
   // A database page's own views: they only move (see DatabaseViews).
-  const fixed = node.type.name === "databaseViews";
+  const fixed = !many && node.type.name === "databaseViews";
+  const own = useContext(OwnDatabase);
   const show = (label: string) => label.toLowerCase().includes(q);
-  const label =
-    node.type.name === "heading" ? `Heading ${node.attrs.level}` : node.type.name === "details" && node.attrs.level ? `Toggle heading ${node.attrs.level}` : (NODE_LABELS[node.type.name] ?? node.type.name);
+  const label = many
+    ? `${selectedBlocks(many).length} blocks`
+    : node.type.name === "heading"
+      ? `Heading ${node.attrs.level}`
+      : node.type.name === "details" && node.attrs.level
+        ? `Toggle heading ${node.attrs.level}`
+        : (NODE_LABELS[node.type.name] ?? node.type.name);
 
   return (
     <Popover anchor={el} onClose={onClose} className="w-64 p-1">
@@ -559,7 +587,7 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
         placeholder="Search actions…"
         className="mb-1 h-7 w-full rounded-md border border-line bg-side px-2 text-sm text-ink outline-none focus:border-[var(--blue)]"
       />
-      {link && (
+      {link && !many && (
         <>
           <MenuSection label="Page link" />
           {show("Open page") && <MenuItem icon={<ArrowUpRight size={15} />} label="Open page" onClick={() => finish(() => onOpenLink(link, false))} />}
@@ -574,11 +602,26 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
       {!fixed && show("Color") && (
         <MenuItem icon={<Palette size={15} />} label="Color" right={<ChevronRight size={14} className="text-faint" />} onClick={(e) => setSub({ kind: "color", el: e.currentTarget })} />
       )}
-      {node.type.name === "table" && !q && <TableOptions editor={editor} table={{ node, pos }} onDone={onClose} />}
-      {fixed && <p className="px-2 py-1.5 text-xs leading-relaxed text-faint">Drag ⋮⋮ to move the views above or below the page's text.</p>}
+      {!many && node.type.name === "table" && !q && <TableOptions editor={editor} table={{ node, pos }} onDone={onClose} />}
+      {fixed && !q && (
+        <p className="px-2 py-1.5 text-xs leading-relaxed text-faint">
+          Drag ⋮⋮ to move the views above or below the page's text. Deleting the database keeps the page's text, and its rows as sub-pages.
+        </p>
+      )}
       <MenuDivider />
       {!fixed && show("Duplicate") && (
-        <MenuItem icon={<Copy size={15} />} label="Duplicate" hint="⌘D" onClick={() => finish(() => editor.chain().insertContentAt(pos + node.nodeSize, node.toJSON()).run())} />
+        <MenuItem
+          icon={<Copy size={15} />}
+          label="Duplicate"
+          hint="⌘D"
+          onClick={() =>
+            finish(() =>
+              many
+                ? editor.chain().insertContentAt(many.to, selectedBlocks(many).filter((b) => b.node.type.name !== "databaseViews").map((b) => b.node.toJSON())).run()
+                : editor.chain().insertContentAt(pos + node.nodeSize, node.toJSON()).run(),
+            )
+          }
+        />
       )}
       {!fixed && show("Delete") && (
         <MenuItem
@@ -586,8 +629,11 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
           label="Delete"
           hint="Del"
           danger
-          onClick={() => finish(() => editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run())}
+          onClick={() => finish(() => (many ? deleteBlocks(editor, many) : editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()))}
         />
+      )}
+      {fixed && own && show("Delete database") && (
+        <MenuItem icon={<Trash2 size={15} />} label="Delete database" hint="Del" danger onClick={() => finish(own.remove)} />
       )}
 
       {sub?.kind === "turn" && (
@@ -614,14 +660,14 @@ export function BlockMenu({ editor, el, node, pos, link, onOpenLink, onClose }: 
           onClose={() => setSub(null)}
           onPick={(attrs) =>
             finish(() => {
-              if (node.type.name === "callout") {
+              if (!many && node.type.name === "callout") {
                 const color = attrs.bg ?? attrs.color ?? "gray";
                 editor.chain().command(({ tr }) => (tr.setNodeMarkup(pos, undefined, { ...node.attrs, color }), true)).run();
-              } else if (node.type.name === "table") {
+              } else if (!many && node.type.name === "table") {
                 colorTable(editor, { node, pos }, cellColor(attrs));
               } else {
-                selectBlock();
-                editor.chain().focus().setColor(attrs).setTextSelection(pos + node.nodeSize - 1).run();
+                const end = selectBlock();
+                editor.chain().focus().setColor(attrs).setTextSelection(end).run();
               }
             })
           }

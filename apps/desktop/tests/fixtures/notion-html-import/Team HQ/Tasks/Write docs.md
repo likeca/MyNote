@@ -1,5 +1,5 @@
 ---
-icon: .assets/notion-0/Team-HQ-Tasks-Write-docs-icon.png
+icon: _assets/notion-0/Team-HQ-Tasks-Write-docs-icon.png
 order: 1
 Status: Done
 Priority: High

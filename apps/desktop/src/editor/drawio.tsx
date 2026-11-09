@@ -1,8 +1,9 @@
 /**
  * draw.io diagrams. They're edited in draw.io's own editor, embed.diagrams.net (so editing needs the
  * internet), shown over the whole window and talking to MyNote with postMessage; the diagram is handed
- * to it and back, not uploaded. A diagram is kept as a `.drawio.svg` in `.assets/`: an SVG picture with
- * the diagram inside, so a page shows it as an ordinary image (Markdown `![Diagram](.assets/….drawio.svg)`)
+ * to it and back, not uploaded. A diagram is kept as a `.drawio.svg` in the page's `_assets/`: an SVG
+ * picture with the diagram inside, so a page shows it as an ordinary image (Markdown
+ * `![Diagram](Page/_assets/….drawio.svg)`)
  * and draw.io's desktop app or VS Code extension can open the file too.
  */
 import type { Editor } from "@tiptap/core";
@@ -10,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { assetChanged } from "../components/PageIcon";
 import { api } from "../lib/api";
+import { isAssetPath } from "../lib/assets";
 
 const ORIGIN = "https://embed.diagrams.net";
 /** Shape libraries on, Save plus Save & Exit buttons, "Unsaved changes" while there are some. */
@@ -18,7 +20,7 @@ const EDITOR_URL = `${ORIGIN}/?embed=1&proto=json&spin=1&libraries=1&saveAndExit
 const LOAD_TIMEOUT_MS = 20_000;
 
 /** Whether an image is a draw.io diagram MyNote can edit: one of the workspace's own `.drawio.svg` files. */
-export const isEditableDiagram = (src: string) => src.startsWith(".assets/") && /\.drawio\.svg$/i.test(src);
+export const isEditableDiagram = (src: string) => isAssetPath(src) && /\.drawio\.svg$/i.test(src);
 
 /**
  * Opens draw.io on a new, blank diagram. Its first save puts it in the page where the cursor was;
@@ -33,7 +35,7 @@ export function newDiagram(editor: Editor) {
         await api.writeAsset(src, [...bytes]);
         return assetChanged(src);
       }
-      src = await api.saveAsset("Diagram.drawio.svg", [...bytes]);
+      src = await api.saveAsset("Diagram.drawio.svg", [...bytes], editor.storage.fileAttachment.page);
       if (editor.isDestroyed) return;
       editor.chain().insertContentAt(Math.min(at, editor.state.doc.content.size), { type: "image", attrs: { src, alt: "Diagram" } }).run();
     },

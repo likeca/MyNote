@@ -1,6 +1,6 @@
 /**
  * Attached files open in tabs of their own, in a code editor (components/FileEditor): a tab's
- * path is `@file/` and the file's workspace path, e.g. `@file/.assets/Notes/config.json`.
+ * path is `@file/` and the file's workspace path, e.g. `@file/assets/Notes/config.json`.
  */
 const PREFIX = "@file/";
 

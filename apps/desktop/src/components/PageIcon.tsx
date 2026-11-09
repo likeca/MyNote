@@ -1,13 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
 import { api } from "../lib/api";
+import { isAssetPath } from "../lib/assets";
 import { textColor } from "../lib/colors";
 
 /**
  * Page icons, stored as a frontmatter string:
  *   "🚀"                    an emoji
  *   "lucide:Rocket:blue"    a flat icon in one of the palette colours
- *   ".assets/logo-123.png"  a custom image uploaded into the vault
+ *   "Page/_assets/logo-123.png"  a custom image uploaded into the page's folder
  *   "https://…/icon.png"    an image link
  */
 export type ParsedIcon =
@@ -20,7 +21,7 @@ export function parseIcon(icon: string): ParsedIcon {
     const [, name, color = "default"] = icon.split(":");
     if (name) return { kind: "lucide", name, color };
   }
-  if (icon.startsWith(".assets/")) return { kind: "image", src: icon, local: true };
+  if (isAssetPath(icon)) return { kind: "image", src: icon, local: true };
   if (/^https?:\/\//.test(icon)) return { kind: "image", src: icon, local: false };
   return { kind: "emoji", value: icon };
 }

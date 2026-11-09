@@ -17,8 +17,8 @@ Everything you import lands under one new page and is committed to git as a sing
 What happens to your pages:
 
 - Notion's IDs are removed from file names, and links between pages become wikilinks.
-- Images and files are copied into the workspace's `.assets/` folder.
-- Images your pages show from the web (covers from Notion's gallery, icons and pictures hosted elsewhere) are downloaded into `.assets/` too, so the imported pages are fully local. Any that can't be downloaded, usually because they no longer exist, keep their web address and are listed when the import finishes.
+- Images and files are copied into the workspace's `_assets/` folder.
+- Images your pages show from the web (covers from Notion's gallery, icons and pictures hosted elsewhere) are downloaded into `_assets/` too, so the imported pages are fully local. Any that can't be downloaded, usually because they no longer exist, keep their web address and are listed when the import finishes.
 - Empty databases come along as empty databases, and a database whose rows were exported without it is rebuilt from them.
 - Sub-pages keep the order they have in Notion.
 - From an HTML export, Notion's icons become matching flat icons in the same colour, and covers, colours and toggles come along. See [[Formatting and colours]].
@@ -30,7 +30,7 @@ What happens to your pages:
 Choose your vault folder.
 
 - Folders and links are kept as they are.
-- Attachments and embedded images are copied into `.assets/`.
+- Attachments and embedded images are copied into `_assets/`.
 - Callouts get matching colours and icons. See [[Formatting and colours]].
 - The `.obsidian` settings folder is skipped.
 

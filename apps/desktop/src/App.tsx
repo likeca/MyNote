@@ -511,7 +511,7 @@ export default function App() {
   );
 
   const ctx: VaultContextValue = useMemo(
-    () => ({ notes, refreshKey, openPage, peek: setPeekPath, createPage, refresh, renamed, aiPolicy, setPageAi }),
+    () => ({ notes, refreshKey, openPage, peek: setPeekPath, createPage, refresh, renamed, aiPolicy, setPageAi, toast: setToast }),
     [notes, refreshKey, openPage, createPage, refresh, renamed, aiPolicy, setPageAi],
   );
   const tree = useMemo(() => buildTree(notes), [notes]);

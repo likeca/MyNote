@@ -13,7 +13,9 @@ A database is a page whose sub-pages are its rows. Each row's values are saved i
 - On an empty page, **Get started with** offers Table, Board and Calendar.
 - [[Import]] turns each Notion database into a MyNote database.
 
-On a database's own page, its views (table, board, calendar…) are one block among the page's text: write above or below them, as on any page, with headings, notes, callouts or checklists about the rows. Click the line under the views to start writing below. To move the views above or below the text, drag them by their `⋮⋮` handle, or drag text blocks past them. The views can't be deleted from their own page; delete the database from its `•••` menu instead.
+On a database's own page, its views (table, board, calendar…) are one block among the page's text: write above or below them, as on any page, with headings, notes, callouts or checklists about the rows. Click the line under the views to start writing below. To move the views above or below the text, drag them by their `⋮⋮` handle, or drag text blocks past them.
+
+To delete the database, click `⋮⋮` (or the current view's tab) and choose **Delete database**, or select the views (arrow keys from the text) and press Delete. The page becomes an ordinary page again: its text stays, and its rows stay as its sub-pages. **Undo** in the message that appears brings the database back. To delete the page itself, rows and all, choose **Move to Trash** in its `•••` menu.
 
 ## Views
 
@@ -28,8 +30,9 @@ Each database can have several views. Every view keeps its own sorts, filters, c
 | Calendar | Rows on the day of a date property. Drag a row to another day to change its date              |
 
 - Click `+` after the view tabs to add a view.
-- Click the current view's tab to rename it, change its layout, duplicate it or delete it.
+- Click the current view's tab to rename it, change its layout, duplicate it or delete it, or to delete the whole database.
 - **View settings** sets the layout, **Group by** for boards, **Show calendar by** for calendars, which properties are shown, and whether long text wraps.
+- A board groups by the database's first Status or Select property, and a calendar shows by its first Date property. Making a view a calendar adds a Date property when the database has none (and a board, a Status property), so every layout shows something straight away.
 
 ## Properties
 

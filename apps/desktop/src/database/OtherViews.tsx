@@ -5,6 +5,7 @@ import { PageIcon } from "../components/PageIcon";
 import { useOpenRow } from "../lib/vault";
 import { monthGrid, StatusDot, Tag } from "./cells";
 import {
+  allProperties,
   asDate,
   asList,
   cardPreviewOf,
@@ -168,9 +169,27 @@ export function BoardView(vp: ViewProps) {
   const props = visibleProperties(schema, view);
 
   if (!group || !["select", "status", "multi_select"].includes(group.type)) {
+    const groupable = schema.properties.filter((p) => ["select", "status", "multi_select"].includes(p.type));
+    const button = "inline-flex h-7 items-center gap-1 rounded-md border border-line px-2.5 text-sm text-ink hover:bg-hover";
     return (
-      <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-muted">
-        Boards group pages by a Select or Status property. Add one, then choose it under ••• → Group by.
+      <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line p-6 text-center text-sm text-muted">
+        <span>Boards group pages by a Status, Select or Multi-select property. {groupable.length ? "Group this board by:" : "This database has none yet."}</span>
+        <div className="flex flex-wrap justify-center gap-2">
+          {groupable.map((p) => (
+            <button key={p.name} className={button} onClick={() => db.updateView(view.id, { groupBy: p.name })}>
+              {p.name}
+            </button>
+          ))}
+          <button
+            className={button}
+            onClick={async () => {
+              const name = await db.addProperty("status");
+              if (name) db.updateView(view.id, { groupBy: name });
+            }}
+          >
+            <Plus size={14} /> Add a Status property
+          </button>
+        </div>
       </div>
     );
   }
@@ -285,6 +304,16 @@ export function BoardView(vp: ViewProps) {
   );
 }
 
+/** A list or gallery with nothing to show says why: no pages yet, or none this view lets through. */
+function NoRows({ vp }: { vp: ViewProps }) {
+  const all = vp.db.state?.rows.length ?? 0;
+  return (
+    <div className="rounded-md border border-dashed border-line px-3 py-4 text-center text-sm text-faint">
+      {all ? "No pages match this view's filters or search." : "No pages yet. Add one with New page."}
+    </div>
+  );
+}
+
 export function GalleryView(vp: ViewProps) {
   const { db, schema, view, rows } = vp;
   const [editing, setEditing] = useAutoEditTitle(vp);
@@ -298,6 +327,7 @@ export function GalleryView(vp: ViewProps) {
           <Card key={row.path} row={row} props={props} vp={vp} editing={editing} setEditing={setEditing} preview={view.cardPreview ?? "auto"} />
         ))}
       </div>
+      {rows.length === 0 && <NoRows vp={vp} />}
       {/* A slim line like the table's, not a card-sized tile: it adds a page, it isn't one. */}
       <button onClick={async () => setEditing(await db.createRow())} className="mt-2 flex h-8 items-center gap-1.5 rounded-md px-2 text-sm text-faint hover:bg-hover">
         <Plus size={15} /> New page
@@ -334,6 +364,7 @@ export function ListView(vp: ViewProps) {
           </span>
         </div>
       ))}
+      {rows.length === 0 && <NoRows vp={vp} />}
       <button onClick={async () => setEditing(await db.createRow())} className="flex h-9 w-full items-center gap-1.5 rounded-md px-2 text-sm text-faint hover:bg-hover">
         <Plus size={15} /> New page
       </button>
@@ -351,9 +382,28 @@ export function CalendarView(vp: ViewProps) {
   const dateProp = view.dateProperty ? findProperty(schema, view.dateProperty) : undefined;
 
   if (!dateProp) {
+    const dates = allProperties(schema).filter((p) => ["date", "created_time", "last_edited_time"].includes(p.type));
+    const button = "inline-flex h-7 items-center gap-1 rounded-md border border-line px-2.5 text-sm text-ink hover:bg-hover";
     return (
-      <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-muted">
-        Calendars place pages by a Date property. Add one, then choose it under ••• → Show calendar by.
+      <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line p-6 text-center text-sm text-muted">
+        <span>Calendars place pages by a date. {dates.length ? "Show this calendar by:" : "This database has no Date property yet."}</span>
+        <div className="flex flex-wrap justify-center gap-2">
+          {dates.map((p) => (
+            <button key={p.name} className={button} onClick={() => db.updateView(view.id, { dateProperty: p.name })}>
+              {p.name}
+            </button>
+          ))}
+          <button
+            className={button}
+            onClick={async () => {
+              const name = await db.addProperty("date");
+              if (name) db.updateView(view.id, { dateProperty: name });
+            }}
+          >
+            <Plus size={14} /> Add a Date property
+          </button>
+        </div>
+        <span className="text-xs text-faint">Set each page's date in its Date property, or drag a page onto a day.</span>
       </div>
     );
   }

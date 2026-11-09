@@ -188,7 +188,7 @@ mod tests {
         let mut stored = vec![];
         let result = localize(&dir, fake, |name, _bytes, _url| {
             stored.push(name.to_string());
-            Some(format!(".assets/batch/{name}"))
+            Some(format!("_assets/batch/{name}"))
         });
 
         // Each address is downloaded once, however many pages show it.
@@ -197,9 +197,9 @@ mod tests {
         assert_eq!(result.failed, ["https://dead.example.com/x.png"]);
         assert_eq!(
             fs::read_to_string(dir.join("Page.md")).unwrap(),
-            "---\nicon: .assets/batch/web-star.png\ncover: .assets/batch/web-sky.png\norder: 1\n---\nText ![shot](.assets/batch/web-star.png) and ![gone](https://dead.example.com/x.png).\n\n<img src=\".assets/batch/web-sky.png\" width=\"200\">\n\n[a link](https://cdn.example.com/c/sky.jpg?x=1)\n"
+            "---\nicon: _assets/batch/web-star.png\ncover: _assets/batch/web-sky.png\norder: 1\n---\nText ![shot](_assets/batch/web-star.png) and ![gone](https://dead.example.com/x.png).\n\n<img src=\"_assets/batch/web-sky.png\" width=\"200\">\n\n[a link](https://cdn.example.com/c/sky.jpg?x=1)\n"
         );
-        assert_eq!(fs::read_to_string(dir.join("Sub/Row.md")).unwrap(), "![again](.assets/batch/web-star.png)\n");
+        assert_eq!(fs::read_to_string(dir.join("Sub/Row.md")).unwrap(), "![again](_assets/batch/web-star.png)\n");
         let _ = fs::remove_dir_all(&dir);
     }
 }

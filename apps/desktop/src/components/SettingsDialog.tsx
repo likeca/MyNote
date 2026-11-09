@@ -574,8 +574,8 @@ function VaultSection({ vault, pageCount, onSwitchVault }: { vault: VaultInfo; p
         <Row label="Pages" hint="Including database rows.">
           <span className="text-sm text-muted">{pageCount.toLocaleString()}</span>
         </Row>
-        <Row label="Uploaded images" hint={<>Custom icons are stored in the workspace's hidden <code className="font-mono">.assets</code> folder and versioned in git.</>}>
-          <span className="text-sm text-muted">.assets/</span>
+        <Row label="Uploaded images" hint={<>Custom icons and attached files are stored in an <code className="font-mono">_assets</code> folder in their page's folder, next to its sub-pages, and versioned in git.</>}>
+          <span className="text-sm text-muted">Page/_assets/</span>
         </Row>
       </div>
     </>

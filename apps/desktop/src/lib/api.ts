@@ -40,7 +40,8 @@ export const api = {
   createNote: (parent: string | null, title: string) => invoke<string>("create_note", { parent, title }),
   databaseRows: (path: string) => invoke<RawRow[]>("database_rows", { path }),
   duplicateNote: (path: string) => invoke<string>("duplicate_note", { path }),
-  saveAsset: (name: string, bytes: number[]) => invoke<string>("save_asset", { name, bytes }),
+  /** Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder, or the workspace's `_assets/`. */
+  saveAsset: (name: string, bytes: number[], page?: string | null) => invoke<string>("save_asset", { name, bytes, page: page ?? null }),
   readAsset: (path: string) => invoke<ArrayBuffer>("read_asset", { path }),
   writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
   /** Saves an attached text file edited in its tab. */

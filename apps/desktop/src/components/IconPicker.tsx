@@ -3,6 +3,7 @@ import { Search, Shuffle, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import emojiGroups from "unicode-emoji-json/data-by-group.json";
 import { api } from "../lib/api";
+import { isAssetPath } from "../lib/assets";
 import { COLORS, colorLabel, textColor } from "../lib/colors";
 import { PageIcon, lucideIcon } from "./PageIcon";
 
@@ -47,10 +48,10 @@ const readRecents = (): string[] => {
   }
 };
 
-/** Icon picker: emoji, coloured flat icons, or a custom image. */
-export function IconPicker({ onPick, onClose, current }: { onPick: (icon: string | null) => void; onClose: () => void; current?: string }) {
+/** Icon picker: emoji, coloured flat icons, or a custom image (saved in `page`'s `_assets/`). */
+export function IconPicker({ onPick, onClose, current, page }: { onPick: (icon: string | null) => void; onClose: () => void; current?: string; page?: string | null }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<Tab>(() => (current?.startsWith("lucide:") ? "icons" : current?.startsWith(".assets/") ? "upload" : "emoji"));
+  const [tab, setTab] = useState<Tab>(() => (current?.startsWith("lucide:") ? "icons" : isAssetPath(current) ? "upload" : "emoji"));
   const [query, setQuery] = useState("");
   const [color, setColor] = useState<string>(() => (current?.startsWith("lucide:") ? current.split(":")[2] ?? "default" : "default"));
   const [recents, setRecents] = useState(readRecents);
@@ -130,9 +131,9 @@ export function IconPicker({ onPick, onClose, current }: { onPick: (icon: string
         </div>
       )}
 
-      {tab === "emoji" && <EmojiGrid query={query} recents={recents.filter((r) => !r.startsWith("lucide:") && !r.startsWith(".") && !r.startsWith("http"))} onPick={pick} />}
+      {tab === "emoji" && <EmojiGrid query={query} recents={recents.filter((r) => !r.startsWith("lucide:") && !isAssetPath(r) && !r.startsWith("http"))} onPick={pick} />}
       {tab === "icons" && <IconGrid query={query} color={color} recents={recents.filter((r) => r.startsWith("lucide:"))} onPick={pick} />}
-      {tab === "upload" && <UploadPane onPick={pick} />}
+      {tab === "upload" && <UploadPane onPick={pick} page={page} />}
     </div>
   );
 }
@@ -280,7 +281,7 @@ async function prepareImage(file: File): Promise<number[]> {
   return [...new Uint8Array(await blob.arrayBuffer())];
 }
 
-function UploadPane({ onPick }: { onPick: (icon: string) => void }) {
+function UploadPane({ onPick, page }: { onPick: (icon: string) => void; page?: string | null }) {
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -295,7 +296,7 @@ function UploadPane({ onPick }: { onPick: (icon: string) => void }) {
     try {
       const bytes = await prepareImage(file);
       const name = file.type === "image/gif" || file.type === "image/svg+xml" ? file.name : file.name.replace(/\.\w+$/, ".png");
-      onPick(await api.saveAsset(name, bytes));
+      onPick(await api.saveAsset(name, bytes, page));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -340,7 +341,7 @@ function UploadPane({ onPick }: { onPick: (icon: string) => void }) {
         <button className="h-8 rounded-md bg-[var(--blue)] px-3 text-sm font-medium text-white hover:brightness-110">Submit</button>
       </form>
       {error && <p className="text-xs text-[var(--c-red-text)]">{error}</p>}
-      <p className="text-[11px] text-faint">Images are saved in the workspace's .assets folder, so they're versioned in git with your pages.</p>
+      <p className="text-[11px] text-faint">Images are saved in the page's _assets folder, so they're versioned in git with your pages.</p>
     </div>
   );
 }

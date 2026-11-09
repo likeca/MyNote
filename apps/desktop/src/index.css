@@ -1083,6 +1083,27 @@ pre {
   border-radius: 3px;
 }
 
+/* Blocks selected as a whole (Esc, Shift-↑/↓, a box dragged from the margin; see blockSelect.ts):
+   each tinted, and the text inside not highlighted again. */
+.mynote-prose .ProseMirror-selectednoderange {
+  background-color: color-mix(in srgb, var(--blue) 14%, transparent);
+  border-radius: 3px;
+}
+
+.mynote-prose.has-block-selection ::selection {
+  background: transparent;
+}
+
+/* The box drawn while dragging from the page's margin. */
+.block-marquee {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--blue) 50%, transparent);
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+  border-radius: 2px;
+}
+
 /* Drag handle and drop indicator */
 .drag-handle {
   transition: opacity 120ms;

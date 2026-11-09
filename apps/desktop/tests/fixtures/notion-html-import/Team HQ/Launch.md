@@ -1,6 +1,6 @@
 ---
 icon: 🚀
-cover: .assets/notion-0/Team-HQ-Launch-cover.png
+cover: _assets/notion-0/Team-HQ-Launch-cover.png
 ---
 Some <span data-color="green">green **bold**</span> text, *italics*, ~~gone~~, `code_span` and a\_b.  
 Next line.
@@ -42,9 +42,9 @@ if (a < 2) {}
 
 ---
 
-![diagram.png](.assets/notion-0/Team-HQ-Launch-diagram.png)
+![diagram.png](_assets/notion-0/Team-HQ-Launch-diagram.png)
 
-[spec.pdf](.assets/notion-0/Team-HQ-Launch-spec.pdf)
+[spec.pdf](_assets/notion-0/Team-HQ-Launch-spec.pdf)
 
 [A post](https://example.com/post)
 

@@ -25,10 +25,10 @@ import {
 } from "lucide-react";
 import { Calendar as DayPicker } from "../components/Calendar";
 import { PageIcon } from "../components/PageIcon";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { MenuDivider, MenuItem, MenuSection, Popover } from "../components/Popover";
 import { wantsNewTab } from "../lib/nav";
-import { OpenRowsIn, useVault } from "../lib/vault";
+import { OpenRowsIn, OwnDatabase, useVault } from "../lib/vault";
 import { PropIcon } from "./cells";
 import {
   RELATIVE_DATES,
@@ -346,9 +346,12 @@ function ViewTabMenu({
   onClose: () => void;
 }) {
   const canDelete = count > 1;
-  const [name, setName] = useState(view.name);
+  // On the database's own page (not a copy shown elsewhere), the database itself can go too.
+  const own = useContext(OwnDatabase);
+  // Only once typed in: a layout change can rename the view meanwhile (see viewPatch).
+  const [name, setName] = useState<string | null>(null);
   const close = () => {
-    if (name.trim() && name !== view.name) db.updateView(view.id, { name: name.trim() });
+    if (name?.trim() && name !== view.name) db.updateView(view.id, { name: name.trim() });
     onClose();
   };
   return (
@@ -357,7 +360,7 @@ function ViewTabMenu({
         <span className="grid size-7 place-items-center rounded-md border border-line text-muted">{VIEW_ICONS[view.type](15)}</span>
         <input
           autoFocus
-          value={name}
+          value={name ?? view.name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && close()}
           className="h-7 min-w-0 flex-1 rounded-md border border-line bg-side px-2 text-sm text-ink outline-none focus:border-[var(--blue)]"
@@ -387,6 +390,17 @@ function ViewTabMenu({
           onClick={() => {
             db.deleteView(view.id);
             onClose();
+          }}
+        />
+      )}
+      {own?.path === db.path && (
+        <MenuItem
+          icon={<Trash2 size={14} />}
+          label="Delete database"
+          danger
+          onClick={() => {
+            onClose();
+            own.remove();
           }}
         />
       )}

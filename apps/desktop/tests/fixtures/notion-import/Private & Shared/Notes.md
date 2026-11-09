@@ -15,9 +15,9 @@
 | not | a table |
 ```
 
-![image.png](.assets/notion-0/Private---Shared-Notes-image.png)
+![image.png](_assets/notion-0/Private---Shared-Notes-image.png)
 
-[Contract.pdf](.assets/notion-0/Private---Shared-Notes-Contract.pdf)
+[Contract.pdf](_assets/notion-0/Private---Shared-Notes-Contract.pdf)
 
 ---
 

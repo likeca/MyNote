@@ -271,6 +271,52 @@ export const VIEW_LABELS: Record<ViewType, string> = {
   calendar: "Calendar",
 };
 
+/**
+ * A view's changes, with its name following a new layout while it's still a layout's name
+ * ("Board" becomes "Table"); a name of its own ("All tasks") stays.
+ */
+export function viewPatch(view: View, patch: Partial<View>): Partial<View> {
+  if (!patch.type || patch.name !== undefined || !Object.values(VIEW_LABELS).includes(view.name.trim())) return patch;
+  return { ...patch, name: VIEW_LABELS[patch.type] };
+}
+
+/**
+ * `view` ready for its layout: a board groups by the first Status or Select property (else a
+ * Multi-select), a calendar shows by the first Date property, unless it has a property of its own.
+ */
+export function withLayoutDefaults(view: View, schema: Schema): View {
+  const has = (name?: string) => !!name && schema.properties.some((p) => p.name === name);
+  const first = (...types: PropType[]) => types.map((t) => schema.properties.find((p) => p.type === t)).find(Boolean)?.name;
+  if (view.type === "board" && !has(view.groupBy)) {
+    const groupBy = first("status", "select", "multi_select");
+    if (groupBy) return { ...view, groupBy };
+  }
+  if (view.type === "calendar" && !has(view.dateProperty)) {
+    const dateProperty = first("date");
+    if (dateProperty) return { ...view, dateProperty };
+  }
+  return view;
+}
+
+/** A new property of `type`, named for its type ("Date", or "Status 2" when taken), with Status's usual options. */
+export function newProperty(schema: Schema, type: PropType): Property {
+  const name = uniquePropertyName(schema, TYPE_LABELS[type]);
+  if (type === "status") {
+    return { name, type, options: [{ name: "Not started", color: "gray" }, { name: "In progress", color: "blue" }, { name: "Done", color: "green" }] };
+  }
+  return { name, type, ...(type === "select" || type === "multi_select" ? { options: [] } : {}) };
+}
+
+/**
+ * `schema` with what a `layout` view needs to show anything, as Notion does: a calendar a Date
+ * property, a board a Status one, added when the database has nothing of the kind.
+ */
+export function withLayoutProperty(schema: Schema, layout: ViewType): Schema {
+  const needs = layout === "calendar" ? (["date"] as PropType[]) : layout === "board" ? (["status", "select", "multi_select"] as PropType[]) : [];
+  if (!needs.length || schema.properties.some((p) => needs.includes(p.type))) return schema;
+  return { ...schema, properties: [...schema.properties, newProperty(schema, needs[0])] };
+}
+
 const FENCE = /```database[ \t]*\n([\s\S]*?)\n```/;
 
 export const newId = () => Math.random().toString(36).slice(2, 9);
@@ -313,6 +359,19 @@ export function writeSchema(body: string, schema: Schema): string {
 
 /** Whether a page body holds a database's schema block. */
 export const hasSchema = (body: string) => FENCE.test(body);
+
+/**
+ * A database page's body as an ordinary page's: its schema block (or, in the editor's Markdown, its
+ * views' line) gone, the text above and below it kept, joined by one blank line.
+ */
+export function withoutSchema(body: string): string {
+  const m = FENCE.exec(body);
+  const at = m ? m.index : body.indexOf(VIEWS_MARKER);
+  if (at < 0) return body;
+  const end = at + (m ? m[0].length : VIEWS_MARKER.length);
+  const text = [body.slice(0, at).trimEnd(), body.slice(end).replace(/^(?:[ \t]*\n)+/, "").trimEnd()].filter(Boolean).join("\n\n");
+  return text ? `${text}\n` : "";
+}
 
 /**
  * On a database's own page, the editor holds the page's text blocks and, among them, its views as

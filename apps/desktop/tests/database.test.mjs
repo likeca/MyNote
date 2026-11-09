@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { allProperties, applyView, bodyForEditor, bodyFromEditor, filterDefaults, moveProperty, calculate, parseSchema, toRow, withSchemaBlockOf, writeSchema, defaultSchema, visibleProperties } from "../src/database/model.ts";
+import { allProperties, applyView, bodyForEditor, bodyFromEditor, filterDefaults, moveProperty, calculate, parseSchema, toRow, withSchemaBlockOf, withoutSchema, writeSchema, defaultSchema, visibleProperties } from "../src/database/model.ts";
 import { patchFrontmatter } from "../src/lib/frontmatter.ts";
 
 const schema = {
@@ -75,6 +75,15 @@ test("a database page's text can sit above and below its views, wherever they're
   const saved = withSchemaBlockOf(`Edited.\n\n${block}\n\nNotes below.\n`, disk);
   assert.deepEqual(parseSchema(saved).properties.map((p) => p.name), ["Status", "Tags", "Due"]);
   assert.equal(bodyForEditor(saved), "Edited.\n\n<!-- database views -->\n\nNotes below.\n");
+});
+
+test("deleting a database keeps the page's text around its views", () => {
+  const block = writeSchema("", defaultSchema()).trim();
+  assert.equal(withoutSchema(`## Plan\n\n${block}\n\n    indented code\n\nNotes below.\n`), "## Plan\n\n    indented code\n\nNotes below.\n");
+  assert.equal(withoutSchema(`${block}\n\n&nbsp;\n`), "&nbsp;\n");
+  assert.equal(withoutSchema(`Above.\n\n${block}\n`), "Above.\n");
+  assert.equal(withoutSchema(`${block}\n`), "", "a new database leaves an empty page");
+  assert.equal(withoutSchema("Just text.\n"), "Just text.\n", "nothing to remove");
 });
 
 test("frontmatter patches keep other keys and formatting", () => {
@@ -176,7 +185,33 @@ test("removing a property clears it from views", () => {
   assert.deepEqual(next.views[0].hidden, []);
 });
 
-import { moveView, cardPreviewOf } from "../src/database/model.ts";
+import { moveView, cardPreviewOf, viewPatch, withLayoutDefaults, withLayoutProperty } from "../src/database/model.ts";
+
+test("a view named after its layout takes the new layout's name; its own name stays", () => {
+  const board = { id: "b", name: "Board", type: "board" };
+  assert.deepEqual(viewPatch(board, { type: "table" }), { type: "table", name: "Table" });
+  // Named after another layout (it was a calendar shown as a list): follows too.
+  assert.equal(viewPatch({ id: "c", name: "Calendar", type: "list" }, { type: "list" }).name, "List");
+  assert.deepEqual(viewPatch({ id: "a", name: "All tasks", type: "table" }, { type: "board" }), { type: "board" });
+  assert.equal(viewPatch(board, { type: "table", name: "Mine" }).name, "Mine", "a name given with it wins");
+  assert.deepEqual(viewPatch(board, { groupBy: "Status" }), { groupBy: "Status" }, "only a layout change renames");
+});
+
+test("a board or calendar picks its property when it has none of its own", () => {
+  const schema = { properties: [{ name: "Tags", type: "multi_select" }, { name: "Kind", type: "select" }, { name: "Status", type: "status" }, { name: "Due", type: "date" }], views: [] };
+  assert.equal(withLayoutDefaults({ id: "b", name: "Board", type: "board" }, schema).groupBy, "Status", "Status before Select, Select before Multi-select");
+  assert.equal(withLayoutDefaults({ id: "b", name: "Board", type: "board", groupBy: "Kind" }, schema).groupBy, "Kind", "its own choice stays");
+  assert.equal(withLayoutDefaults({ id: "b", name: "Board", type: "board", groupBy: "Gone" }, schema).groupBy, "Status", "a deleted property is replaced");
+  assert.equal(withLayoutDefaults({ id: "c", name: "Calendar", type: "calendar" }, schema).dateProperty, "Due");
+  const bare = { id: "c", name: "Calendar", type: "calendar" };
+  assert.equal(withLayoutDefaults(bare, { properties: [], views: [] }), bare, "nothing to pick: unchanged");
+  // A layout with nothing to show by gets the property it needs; one that has it is left alone.
+  const plain = { properties: [{ name: "Date", type: "text" }], views: [] };
+  assert.deepEqual(withLayoutProperty(plain, "calendar").properties.at(-1), { name: "Date 2", type: "date" });
+  assert.deepEqual(withLayoutProperty(plain, "board").properties.at(-1).options.map((o) => o.name), ["Not started", "In progress", "Done"]);
+  assert.equal(withLayoutProperty(schema, "calendar"), schema);
+  assert.equal(withLayoutProperty(plain, "list"), plain);
+});
 
 test("moves a view's tab to a new position", () => {
   const vs = ["a", "b", "c", "d"].map((id) => ({ id, name: id, type: "table" }));

@@ -25,7 +25,7 @@ Hover above a page's title to see **Add icon**, **Add cover** and **Add tags**.
 - **Cover:** starts as a gradient. Hover it and click **Change cover** to pick another gradient, a colour or a link to an image, or **Remove**.
 - **Tags:** type a tag and press Enter. Hover a tag and click × to remove it.
 
-Uploaded images are stored in the workspace's `.assets/` folder, so they're versioned in git with your pages.
+Uploaded images are stored in an `_assets/` folder in the page's own folder (next to its sub-pages), so they're versioned in git with your pages and go wherever the page goes.
 
 ## The page menu
 

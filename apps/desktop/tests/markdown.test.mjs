@@ -290,18 +290,18 @@ test("imported callouts", () => {
 test("imported lists, embeds and files", () => {
   exact("- [x] done\n- [ ] todo\n  - [ ] sub\n- [ ] \n\n1. first\n   - inner\n");
   exact("![[Tasks]]\n\n![[Notion import/Private & Shared/Library 2]]\n\n### Domains\n");
-  exact("![image.png](.assets/notion-0/a-image.png)\n\n[Contract.pdf](.assets/notion-0/a-Contract.pdf)\n\n---\n\nAfter\n");
+  exact("![image.png](_assets/notion-0/a-image.png)\n\n[Contract.pdf](_assets/notion-0/a-Contract.pdf)\n\n---\n\nAfter\n");
 });
 
 test("a resized image keeps its width, in Obsidian's ![alt|width] form", () => {
-  exact("![photo|320](.assets/photo.png)\n\n![|240](https://example.com/a.png)\n\n![plain](.assets/b.png)\n");
+  exact("![photo|320](_assets/photo.png)\n\n![|240](https://example.com/a.png)\n\n![plain](_assets/b.png)\n");
   // Obsidian's width x height keeps the width (images keep their aspect ratio).
-  assert.equal(roundTrip("![photo|320x200](.assets/photo.png)").trim(), "![photo|320](.assets/photo.png)");
+  assert.equal(roundTrip("![photo|320x200](_assets/photo.png)").trim(), "![photo|320](_assets/photo.png)");
   // A pipe that isn't followed by a width is part of the description.
-  exact("![before | after](.assets/c.png)\n");
+  exact("![before | after](_assets/c.png)\n");
 });
 
-test("links to files in .assets/ are attachments; images and other links stay as they are", () => {
+test("links to files in _assets/ are attachments; images and other links stay as they are", () => {
   const kinds = (md) => {
     const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
     const editor = new Editor({ extensions, content: md, contentType: "markdown" });
@@ -314,20 +314,23 @@ test("links to files in .assets/ are attachments; images and other links stay as
     editor.destroy();
     return found;
   };
-  const md = "[Q3 Report.pdf](.assets/Q3Report-1.pdf)\n\nSee [the brief](.assets/notion-0/a-Brief.docx) and [the site](https://example.com).\n\n![chart](.assets/chart.png)\n";
+  const md = "[Q3 Report.pdf](_assets/Q3Report-1.pdf)\n\nSee [the brief](_assets/notion-0/a-Brief.docx) and [the site](https://example.com).\n\n![chart](_assets/chart.png)\n";
   exact(md);
-  assert.deepEqual(kinds(md), ["file:Q3 Report.pdf→.assets/Q3Report-1.pdf", "file:the brief→.assets/notion-0/a-Brief.docx", "link:the site", "image:.assets/chart.png"]);
+  assert.deepEqual(kinds(md), ["file:Q3 Report.pdf→_assets/Q3Report-1.pdf", "file:the brief→_assets/notion-0/a-Brief.docx", "link:the site", "image:_assets/chart.png"]);
   // Brackets in a file's name are escaped, and come back unescaped.
-  exact("[Notes \\[final\\].txt](.assets/Notesfinal-2.txt)\n");
-  assert.deepEqual(kinds("[Notes \\[final\\].txt](.assets/Notesfinal-2.txt)"), ["file:Notes [final].txt→.assets/Notesfinal-2.txt"]);
+  exact("[Notes \\[final\\].txt](_assets/Notesfinal-2.txt)\n");
+  assert.deepEqual(kinds("[Notes \\[final\\].txt](_assets/Notesfinal-2.txt)"), ["file:Notes [final].txt→_assets/Notesfinal-2.txt"]);
   // Attachments inside lists and quotes keep their place.
-  exact("- [a.zip](.assets/a-3.zip)\n\n> [b.csv](.assets/b-4.csv)\n");
+  exact("- [a.zip](_assets/a-3.zip)\n\n> [b.csv](_assets/b-4.csv)\n");
   // In a page's folder, spaces and brackets are escaped in the link; the file's path reads back exactly.
-  const md2 = "[Q3 Report (final).pdf](.assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf)\n";
+  const md2 = "[Q3 Report (final).pdf](Projects/Launch%20plan/_assets/Q3%20Report%20%28final%29.pdf)\n";
   exact(md2);
-  assert.deepEqual(kinds(md2), ["file:Q3 Report (final).pdf→.assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf"]);
-  assert.equal(assetHref(".assets/Projects/Launch plan/Q3 Report (final).pdf"), ".assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf");
-  assert.equal(assetPath(".assets/Projects/Launch%20plan/Q3%20Report%20%28final%29.pdf"), ".assets/Projects/Launch plan/Q3 Report (final).pdf");
+  assert.deepEqual(kinds(md2), ["file:Q3 Report (final).pdf→Projects/Launch%20plan/_assets/Q3%20Report%20%28final%29.pdf"]);
+  assert.equal(assetHref("Projects/Launch plan/_assets/Q3 Report (final).pdf"), "Projects/Launch%20plan/_assets/Q3%20Report%20%28final%29.pdf");
+  assert.equal(assetPath("Projects/Launch%20plan/_assets/Q3%20Report%20%28final%29.pdf"), "Projects/Launch plan/_assets/Q3 Report (final).pdf");
+  // A link into a page's folder but not its attachments, or to a website's `_assets/`, stays a link.
+  assert.deepEqual(kinds("[plan](Projects/Launch%20plan/notes.pdf) and [site](https://example.com/_assets/a.pdf)"), ["link:plan", "link:site"]);
+  assert.deepEqual(kinds("[x](my_assets/x.pdf)"), ["link:x"]);
 });
 
 test("equations: $$ blocks and $…$ inline are LaTeX; prices and escaped dollars stay text", () => {

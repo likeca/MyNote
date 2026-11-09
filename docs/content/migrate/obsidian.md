@@ -9,7 +9,7 @@ Obsidian and MyNote both keep notes as Markdown files in a folder, and MyNote us
 | Your files | Stay where they are. MyNote and Obsidian both work on the same folder. | Copied into your MyNote workspace, under one new page. Your vault isn't touched. |
 | Good for | Switching over, or using both apps side by side | Adding your vault to a workspace you already have |
 | Callouts | Kept in Obsidian's style | Changed to MyNote's colours and icons |
-| Attachments | Stay where they are | Copied into `.assets/` |
+| Attachments | Stay where they are | Copied into `_assets/` |
 
 ## Open your vault
 
@@ -31,7 +31,7 @@ Your pages, folders, links, embeds, tags and frontmatter work as they are. Keep 
 Everything goes under a new page named after your vault, as one git commit you can undo.
 
 - Pages and folders keep their structure, and `[[links]]` keep working.
-- Attachments (images, PDFs and other files) are copied into the workspace's `.assets/` folder, and image embeds (`![[photo.png]]`) point to the copies.
+- Attachments (images, PDFs and other files) are copied into the workspace's `_assets/` folder, and image embeds (`![[photo.png]]`) point to the copies.
 - Embedded notes (`![[Note]]`) show as cards that open the note.
 - Callouts become MyNote callouts with matching colours and icons: a `[!warning]` turns yellow with ⚠️, a `[!tip]` green with 💡.
 - Hidden folders such as `.obsidian` and `.trash` are skipped.

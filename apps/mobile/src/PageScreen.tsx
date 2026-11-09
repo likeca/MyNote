@@ -419,6 +419,7 @@ export function PageScreen({ path }: { path: string }) {
       {sheet === "icon" && (
         <Sheet onClose={() => setSheet(null)} title="Page icon" className="icon-sheet">
           <IconPicker
+            page={path}
             current={icon}
             onClose={() => setSheet(null)}
             onPick={(i) => {

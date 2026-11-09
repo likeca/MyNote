@@ -1,6 +1,7 @@
 mod importer;
 mod legacy;
 mod library;
+mod login_path;
 mod script;
 mod seed;
 mod terminal;
@@ -187,6 +188,7 @@ fn activate(app: &AppHandle, state: &AppState, path: PathBuf, remember: bool) ->
         seed::seed(&path)?;
     }
     vault::migrate_legacy_dir(&path).map_err(|e| format!("couldn't rename the workspace's {} folder: {e}", vault::LEGACY_DIR))?;
+    vault::migrate_assets_dir(&path).map_err(|e| format!("couldn't move the workspace's attached files into their pages' _assets folders: {e}"))?;
     git::ensure_repo(&path)?;
 
     let handle = app.clone();
@@ -379,9 +381,11 @@ fn duplicate_note(state: State<AppState>, path: String) -> Result<String, String
     vault::duplicate_note(&vault(&state)?, &path)
 }
 
+/// Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder, or the
+/// workspace's `_assets/` without one.
 #[tauri::command]
-fn save_asset(state: State<AppState>, name: String, bytes: Vec<u8>) -> Result<String, String> {
-    vault::save_asset(&vault(&state)?, &name, &bytes)
+fn save_asset(state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>) -> Result<String, String> {
+    vault::save_asset(&vault(&state)?, page.as_deref().filter(|p| !p.is_empty()), &name, &bytes)
 }
 
 /// Returns raw bytes (an ArrayBuffer in JS) rather than a JSON number array.
@@ -448,11 +452,11 @@ fn file_size(state: State<AppState>, path: String) -> Option<u64> {
     vault::file_size(&vault, &path)
 }
 
-/// Opens an attached file (in `.assets/`) in its default app, or with `reveal`, shows it in Finder.
+/// Opens an attached file (in an `_assets/` folder) in its default app, or with `reveal`, shows it in Finder.
 #[tauri::command]
 fn open_attachment(app: AppHandle, state: State<AppState>, path: String, reveal: bool) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    if !path.starts_with(".assets/") {
+    if !vault::in_assets(&path) {
         return Err("Only attached files can be opened.".into());
     }
     let vault = vault(&state)?;
@@ -896,7 +900,9 @@ fn set_dock_icon(app: AppHandle, dark: bool) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // First: the app's folders are named after the bundle identifier, which changed in the rename.
+    // First, while nothing else runs: the login shell's PATH, so git finds gpg, ssh and helpers.
+    login_path::adopt();
+    // The app's folders are named after the bundle identifier, which changed in the rename.
     legacy::migrate_app_dirs();
     let state: AppState = Arc::default();
     tauri::Builder::default()

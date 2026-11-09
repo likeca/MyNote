@@ -14,6 +14,10 @@ import {
   mapProperty,
   moveView,
   newId,
+  viewPatch,
+  withLayoutDefaults,
+  withLayoutProperty,
+  newProperty,
   parseSchema,
   relationDatabase,
   relationTitles,
@@ -26,7 +30,6 @@ import {
   viewsFor,
   withComputed,
   writeSchema,
-  TYPE_LABELS,
   VIEW_LABELS,
   type PropType,
   type Property,
@@ -260,15 +263,8 @@ export function useDatabase(path: string, scope?: string) {
     async (type: PropType, viewId?: string, index?: number) => {
       const s = latest.current;
       if (!s) return "";
-      const name = uniquePropertyName(s.schema, TYPE_LABELS[type]);
-      const prop: Property = { name, type, ...(type === "select" || type === "multi_select" ? { options: [] } : {}) };
-      if (type === "status") {
-        prop.options = [
-          { name: "Not started", color: "gray" },
-          { name: "In progress", color: "blue" },
-          { name: "Done", color: "green" },
-        ];
-      }
+      const prop = newProperty(s.schema, type);
+      const name = prop.name;
       const properties = [...s.schema.properties, prop];
       const views = s.schema.views.map((v) => {
         if (v.id !== viewId || index === undefined) return v;
@@ -301,8 +297,10 @@ export function useDatabase(path: string, scope?: string) {
     (id: string, patch: Partial<View>) => {
       const s = latest.current;
       if (!s) return;
-      const views = forkViews(s.schema.views, scope).map((v) => (v.id === id && inScope(v, scope) ? { ...v, ...patch } : v));
-      saveSchema({ ...s.schema, views });
+      // A new layout gets what it needs to show anything (a calendar, a Date property).
+      const schema = patch.type ? withLayoutProperty(s.schema, patch.type) : s.schema;
+      const views = forkViews(schema.views, scope).map((v) => (v.id === id && inScope(v, scope) ? withLayoutDefaults({ ...v, ...viewPatch(v, patch) }, schema) : v));
+      saveSchema({ ...schema, views });
     },
     [saveSchema, scope],
   );
@@ -311,12 +309,9 @@ export function useDatabase(path: string, scope?: string) {
     async (type: ViewType, from?: View) => {
       const s = latest.current;
       if (!s) return "";
-      const view: View = from
-        ? { ...from, id: newId(), name: `${from.name} copy`, scope }
-        : { id: newId(), name: VIEW_LABELS[type], type, scope };
-      if (type === "board" && !view.groupBy) view.groupBy = s.schema.properties.find((p) => p.type === "status" || p.type === "select")?.name;
-      if (type === "calendar" && !view.dateProperty) view.dateProperty = s.schema.properties.find((p) => p.type === "date")?.name;
-      await saveSchema({ ...s.schema, views: [...forkViews(s.schema.views, scope), view] });
+      const schema = withLayoutProperty(s.schema, from?.type ?? type);
+      const view: View = withLayoutDefaults(from ? { ...from, id: newId(), name: `${from.name} copy`, scope } : { id: newId(), name: VIEW_LABELS[type], type, scope }, schema);
+      await saveSchema({ ...schema, views: [...forkViews(schema.views, scope), view] });
       return view.id;
     },
     [saveSchema, scope],
@@ -388,6 +383,8 @@ export function useDatabase(path: string, scope?: string) {
   );
 
   return {
+    /** The database's page. */
+    path,
     state,
     /** The views shown here (see `scope`). */
     views: state ? viewsFor(state.schema.views, scope) : [],

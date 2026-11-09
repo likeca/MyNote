@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { PageIcon } from "./PageIcon";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { bodyForEditor, bodyFromEditor, defaultSchema, hasSchema, withSchemaBlockOf, writeSchema } from "../database/model";
+import { bodyForEditor, bodyFromEditor, defaultSchema, hasSchema, withSchemaBlockOf, withoutSchema, writeSchema } from "../database/model";
 import { Toggle } from "../database/PropertyMenu";
 import { RowProperties } from "../database/RowProperties";
 import { PluginPagePanels } from "../plugins/slots";
@@ -30,7 +30,8 @@ import { markQuietWrite } from "../lib/quiet";
 import { createDatabase } from "../database/useDatabase";
 import type { Editor as TiptapEditor } from "@tiptap/react";
 import { Editor } from "../editor/Editor";
-import { PageContext } from "../editor/blocks";
+import { PageContext, dropFiles } from "../editor/blocks";
+import { selectBlocksBetween } from "../editor/blockSelect";
 import { api, type NoteMeta } from "../lib/api";
 import { fileTitle, frontmatterTags, joinNote, pageTitle, patchFrontmatter, readFrontmatter, splitNote } from "../lib/frontmatter";
 import { labelColor, tagColor } from "../lib/colors";
@@ -39,7 +40,7 @@ import { ancestorKeys, resolveWikiLink } from "../lib/tree";
 import { aiAccess, type AiAccess } from "../lib/ai";
 import { wantsNewTab } from "../lib/nav";
 import { useSettings } from "../lib/settings";
-import { useVault } from "../lib/vault";
+import { OwnDatabase, useVault } from "../lib/vault";
 import { CoverBox, CoverCredit, CoverPicker, photoCover } from "./Cover";
 import { IconPicker } from "./LazyIconPicker";
 import { Outline } from "./Outline";
@@ -66,7 +67,7 @@ const titleOf = fileTitle;
 const parentOf = (path: string) => (path.includes("/") ? `${path.slice(0, path.lastIndexOf("/"))}.md` : null);
 
 export function PageView(p: Props) {
-  const { notes, refreshKey, openPage, peek, createPage, refresh, aiPolicy } = useVault();
+  const { notes, refreshKey, openPage, peek, createPage, refresh, aiPolicy, toast } = useVault();
   const settings = useSettings();
   const [doc, setDoc] = useState<Doc | "missing" | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -116,6 +117,8 @@ export function PageView(p: Props) {
       return !v;
     });
   const [menu, setMenu] = useState<HTMLElement | null>(null);
+  /** The box being dragged from the margin to select blocks, in window coordinates. */
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
 
   const scroller = useRef<HTMLDivElement>(null);
   const pathRef = useRef(p.path);
@@ -226,6 +229,37 @@ export function PageView(p: Props) {
     scheduleSave(0);
   };
 
+  /**
+   * Turns a database's own page back into an ordinary page: its views and property definitions go,
+   * its text stays, and its rows stay as sub-pages (keeping their values in their frontmatter). The
+   * toast's Undo puts the database back as it was.
+   */
+  const removeDatabase = async () => {
+    await flush();
+    const target = pathRef.current;
+    const before = await api.readNote(target);
+    const parts = splitNote(before);
+    const next = joinNote(patchFrontmatter(parts.frontmatter, { type: null }), withoutSchema(parts.body));
+    await api.writeNote(target, next);
+    if (pathRef.current === target) load(next);
+    const notesNow = await refresh();
+    const rows = notesNow.filter((n) => parentOf(n.path) === target).length;
+    toast({
+      message: rows ? `Deleted the database; its ${rows === 1 ? "row stays as a sub-page" : `${rows} rows stay as sub-pages`}` : "Deleted the database",
+      action: {
+        label: "Undo",
+        run: async () => {
+          await api.writeNote(target, before);
+          if (pathRef.current === target) load(before);
+          await refresh();
+        },
+      },
+    });
+  };
+  const removeRef = useRef(removeDatabase);
+  removeRef.current = removeDatabase;
+  const ownDatabase = useMemo(() => ({ path: shownPath, remove: () => void removeRef.current() }), [shownPath]);
+
   const path = shownPath;
 
   const commitTitle = async () => {
@@ -261,6 +295,7 @@ export function PageView(p: Props) {
   const editor =
     doc && doc !== "missing" ? (
       <PageContext.Provider value={path}>
+        <OwnDatabase.Provider value={isDb ? ownDatabase : null}>
         <Editor
           key={`${path}:${editorKey}`}
           editorRef={editorRef}
@@ -285,6 +320,7 @@ export function PageView(p: Props) {
             createDatabase: () => createDatabase(path),
           }}
         />
+        </OwnDatabase.Provider>
       </PageContext.Provider>
     ) : null;
 
@@ -318,7 +354,51 @@ export function PageView(p: Props) {
 
       <div className="relative min-h-0 flex-1">
       {!peekMode && !isDb && <Outline key={`${path}:${editorKey}`} scroller={scroller} />}
-      <div ref={scroller} className="h-full overflow-y-auto" data-font={font} data-small={small || undefined}>
+      <div
+        ref={scroller}
+        className="h-full overflow-y-auto"
+        data-font={font}
+        data-small={small || undefined}
+        // Files dropped beside the text (its margins, the space below it, the title) still attach:
+        // at the line level with the pointer, before the first line or after the last.
+        onDrop={(e) => {
+          const view = editorRef.current?.view;
+          const files = Array.from(e.dataTransfer.files);
+          // Taken already: by the editor itself, or a drop zone such as the icon picker's.
+          if (e.defaultPrevented || !files.length || !view || view.isDestroyed) return;
+          e.preventDefault();
+          const r = view.dom.getBoundingClientRect();
+          const pos =
+            e.clientY < r.top ? 0 : e.clientY > r.bottom ? null : view.posAtCoords({ left: Math.min(Math.max(e.clientX, r.left + 1), r.right - 1), top: e.clientY })?.pos;
+          void dropFiles(view, files, path, pos);
+        }}
+        // A drag that starts beside the text (its margins, the space below it) draws a box: the
+        // blocks it crosses are selected, ready to delete, copy or move (see blockSelect.ts).
+        onMouseDown={(e) => {
+          const editor = editorRef.current;
+          const t = e.target as HTMLElement;
+          if (e.button !== 0 || !editor || editor.isDestroyed || !editor.isEditable) return;
+          if (t.closest(".ProseMirror, button, a, input, textarea, select, [contenteditable], [role=button], [data-popover], [data-table-controls], .drag-handle")) return;
+          // Below the page's head (icon, title, properties), where its blocks are.
+          if (e.clientY < editor.view.dom.getBoundingClientRect().top - 24) return;
+          e.preventDefault();
+          const start = { x: e.clientX, y: e.clientY };
+          let drawing = false;
+          const move = (ev: MouseEvent) => {
+            if (!drawing && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 4) return;
+            drawing = true;
+            setMarquee({ x0: start.x, y0: start.y, x1: ev.clientX, y1: ev.clientY });
+            selectBlocksBetween(editor, Math.min(start.y, ev.clientY), Math.max(start.y, ev.clientY));
+          };
+          const up = () => {
+            window.removeEventListener("mousemove", move);
+            window.removeEventListener("mouseup", up);
+            setMarquee(null);
+          };
+          window.addEventListener("mousemove", move);
+          window.addEventListener("mouseup", up);
+        }}
+      >
         {cover && (
           <CoverBox
             cover={cover}
@@ -378,6 +458,7 @@ export function PageView(p: Props) {
             </div>
             {picker === "icon" && (
               <IconPicker
+                page={path}
                 current={icon}
                 onClose={() => setPicker(null)}
                 onPick={(i) => {
@@ -508,6 +589,12 @@ export function PageView(p: Props) {
       </div>
       </div>
 
+      {marquee && (
+        <div
+          className="block-marquee"
+          style={{ left: Math.min(marquee.x0, marquee.x1), top: Math.min(marquee.y0, marquee.y1), width: Math.abs(marquee.x1 - marquee.x0), height: Math.abs(marquee.y1 - marquee.y0) }}
+        />
+      )}
       {menu && (
         <PageMenu
           anchor={menu}

@@ -28,6 +28,16 @@ Hover a block to see the `⋮⋮` handle on its left.
 - **Click** it to open the block menu: **Turn into**, **Color**, **Duplicate** (`⌘D`) and **Delete**. Type in the menu's search box to find an action.
 - `⌘⌥0` to `⌘⌥8` turn the current block into another type. See [[Keyboard shortcuts]].
 
+## Selecting several blocks
+
+To delete, copy or cut several blocks at once (text, files, images, whatever they are), select them whole:
+
+- **Drag from the margin:** press beside the text, in the page's left or right margin or the space below it, and drag across the blocks. A box shows what you're selecting.
+- **From the keyboard:** press `Esc` to select the block with the cursor, then `⇧↑` or `⇧↓` to add the blocks above or below it.
+- **Shift-click** another block to stretch the selection to it.
+
+Selected blocks are tinted. Press `Backspace` or `Delete` to delete them, or click the `⋮⋮` handle of any of them (or right-click one) for a menu that acts on them all: **Delete**, **Duplicate**, **Color** and **Turn into**. Attached files on deleted lines go to the Trash and come back with `⌘Z`. `⌘C` and `⌘X` copy and cut the blocks. `Esc` again, or a click in the text, goes back to a cursor. On a database's page, its views stay when the text around them is deleted.
+
 ## Every block
 
 ### Text and headings
@@ -107,17 +117,17 @@ The cells stay a plain Markdown table. Headers, colours and widths are saved in 
 const greet = (name) => `Hello, ${name}!`;
 ```
 
-On the desktop app, a **Bash**, **Bash + profile**, **Shell**, **Zsh** or **Python** block can be run: hover it and click **Run** to run the whole block, or put the cursor on a line and press `Ctrl E` (or click **Run line**) to run just that line. It runs in your workspace folder. **Bash** runs on its own, without your startup files. **Bash + profile** first loads `~/.bash_profile` (or `~/.profile`), **Zsh** loads `~/.zprofile` and `~/.zshrc`, aliases included, and **Shell** runs Bash with the `PATH` and exports from your own shell's startup files. **Python** runs `python3` (`python` on Windows) with that same `PATH`, so it's the Python you'd get in Terminal, Homebrew's or pyenv's included; a line run on its own loses its indent, so a line from inside a `for` or `def` still runs. The language menu shows what each one loads. Its output appears under the block until you clear it, and isn't saved in the page. **Stop** ends a script that's still running, and so does closing the page. Only run scripts you trust: they can do anything you can.
+On the desktop app, a **Bash**, **Bash + profile**, **Shell**, **Zsh** or **Python** block can be run: hover it and click **Run** to run the whole block, or put the cursor on a line and press `Ctrl E` (or click **Run line**) to run just that line. It runs in your workspace folder. **Bash** runs on its own, without your startup files. **Bash + profile** first loads `~/.bash_profile` (or `~/.profile`), **Zsh** loads `~/.zprofile` and `~/.zshrc`, aliases included, and **Shell** runs Bash with the `PATH` and exports from your own shell's startup files. **Python** runs `python3` (`python` on Windows) with that same `PATH`, so it's the Python you'd get in Terminal, Homebrew's or pyenv's included; a line run on its own loses its indent, so a line from inside a `for` or `def` still runs. The language menu shows what each one loads. Its output appears under the block until you clear it, and is still there when you come back from another page or tab (a script still running keeps going meanwhile), but it isn't saved in the page and is gone when MyNote quits. **Stop** ends a script that's still running, and so does deleting its block. Only run scripts you trust: they can do anything you can.
 
 ### Image
 
-`/Image`, then paste a link to an image and click **Embed image**. Images that come in with an import are copied into the workspace's `.assets/` folder.
+`/Image`, then paste a link to an image and click **Embed image**. Images you paste or drop on the page are copied into its `_assets/` folder (see File, below); images that come in with an import, into the workspace's `_assets/` folder.
 
 To resize an image, hover it and drag the handle on either side; it keeps its proportions. Double-click a handle to go back to the image's own size. The width is saved in the page the way Obsidian writes it, `![description|320](link)` for 320 pixels wide.
 
 ### File
 
-`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into a folder named after the page, inside the workspace's `.assets/` folder: a page "Launch plan" keeps its files in `.assets/Launch plan/`, under their own names, so they're versioned with your pages. Rename or move the page and its folder follows. A file shows as a chip with its name and size. In the page it's an ordinary link, `[Q3 Report.pdf](.assets/Launch%20plan/Q3%20Report.pdf)` (spaces are written `%20`), so other Markdown apps can open it too.
+`/File` picks files on your computer to attach to the page, or drag files from Finder onto the page (or paste them). Each is copied into an `_assets/` folder in the page's own folder, next to its sub-pages: a page "Launch plan" keeps its files in `Launch plan/_assets/`, under their own names, so they're versioned with your pages. Rename, move or delete the page and its files go with it. A file shows as a chip with its name and size. In the page it's an ordinary link, `[Q3 Report.pdf](Launch%20plan/_assets/Q3%20Report.pdf)` (spaces are written `%20`), so other Markdown apps can open it too.
 
 Click a file to open it. On the desktop app, text and code (JSON, YAML, CSV, scripts, configs and the like) open in a tab of their own, in the same code editor as VS Code, with VS Code's Monokai colours: highlighting for its language, find and replace (`⌘F`), several cursors. What you type saves as you go, and `⌘S` saves straight away. Clicking the file again goes back to its tab. Pictures, sound, video, PDFs, office documents and archives open in their own app instead; so does any file from the tab's buttons, which also show it in Finder. `⌘`-click a file to show it in Finder.
 
@@ -137,7 +147,7 @@ While you edit an equation, the two **A** buttons make the LaTeX you're typing b
 
 `/Draw.io` opens draw.io's editor over the page. Draw, then save and exit, and the diagram appears where you typed the command. To change it later, hover it and click the pencil, or double-click it. Editing needs an internet connection: the editor is draw.io's own, loaded from embed.diagrams.net, and your diagram is handed to it inside MyNote's window.
 
-Each diagram is a `.drawio.svg` file in `.assets/`: a picture with the diagram stored inside. The page shows it like any image (you can resize it the same way), other Markdown apps show the picture, and draw.io's desktop app or its VS Code extension can open the file and edit it.
+Each diagram is a `.drawio.svg` file in the page's `_assets/` folder: a picture with the diagram stored inside. The page shows it like any image (you can resize it the same way), other Markdown apps show the picture, and draw.io's desktop app or its VS Code extension can open the file and edit it.
 
 ### Columns
 
@@ -180,8 +190,8 @@ Each block has a Markdown form that other editors can read. Open this page's fil
 | Code            | Three backticks and the language                         |
 | Image           | `![description](link)`                                   |
 | Resized image   | `![description\|320](link)`                              |
-| Draw.io diagram | `![Diagram](.assets/….drawio.svg)`                       |
-| File            | `[Report.pdf](.assets/Page/Report.pdf)`                  |
+| Draw.io diagram | `![Diagram](Page/_assets/….drawio.svg)`                  |
+| File            | `[Report.pdf](Page/_assets/Report.pdf)`                  |
 | Block equation  | `$$` lines around the LaTeX                              |
 | Inline equation | `$x^2$`                                                  |
 | Page link       | `[[Ideas]]`                                              |

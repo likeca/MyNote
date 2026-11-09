@@ -35,8 +35,8 @@ Everything goes under a new **Notion import** page, so the rest of your workspac
 | Toggles and toggle headings | Toggles |
 | Columns | Columns, with their widths if you resized them |
 | Tables | Tables |
-| Images and files | Copied into the workspace's `.assets/` folder |
-| Images shown from the web (gallery covers, hosted pictures) | Downloaded into `.assets/`, so nothing depends on Notion any more |
+| Images and files | Copied into the workspace's `_assets/` folder |
+| Images shown from the web (gallery covers, hosted pictures) | Downloaded into `_assets/`, so nothing depends on Notion any more |
 | Bookmarks and embeds | Links |
 | Equations | LaTeX, in code |
 | Databases | Databases, with every row as a page |

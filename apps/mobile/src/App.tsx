@@ -215,6 +215,7 @@ export default function App() {
       // AI agents reach a workspace through the desktop app's MCP server, not the phone.
       aiPolicy: "all",
       setPageAi: async () => {},
+      toast: setToast,
     }),
     [notes, refreshKey, openPage, createPage, refresh, renamed],
   );

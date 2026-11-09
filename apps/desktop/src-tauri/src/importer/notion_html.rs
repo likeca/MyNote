@@ -1439,7 +1439,7 @@ impl<'a> Conv<'a> {
         }
     }
 
-    /// A cover: Notion's gallery images and links stay links, uploads are copied into `.assets/`.
+    /// A cover: Notion's gallery images and links stay links, uploads are copied into `_assets/`.
     pub fn cover_value(&self, src: &str) -> Option<String> {
         match self.ctx.resolve(self.from_dir, src) {
             Some(Target::Asset(a)) => Some(a),

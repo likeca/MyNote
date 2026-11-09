@@ -46,8 +46,11 @@ const WELCOME: &[(&str, &str)] = &[("Welcome.md", include_str!("../welcome/Welco
 fn workspace_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("Workspace");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    // Moves a legacy `.betelgeuse/` folder (before the rename to MyNote) to `.mynote/`.
+    // Moves a legacy `.betelgeuse/` folder (before the rename to MyNote) to `.mynote/`, and the
+    // attachments folder from `.assets/` or `assets/` to `_assets/`, then each page's files into its
+    // own folder's `_assets/` (links included).
     vault::migrate_legacy_dir(&dir).map_err(|e| e.to_string())?;
+    vault::migrate_assets_dir(&dir)?;
     Ok(dir)
 }
 
@@ -118,9 +121,9 @@ fn duplicate_note(app: AppHandle, state: State<AppState>, path: String) -> Resul
 }
 
 #[tauri::command]
-fn save_asset(app: AppHandle, state: State<AppState>, name: String, bytes: Vec<u8>) -> Result<String, String> {
+fn save_asset(app: AppHandle, state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>) -> Result<String, String> {
     let _writes = state.write();
-    let done = vault::save_asset(&state.workspace, &name, &bytes);
+    let done = vault::save_asset(&state.workspace, page.as_deref().filter(|p| !p.is_empty()), &name, &bytes);
     changed(&app, &[]);
     done
 }

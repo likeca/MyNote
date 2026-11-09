@@ -59,6 +59,8 @@ import { resolveWikiLink } from "../lib/tree";
 import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
 import { fileTab, opensInEditor } from "../lib/fileTabs";
+import { claimRun, holdRun, releaseRun, setRunCode, updateRun, useScriptRun, type ScriptRun } from "./scriptRuns";
+import { isAssetPath } from "../lib/assets";
 import { codeHighlight } from "./highlight";
 import { isEditableDiagram, openDiagramEditor } from "./drawio";
 
@@ -76,6 +78,8 @@ declare module "@tiptap/core" {
   interface Storage {
     /** The vault path of the page the editor shows: its attachments go in its folder. */
     fileAttachment: { page: string | null };
+    /** On a database's own page: deletes the database (the page stays, as an ordinary one). */
+    databaseViews: { remove: (() => void) | null };
   }
 }
 
@@ -161,7 +165,7 @@ const CALLOUT = /^> ?\[!([a-z]+)\][ \t]*([^\n]*)(?:\n|$)((?:>[^\n]*(?:\n|$))*)/;
  */
 function calloutHead(line: string): { icon: string; title: string } {
   const [first = "", ...rest] = line.trim().split(/\s+/);
-  const isIcon = /^(lucide:|\.assets\/|https?:\/\/)/.test(first) || /^\p{Extended_Pictographic}/u.test(first);
+  const isIcon = /^(lucide:|https?:\/\/)/.test(first) || isAssetPath(first) || /^\p{Extended_Pictographic}/u.test(first);
   return isIcon ? { icon: first, title: rest.join(" ") } : { icon: "", title: line.trim() };
 }
 
@@ -214,7 +218,7 @@ export const Callout = Node.create({
   renderMarkdown: (node, h) => `> [!${node.attrs?.color ?? "gray"}] ${node.attrs?.icon ?? "💡"}\n${quote(h.renderChildren(node.content ?? [], "\n\n"))}`,
 });
 
-function CalloutView({ node, updateAttributes }: NodeViewProps) {
+function CalloutView({ node, updateAttributes, editor }: NodeViewProps) {
   const [picking, setPicking] = useState(false);
   const color = node.attrs.color === "default" ? null : node.attrs.color;
   return (
@@ -225,6 +229,7 @@ function CalloutView({ node, updateAttributes }: NodeViewProps) {
         </button>
         {picking && (
           <IconPicker
+            page={editor.storage.fileAttachment.page}
             current={node.attrs.icon}
             onClose={() => setPicking(false)}
             onPick={(icon) => {
@@ -744,8 +749,9 @@ function viewsBlocks(doc: PMNode) {
 /**
  * On a database's own page: its views (table, board, calendar…) as one block among the page's
  * text, so text can sit above or below them, and either can be dragged. Saved as the page's schema
- * block (see `bodyFromEditor`); here it's just a placeholder line. There's always exactly one:
- * it can't be deleted, cut or duplicated, and none can be pasted into another page.
+ * block (see `bodyFromEditor`); here it's just a placeholder line. There's always exactly one: it
+ * can't be cut, duplicated or pasted into another page, and deleting it deletes the database (the
+ * page turns back into an ordinary page; see PageView's `removeDatabase`).
  */
 export const DatabaseViews = Node.create({
   name: "databaseViews",
@@ -761,6 +767,21 @@ export const DatabaseViews = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(DatabaseViewsView, { stopEvent: ({ event }) => !event.type.startsWith("drag"), ignoreMutation: () => true });
+  },
+  addStorage() {
+    // Set by the editor on a database's own page (see OwnDatabase).
+    return { remove: null as (() => void) | null };
+  },
+  addKeyboardShortcuts() {
+    // With the views selected (Esc, or a click on ⋮⋮), Backspace or Delete deletes the database:
+    // the page turns back into an ordinary one, with an Undo.
+    const remove = () => {
+      const { selection } = this.editor.state;
+      if (!(selection instanceof NodeSelection) || selection.node.type.name !== this.name || !this.storage.remove) return false;
+      this.storage.remove();
+      return true;
+    };
+    return { Backspace: remove, Delete: remove };
   },
   addProseMirrorPlugins() {
     // Moving it (a drag deletes and inserts in one step) keeps the count; anything else is refused.
@@ -883,20 +904,35 @@ const RunShortcut = Extension.create({
   },
 });
 
+/** Whether a DOM node is inside a code block's run output. */
+const inRunOutput = (node: globalThis.Node) => !!(node.nodeType === 1 ? (node as Element) : node.parentElement)?.closest(".code-output");
+
 export const CodeBlock = TiptapCodeBlock.extend({
   addNodeView() {
-    return ReactNodeViewRenderer(CodeBlockView);
+    const render = ReactNodeViewRenderer(CodeBlockView);
+    return (props) => {
+      const view = render(props);
+      // A run's output is text to read and copy, not part of the page: a selection made in it is
+      // left alone, where ProseMirror would move it into the code above.
+      const ignore = view.ignoreMutation?.bind(view);
+      view.ignoreMutation = (m) => (m.type === "selection" && inRunOutput(m.target)) || (ignore?.(m) ?? false);
+      return view;
+    };
   },
   addExtensions() {
     return [...(this.parent?.() ?? []), RunShortcut];
   },
   addProseMirrorPlugins() {
-    return [...(this.parent?.() ?? []), codeHighlight()];
+    // ⌘C with text selected in a run's output copies that text (the browser does it), not the
+    // editor's own selection, which ProseMirror would otherwise put on the clipboard.
+    const copyOutput = () => {
+      const at = window.getSelection()?.anchorNode;
+      return !!at && inRunOutput(at);
+    };
+    const outputCopy = new Plugin({ key: new PluginKey("runOutputCopy"), props: { handleDOMEvents: { copy: copyOutput, cut: copyOutput } } });
+    return [...(this.parent?.() ?? []), codeHighlight(), outputCopy];
   },
 }).configure({ defaultLanguage: null, enableTabIndentation: true });
-
-/** A run of a shell or Python block (or one of its lines): its output so far, then its exit code (null when stopped) or why it couldn't start. */
-type ScriptRun = { id: number; line?: number; output: string; exit?: number | null; error?: string };
 
 /** The line of a code block at `pos` that the cursor is on (1-based), or null when the cursor is elsewhere. */
 function cursorLine(editor: TiptapEditor, pos: number | undefined): { number: number; text: string } | null {
@@ -915,7 +951,9 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
   const [wrap, setWrap] = useState(false);
-  const [run, setRun] = useState<ScriptRun | null>(null);
+  const page = useContext(PageContext);
+  const [runKey] = useState(() => claimRun(page ?? "", node.textContent));
+  const run = useScriptRun(runKey);
   // The output panel scrolls past a fixed height; expanded, it shows everything.
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
@@ -937,20 +975,18 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
     },
   });
 
-  const live = useRef<number | null>(null);
   /** Runs the whole block, or just `line`. */
   const start = (only?: { number: number; text: string }) => {
-    if (live.current !== null) return;
+    if (running) return;
     const id = ++runIds;
-    live.current = id;
-    const patch = (f: (r: ScriptRun) => ScriptRun) => setRun((r) => (r?.id === id ? f(r) : r));
-    setRun({ id, line: only?.number, output: "" });
+    const key = runKey;
+    // Updates go to the store, so they keep arriving with the page in another tab.
+    const patch = (f: (r: ScriptRun) => ScriptRun) => updateRun(key, (r) => (r?.id === id ? f(r) : r));
+    updateRun(key, () => ({ id, line: only?.number, output: "" }));
     api.runScript(id, node.attrs.language, only?.text ?? node.textContent, (chunk) => patch((r) => ({ ...r, output: (r.output + chunk).slice(-MAX_OUTPUT) }))).then(
       (exit) => patch((r) => ({ ...r, exit })),
       (e) => patch((r) => ({ ...r, error: String(e) })),
-    ).finally(() => {
-      if (live.current === id) live.current = null;
-    });
+    );
   };
   const runLine = () => {
     const only = cursorLine(editor, getPos());
@@ -966,8 +1002,22 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
     runners.add(entry);
     return () => void runners.delete(entry);
   }, [canRun, editor, getPos]);
-  // A script doesn't outlive its block: closing the page or deleting the block stops it.
-  useEffect(() => () => void (live.current !== null && api.stopScript(live.current)), []);
+  // The output (and a script still running) outlives the editor: switching tabs keeps it. Only
+  // deleting the block, with its page still open, stops its script and drops its output.
+  useEffect(() => {
+    holdRun(runKey);
+    // Gone once its page left the window (Tiptap destroys the editor itself a moment later).
+    const editorGone = () => {
+      try {
+        return editor.isDestroyed || !editor.view.dom.isConnected;
+      } catch {
+        return true;
+      }
+    };
+    return () => releaseRun(runKey, editorGone, (id) => void api.stopScript(id));
+  }, [runKey, editor]);
+  const code = node.textContent;
+  useEffect(() => setRunCode(runKey, code), [runKey, code]);
 
   return (
     <NodeViewWrapper className="code-block group/code">
@@ -1035,7 +1085,7 @@ function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps
                   <Square size={11} /> Stop
                 </button>
               ) : (
-                <button onClick={() => setRun(null)} title="Clear output" className="grid size-5 place-items-center rounded hover:bg-hover">
+                <button onClick={() => updateRun(runKey, () => null)} title="Clear output" className="grid size-5 place-items-center rounded hover:bg-hover">
                   <X size={12} />
                 </button>
               )}
@@ -1109,21 +1159,21 @@ export const ImageBlock = Image.extend({
       new Plugin({
         key: new PluginKey("imageFiles"),
         props: {
-          // Files dropped (e.g. from Finder) or pasted are copied into `.assets/`: images are embedded,
+          // Files dropped (e.g. from Finder) or pasted are copied into the page's `_assets/`: images are embedded,
           // anything else is attached (see FileAttachment).
           handleDrop: (view, event, _slice, moved) => {
             const files = Array.from(event.dataTransfer?.files ?? []);
             if (moved || !files.length) return false;
             event.preventDefault();
             const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            void insertFiles(view, files, at ? at.pos : view.state.selection.from, editor.storage.fileAttachment.page);
+            void dropFiles(view, files, editor.storage.fileAttachment.page, at?.pos);
             return true;
           },
           handlePaste: (view, event) => {
             const files = Array.from(event.clipboardData?.files ?? []);
             if (!files.length) return false;
             event.preventDefault();
-            void insertFiles(view, files, view.state.selection.from, editor.storage.fileAttachment.page);
+            void dropFiles(view, files, editor.storage.fileAttachment.page, view.state.selection.from);
             return true;
           },
         },
@@ -1132,7 +1182,21 @@ export const ImageBlock = Image.extend({
   },
 });
 
-/** Saves each file into `.assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
+/**
+ * Attaches dropped or pasted files at `pos`: after the line it's in, never splitting it (or at the
+ * end of the page with no `pos`, for a drop beside the text). See insertFiles.
+ */
+export function dropFiles(view: EditorView, files: File[], page: string | null, pos?: number | null) {
+  const { doc } = view.state;
+  let at = doc.content.size;
+  if (pos != null) {
+    const $pos = doc.resolve(Math.min(Math.max(0, pos), doc.content.size));
+    at = $pos.parent.isTextblock && $pos.depth > 0 ? $pos.after() : $pos.pos;
+  }
+  return insertFiles(view, files, at, page);
+}
+
+/** Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
 async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null) {
   for (const file of files) {
     const { schema } = view.state;
@@ -1140,7 +1204,7 @@ async function insertFiles(view: EditorView, files: File[], pos: number, page: s
     try {
       const bytes = await file.arrayBuffer();
       if (file.type.startsWith("image/")) {
-        const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)]);
+        const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)], page);
         node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
       } else {
         const name = file.name || "file";
@@ -1180,11 +1244,11 @@ export async function pickAttachments(editor: TiptapEditor) {
 // ---------- file attachment ----------
 
 /**
- * `[Report.pdf](.assets/Report-123.pdf)`: a link to a file in the workspace's `.assets/` folder, shown
- * as a chip that opens the file. Plain Markdown, the same form imports write attachments in, so other
- * apps see an ordinary link.
+ * `[Report.pdf](Plan/_assets/Report.pdf)`: a link to a file in a page's `_assets/` folder (or the
+ * workspace's, for imports), shown as a chip that opens the file. Plain Markdown, the same form
+ * imports write attachments in, so other apps see an ordinary link.
  */
-const ATTACHMENT = /^\[((?:\\.|[^\]\\\n])*)\]\((\.assets\/[^)\s]+)\)/;
+const ATTACHMENT = /^\[((?:\\.|[^\]\\\n])*)\]\(((?:[^)\s:]*\/)?_assets\/[^)\s]+)\)/;
 
 /** A vault path as written in a Markdown link: spaces, brackets and `%` escaped as `%XX` (as Obsidian and GitHub read them). */
 export const assetHref = (path: string) => path.replace(/[ %()<>[\]]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
@@ -1223,7 +1287,7 @@ export const FileAttachment = Node.create({
     return ReactNodeViewRenderer(AttachmentView);
   },
   // When the last link to a file leaves the page (Backspace, cut, deleting its block, its bin
-  // button), the file leaves `.assets/` too, unless another page links to it. It waits in the Trash:
+  // button), the file leaves `_assets/` too, unless another page links to it. It waits in the Trash:
   // if the link comes back (undo, pasted elsewhere), showing it brings the file back (file_size).
   addProseMirrorPlugins() {
     const { name, storage } = this;
@@ -1256,7 +1320,7 @@ export const FileAttachment = Node.create({
     name: "fileAttachment",
     level: "inline",
     // Never right after "!": that's an image.
-    start: (src: string) => src.search(/(?<!!)\[(?:\\.|[^\]\\\n])*\]\(\.assets\//),
+    start: (src: string) => src.search(/(?<!!)\[(?:\\.|[^\]\\\n])*\]\((?:[^)\s]*\/)?_assets\//),
     tokenize(src) {
       const m = ATTACHMENT.exec(src);
       return m ? { type: "fileAttachment", raw: m[0], name: m[1].replace(/\\(.)/g, "$1"), src: m[2] } : undefined;
@@ -1567,9 +1631,9 @@ async function copyImage(url: string) {
   await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
 }
 
-/** Images can point into the workspace's `.assets/` folder, which the webview can't load directly. */
+/** Images can point into the workspace's `_assets/` folders, which the webview can't load directly. */
 function useAssetUrl(src: string) {
-  const local = src.startsWith(".assets/");
+  const local = isAssetPath(src);
   const [url, setUrl] = useState<string | null>(local ? null : src);
   // Bumped when the file is rewritten (an edited diagram), to load it again.
   const [version, setVersion] = useState(0);

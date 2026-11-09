@@ -334,7 +334,7 @@ export function installMockTauri({ files, histories, vault, mcp, git }) {
       write(copy, need(path).content);
       return copy;
     },
-    save_asset: ({ name }) => `.assets/${name.replace(/[^A-Za-z0-9.-]/g, "")}`,
+    save_asset: ({ name, page }) => `${page ? `${childrenDir(page)}/` : ""}_assets/${name.replace(/[^A-Za-z0-9.-]/g, "")}`,
     read_asset: ({ path }) => {
       throw `No such file or directory (os error 2): ${path}`;
     },

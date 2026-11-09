@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { COLORS, colorLabel } from "../lib/colors";
+import { isAssetPath } from "../lib/assets";
 import { assetUrl } from "./PageIcon";
 import { Popover } from "./Popover";
 import { Search, X } from "lucide-react";
@@ -9,7 +10,7 @@ import { reportDownload, searchUnsplash, UNSPLASH_APPS, UNSPLASH_HOME, UnsplashE
 
 /**
  * Covers are stored in frontmatter as `cover: gradient_3`, `cover: color_blue`, an image URL or
- * an image in the workspace (`.assets/…`, e.g. from a Notion import).
+ * an image in the workspace (`_assets/…`, `Page/_assets/…`, e.g. from a Notion import).
  */
 export const GRADIENTS = [
   "linear-gradient(120deg, #f6d365 0%, #fda085 100%)",
@@ -52,7 +53,7 @@ export function coverStyle(cover: string, y = 50): CSSProperties {
 const isImage = (cover: string) => !/^(gradient|color)_/.test(cover);
 
 /**
- * A cover band; workspace images (`.assets/…`) are loaded the way page icons are. With
+ * A cover band; workspace images (`…/_assets/…`) are loaded the way page icons are. With
  * `onPosition`, dragging the image up or down moves it within the band (reposition mode).
  */
 export function CoverBox({
@@ -68,7 +69,7 @@ export function CoverBox({
   className?: string;
   children?: ReactNode;
 }) {
-  const local = cover.startsWith(".assets/");
+  const local = isAssetPath(cover);
   const box = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [url, setUrl] = useState<string | null>(null);

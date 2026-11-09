@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import type { ToastData } from "../components/Toast";
 import type { AiPolicy, NoteMeta } from "./api";
 import { wantsNewTab, type OpenOptions } from "./nav";
 
@@ -22,9 +23,17 @@ export type VaultContextValue = {
   aiPolicy: AiPolicy;
   /** Shows or hides a page from AI agents (writes its `ai` frontmatter). */
   setPageAi: (path: string, visible: boolean) => Promise<void>;
+  /** Shows a message at the bottom of the window, with an optional action (Undo). */
+  toast: (t: ToastData) => void;
 };
 
 export const VaultContext = createContext<VaultContextValue | null>(null);
+
+/**
+ * On a database's own page: the database, and turning the page back into an ordinary page (its
+ * views and properties gone, its text and rows kept). Unset elsewhere.
+ */
+export const OwnDatabase = createContext<{ path: string; remove: () => void } | null>(null);
 
 export function useVault(): VaultContextValue {
   const v = useContext(VaultContext);

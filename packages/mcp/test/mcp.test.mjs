@@ -262,44 +262,51 @@ test("moving a page takes its sub-pages along and updates path links", async () 
   assert.match(bad.content[0].text, /inside itself/);
 });
 
-test("renaming and moving a page carries its attachment folder, and links to its files follow", async () => {
-  mkdirSync(path.join(vault, ".assets/Brief/Notes"), { recursive: true });
-  writeFileSync(path.join(vault, ".assets/Brief/Q3 Report.pdf"), "pdf");
-  writeFileSync(path.join(vault, ".assets/Brief/Notes/data.csv"), "a,b");
-  writeFileSync(path.join(vault, "Brief.md"), "[Q3 Report.pdf](.assets/Brief/Q3%20Report.pdf)\n");
-  mkdirSync(path.join(vault, "Brief"));
-  writeFileSync(path.join(vault, "Brief/Notes.md"), "[data.csv](.assets/Brief/Notes/data.csv)\n");
-  writeFileSync(path.join(vault, "Mentions.md"), "See [the report](.assets/Brief/Q3%20Report.pdf) and [other](.assets/Briefing/x.pdf).\n");
+test("renaming and moving a page carries its attached files, and links to them follow", async () => {
+  mkdirSync(path.join(vault, "Brief/_assets"), { recursive: true });
+  mkdirSync(path.join(vault, "Brief/Notes/_assets"), { recursive: true });
+  writeFileSync(path.join(vault, "Brief/_assets/Q3 Report.pdf"), "pdf");
+  writeFileSync(path.join(vault, "Brief/Notes/_assets/data.csv"), "a,b");
+  writeFileSync(path.join(vault, "Brief/_assets/attached.md"), "not a page");
+  writeFileSync(path.join(vault, "Brief.md"), "---\nicon: Brief/_assets/logo.png\n---\n[Q3 Report.pdf](Brief/_assets/Q3%20Report.pdf)\n");
+  writeFileSync(path.join(vault, "Brief/Notes.md"), "[data.csv](Brief/Notes/_assets/data.csv)\n");
+  writeFileSync(path.join(vault, "Mentions.md"), "See [the report](Brief/_assets/Q3%20Report.pdf) and [other](Briefing/_assets/x.pdf).\n");
   git("add", "-A");
   git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "attachments");
+  assert.doesNotMatch(await call("list_notes"), /attached/, "attached Markdown isn't a page");
 
   assert.equal(JSON.parse(await call("rename_note", { note: "Brief", title: "Launch brief" })).path, "Launch brief.md");
-  assert.ok(existsSync(path.join(vault, ".assets/Launch brief/Q3 Report.pdf")));
-  assert.ok(existsSync(path.join(vault, ".assets/Launch brief/Notes/data.csv")), "a sub-page's files move along");
-  assert.ok(!existsSync(path.join(vault, ".assets/Brief")));
-  assert.equal(readFileSync(path.join(vault, "Launch brief.md"), "utf8"), "[Q3 Report.pdf](.assets/Launch%20brief/Q3%20Report.pdf)\n");
-  assert.equal(readFileSync(path.join(vault, "Launch brief/Notes.md"), "utf8"), "[data.csv](.assets/Launch%20brief/Notes/data.csv)\n");
-  assert.equal(readFileSync(path.join(vault, "Mentions.md"), "utf8"), "See [the report](.assets/Launch%20brief/Q3%20Report.pdf) and [other](.assets/Briefing/x.pdf).\n");
+  assert.ok(existsSync(path.join(vault, "Launch brief/_assets/Q3 Report.pdf")));
+  assert.ok(existsSync(path.join(vault, "Launch brief/Notes/_assets/data.csv")), "a sub-page's files move along");
+  assert.ok(!existsSync(path.join(vault, "Brief")));
+  assert.match(readFileSync(path.join(vault, "Launch brief.md"), "utf8"), /^---\nicon: Launch brief\/_assets\/logo\.png\n[\s\S]*\[Q3 Report\.pdf\]\(Launch%20brief\/_assets\/Q3%20Report\.pdf\)\n$/);
+  assert.equal(readFileSync(path.join(vault, "Launch brief/Notes.md"), "utf8"), "[data.csv](Launch%20brief/Notes/_assets/data.csv)\n");
+  assert.equal(readFileSync(path.join(vault, "Mentions.md"), "utf8"), "See [the report](Launch%20brief/_assets/Q3%20Report.pdf) and [other](Briefing/_assets/x.pdf).\n");
   assert.equal(git("status", "--porcelain"), "", "the moved files are committed");
 
   assert.equal(JSON.parse(await call("move_note", { note: "Launch brief", parent: "Projects" })).path, "Projects/Launch brief.md");
-  assert.ok(existsSync(path.join(vault, ".assets/Projects/Launch brief/Q3 Report.pdf")));
-  assert.equal(readFileSync(path.join(vault, "Mentions.md"), "utf8"), "See [the report](.assets/Projects/Launch%20brief/Q3%20Report.pdf) and [other](.assets/Briefing/x.pdf).\n");
+  assert.ok(existsSync(path.join(vault, "Projects/Launch brief/_assets/Q3 Report.pdf")));
+  assert.equal(readFileSync(path.join(vault, "Mentions.md"), "utf8"), "See [the report](Projects/Launch%20brief/_assets/Q3%20Report.pdf) and [other](Briefing/_assets/x.pdf).\n");
   assert.equal(git("status", "--porcelain"), "");
 });
 
-test("deleting a page takes its attachment folder to the Trash with it, as the app does", async () => {
-  mkdirSync(path.join(vault, ".assets/Areas/Draft"), { recursive: true });
-  writeFileSync(path.join(vault, ".assets/Areas/Draft/notes.pdf"), "pdf");
-  writeFileSync(path.join(vault, "Areas/Draft.md"), "[notes.pdf](.assets/Areas/Draft/notes.pdf)\n");
+test("a page is never named like the attachments folder", async () => {
+  const { path: p } = JSON.parse(await call("create_note", { title: "_assets", parent: "Projects" }));
+  assert.equal(p, "Projects/_assets 2.md");
+});
+
+test("deleting a page takes its attached files to the Trash with it, as the app does", async () => {
+  mkdirSync(path.join(vault, "Areas/Draft/_assets"), { recursive: true });
+  writeFileSync(path.join(vault, "Areas/Draft/_assets/notes.pdf"), "pdf");
+  writeFileSync(path.join(vault, "Areas/Draft.md"), "[notes.pdf](Areas/Draft/_assets/notes.pdf)\n");
   git("add", "-A");
   git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "draft");
   const r = JSON.parse(await call("delete_note", { note: "Areas/Draft" }));
-  assert.deepEqual(r.movedToTrash, ["Areas/Draft.md", ".assets/Areas/Draft"]);
+  assert.deepEqual(r.movedToTrash, ["Areas/Draft.md", "Areas/Draft"]);
   const { readdirSync } = await import("node:fs");
   const [id] = readdirSync(path.join(vault, ".trash")).filter((d) => readFileSync(path.join(vault, ".trash", d, "meta.json"), "utf8").includes("Areas/Draft.md"));
-  assert.equal(readFileSync(path.join(vault, ".trash", id, ".assets/notes.pdf"), "utf8"), "pdf");
-  assert.ok(!existsSync(path.join(vault, ".assets/Areas")), "the emptied folders go");
+  assert.equal(readFileSync(path.join(vault, ".trash", id, "Draft/_assets/notes.pdf"), "utf8"), "pdf");
+  assert.ok(!existsSync(path.join(vault, "Areas/Draft")));
   // The removed files are committed (`.trash/` is git-ignored in real workspaces).
   assert.equal(git("status", "--porcelain", "--", ".", ":!.trash"), "");
 });
