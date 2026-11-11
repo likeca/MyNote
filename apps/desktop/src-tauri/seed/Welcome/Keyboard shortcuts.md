@@ -9,6 +9,7 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 | Shortcut                   | What it does                 |
 | -------------------------- | ---------------------------- |
 | `⌘K` or `⌘P`               | Search pages                 |
+| `⌘F`                       | Find in this page            |
 | `⌘N`                       | New page                     |
 | `⌘T`                       | New tab                      |
 | `Ctrl` + backtick          | New terminal                 |

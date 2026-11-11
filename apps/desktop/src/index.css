@@ -753,9 +753,12 @@ pre {
   font-size: 14px;
 }
 
+/* 1px lines in a solid colour: the text colour mixed into the page background (what the
+   translucent --line-strong looks like on a plain page), but opaque, so a coloured cell or a
+   selection doesn't show through or change it. Follows the theme and custom colours. */
 .mynote-prose th,
 .mynote-prose td {
-  border: 2px solid var(--line-strong);
+  border: 1px solid rgb(from color-mix(in srgb, var(--ink) 20%, var(--surface)) r g b / 1);
   padding: 7px 9px;
   text-align: left;
   vertical-align: top;
@@ -995,6 +998,16 @@ pre {
 
 .mynote-prose .wikilink.missing .wikilink-title {
   text-decoration-style: dashed;
+}
+
+/* Find in page (⌘F): every match tinted yellow, the current one orange, as browsers do. */
+.mynote-prose .find-match {
+  background: rgba(255, 212, 0, 0.35);
+  border-radius: 2px;
+}
+
+.mynote-prose .find-match-current {
+  background: rgba(255, 150, 0, 0.6);
 }
 
 /* A link mention (a pasted URL as its site's icon and page title), styled as a page link; faint

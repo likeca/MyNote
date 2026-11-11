@@ -40,6 +40,7 @@ import { ancestorKeys, resolveWikiLink } from "../lib/tree";
 import { aiAccess, type AiAccess } from "../lib/ai";
 import { wantsNewTab } from "../lib/nav";
 import { useSettings } from "../lib/settings";
+import { FIND_REQUEST, FindBar, findMatches, takeFindRequest } from "../editor/findInPage";
 import { OwnDatabase, useVault } from "../lib/vault";
 import { CoverBox, CoverCredit, CoverPicker, photoCover } from "./Cover";
 import { IconPicker } from "./LazyIconPicker";
@@ -94,6 +95,20 @@ export function PageView(p: Props) {
       if (!editor) return;
       e.preventDefault();
       editor.chain().focus().selectAll().run();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [p.mode]);
+  // ⌘F: find in this page (the side peek's page while it's open). Again with the bar open puts
+  // the cursor back in it.
+  const [finding, setFinding] = useState<number | null>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f" || e.defaultPrevented) return;
+      const peekOpen = !!document.querySelector(".peek-panel");
+      if (peekOpen !== (p.mode === "peek") || !editorRef.current) return;
+      e.preventDefault();
+      setFinding((n) => (n ?? 0) + 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -222,6 +237,34 @@ export function PageView(p: Props) {
     api.backlinks(shownPath).then(setBacklinks).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on disk changes, not on page switches
   }, [refreshKey, load]);
+
+  // Opened from a search on its contents: shows where they are, as ⌘F would (see findOnOpen).
+  // Waits for this page's editor; a search that only matched the title shows nothing.
+  useEffect(() => {
+    if (p.mode === "peek" || shownPath !== p.path || doc === null || doc === "missing") return;
+    let frame = 0;
+    let tries = 0;
+    const attempt = () => {
+      const editor = editorRef.current;
+      if (!editor || editor.isDestroyed || !editor.view.dom.isConnected) {
+        if (tries++ < 60) frame = requestAnimationFrame(attempt);
+        return;
+      }
+      const query = takeFindRequest(shownPath);
+      if (query && findMatches(editor.state.doc, query).length) setFinding((n) => (n ?? 0) + 1);
+    };
+    const onRequest = () => {
+      cancelAnimationFrame(frame);
+      tries = 0;
+      attempt();
+    };
+    attempt();
+    window.addEventListener(FIND_REQUEST, onRequest);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener(FIND_REQUEST, onRequest);
+    };
+  }, [p.mode, p.path, shownPath, editorKey, doc === null || doc === "missing"]);
 
   const patch = (values: Record<string, unknown>) => {
     fm.current = patchFrontmatter(fm.current, values);
@@ -354,6 +397,9 @@ export function PageView(p: Props) {
 
       <div className="relative min-h-0 flex-1">
       {!peekMode && !isDb && <Outline key={`${path}:${editorKey}`} scroller={scroller} />}
+      {finding !== null && editorRef.current && (
+        <FindBar key={`find:${path}:${editorKey}`} editor={editorRef.current} focusKey={finding} onClose={() => setFinding(null)} />
+      )}
       <div
         ref={scroller}
         className="h-full overflow-y-auto"

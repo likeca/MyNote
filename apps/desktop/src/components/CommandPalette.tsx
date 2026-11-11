@@ -6,8 +6,12 @@ import { useContributions } from "../plugins/runtime";
 import type { SearchResult as PluginResult } from "@mynote/plugin-api";
 import type { ReactNode } from "react";
 import { Modal } from "./Modal";
+import { findOnOpen } from "../editor/findInPage";
 
 type Result = { id: string; title: string; icon: string | null; detail?: string; run: () => void; first?: string; node?: ReactNode };
+
+/** Where the last search is kept, so the palette reopens on it (as Notion's does). */
+const LAST_QUERY = "search-query";
 
 export function CommandPalette({
   notes,
@@ -20,10 +24,13 @@ export function CommandPalette({
   onCreate: (title: string) => void;
   onClose: () => void;
 }) {
-  const [query, setQuery] = useState("");
+  // The last search comes back, selected: typing replaces it, Enter or the arrows use its results.
+  const [query, setQuery] = useState(() => localStorage.getItem(LAST_QUERY) ?? "");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => inputRef.current?.select(), []);
   // Plugins: their commands, and their search result groups.
   const { commands, search } = useContributions();
   const [pluginHits, setPluginHits] = useState<{ group: string; results: PluginResult[] }[]>([]);
@@ -57,7 +64,9 @@ export function CommandPalette({
         .slice(0, 8)
         .map((n) => ({ id: n.path, title: n.title, icon: n.icon, detail: parentOf(n.path), run: open(n.path) }));
     }
-    const out: Result[] = hits.map((h) => ({ id: h.path, title: h.title, icon: h.icon, detail: h.snippet, run: open(h.path) }));
+    // A page found by its contents opens on where they are: the search found in it, as ⌘F would.
+    const openAt = (path: string) => () => (findOnOpen(path, query.trim()), onOpen(path), onClose());
+    const out: Result[] = hits.map((h) => ({ id: h.path, title: h.title, icon: h.icon, detail: h.snippet, run: openAt(h.path) }));
     const q = query.trim().toLowerCase();
     commands
       .filter((c) => c.title.toLowerCase().includes(q))
@@ -81,9 +90,13 @@ export function CommandPalette({
       <div className="flex items-center gap-3 border-b border-line px-4">
         <Search size={18} className="text-faint" />
         <input
+          ref={inputRef}
           autoFocus
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            localStorage.setItem(LAST_QUERY, e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") (e.preventDefault(), setActive((a) => Math.min(a + 1, results.length - 1)));
             if (e.key === "ArrowUp") (e.preventDefault(), setActive((a) => Math.max(a - 1, 0)));

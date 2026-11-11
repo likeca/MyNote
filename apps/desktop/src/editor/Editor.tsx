@@ -56,6 +56,7 @@ import { normalizeMarkdown } from "./markdown";
 import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
 import { BlockSelect, deleteBlocks, selectedBlocks } from "./blockSelect";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
+import { FindInPage } from "./findInPage";
 import { LinkMention } from "./LinkMention";
 import { WikiLink } from "./WikiLink";
 
@@ -187,6 +188,7 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       SlashCommand.configure({ page }),
       PageLinkSuggestion.configure({ getNotes, createPage }),
       MentionSuggestion.configure({ getNotes, createPage }),
+      FindInPage,
     ],
     content: initial,
     contentType: "markdown",

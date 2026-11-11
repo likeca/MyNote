@@ -346,6 +346,19 @@ test("links to files in _assets/ are attachments; images and other links stay as
   assert.deepEqual(kinds("[x](my_assets/x.pdf)"), ["link:x"]);
 });
 
+test("find in page matches the page's text, ignoring case, but not across blocks or page links", async () => {
+  const { findMatches } = await import("../src/editor/findInPage.tsx");
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, contentType: "markdown", content: "Helm charts and HELM.\n\nhel\n\nlm\n\nSee [[Ideas]]helm\n\n```bash\nhelm install x\n```\n" });
+  const { doc } = editor.state;
+  const found = (q) => findMatches(doc, q).map((m) => doc.textBetween(m.from, m.to));
+  assert.deepEqual(found("helm"), ["Helm", "HELM", "helm", "helm"], "two in a line, after a page link, and in code");
+  assert.deepEqual(found("hellm"), [], "not across two blocks");
+  assert.deepEqual(found("idea"), [], "a page link's name isn't page text");
+  assert.deepEqual(found(""), []);
+  editor.destroy();
+});
+
 test("a link titled \"mention\" is a link mention; other links stay links", () => {
   const kinds = (md) => {
     const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));

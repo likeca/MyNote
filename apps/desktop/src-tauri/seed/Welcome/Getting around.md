@@ -21,7 +21,9 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 
 ## Search
 
-`⌘K` (or `⌘P`) opens search. With nothing typed, it lists recent pages. Type to search page titles, tags and contents, with a snippet from each match. Use the arrow keys and Enter to open a result. The last result, **New page**, creates a page with the title you typed.
+`⌘K` (or `⌘P`) opens search. With nothing typed, it lists recent pages. Type to search page titles, tags and contents, with a snippet from each match. Use the arrow keys and Enter to open a result. A page found by its contents opens at the first place your search appears, highlighted as with `⌘F` below; `Enter` goes to the next. The last result, **New page**, creates a page with the title you typed. Search opens on your last search, selected, so typing starts a new one.
+
+`⌘F` finds words in the page you're on: every match is highlighted, `Enter` and `⇧Enter` step through them, and `Esc` closes the bar with the cursor on the match you stopped at.
 
 ## On a page
 
