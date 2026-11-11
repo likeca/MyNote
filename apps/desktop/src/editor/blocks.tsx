@@ -1141,14 +1141,19 @@ export const ImageBlock = Image.extend({
       width: { default: null, parseHTML: (el) => Number.parseInt(el.getAttribute("width") ?? "", 10) || null },
     };
   },
+  // `src` is the vault path itself (what reads the file); in Markdown a workspace image's path is
+  // escaped, `%20` for a space, as attachments' are: a page folder's name can have spaces or
+  // brackets, which would end the link.
   parseMarkdown: (token, h) => {
     const sized = WIDTH_IN_ALT.exec(token.text ?? "");
-    return h.createNode("image", { src: token.href, title: token.title, alt: sized ? sized[1] : token.text, width: sized ? Number(sized[2]) || null : null });
+    const src = isAssetPath(token.href) ? assetPath(token.href) : token.href;
+    return h.createNode("image", { src, title: token.title, alt: sized ? sized[1] : token.text, width: sized ? Number(sized[2]) || null : null });
   },
   renderMarkdown: (node) => {
     const { src, alt, title, width } = node.attrs ?? {};
     const label = `${alt ?? ""}${width ? `|${width}` : ""}`;
-    return title ? `![${label}](${src ?? ""} "${title}")` : `![${label}](${src ?? ""})`;
+    const href = isAssetPath(src) ? assetHref(src) : (src ?? "");
+    return title ? `![${label}](${href} "${title}")` : `![${label}](${href})`;
   },
   addNodeView() {
     return ReactNodeViewRenderer(ImageView);

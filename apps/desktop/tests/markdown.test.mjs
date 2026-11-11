@@ -301,6 +301,19 @@ test("a resized image keeps its width, in Obsidian's ![alt|width] form", () => {
   exact("![before | after](_assets/c.png)\n");
 });
 
+test("an image in a page folder with spaces or brackets in its name is saved escaped, and reads back as the file's path", () => {
+  const md = "![DNS|887](Sectigo/MTC%20-%20Private%20QA%20%28On-Prem%29/_assets/DNS-1.jpg)\n";
+  exact(md);
+  const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
+  const editor = new Editor({ extensions, content: md, contentType: "markdown" });
+  let src = null;
+  editor.state.doc.descendants((n) => void (n.type.name === "image" && (src = n.attrs.src)));
+  editor.destroy();
+  assert.equal(src, "Sectigo/MTC - Private QA (On-Prem)/_assets/DNS-1.jpg", "the path the file is read from");
+  // Web images are left as they are.
+  exact("![x](https://example.com/a%20b.png)\n");
+});
+
 test("links to files in _assets/ are attachments; images and other links stay as they are", () => {
   const kinds = (md) => {
     const extensions = contentExtensions().map((e) => (e.config.addNodeView ? e.extend({ addNodeView: undefined }) : e));
