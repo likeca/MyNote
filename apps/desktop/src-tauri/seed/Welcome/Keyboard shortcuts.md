@@ -16,7 +16,7 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 | `Ctrl Tab` and `Ctrl ⇧Tab` | Next and previous tab        |
 | `⌘\`                       | Show or hide the sidebar     |
 | `⌘[` and `⌘]`              | Back and forward             |
-| `⌘S`                       | Commit changes to git now    |
+| `⌘S` or `Ctrl S`           | Upload to git now            |
 | `⌘,`                       | Open Settings                |
 | `⌘+` and `⌘−`              | Zoom page text in and out    |
 | `⌘0`                       | Reset page text zoom to 100% |

@@ -392,6 +392,9 @@ export default function App() {
     return () => document.removeEventListener("mousedown", down);
   }, [peekPath]);
 
+  /** The git button: with a remote, Upload (commit, then pull and push); without one, commit. */
+  const upload = () => (status?.has_remote ? run("Syncing…", () => api.gitSync()) : run("Committing…", () => api.gitCommit()));
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Keys typed in a terminal are the shell's (Ctrl-K, Ctrl-P, Escape…); only ⌘ shortcuts, and
@@ -408,7 +411,8 @@ export default function App() {
       if (key === "k" || key === "p") (e.preventDefault(), setPalette((v) => !v));
       if (key === "n" && !e.altKey) (e.preventDefault(), createHere().then(openPage));
       if (key === "\\") (e.preventDefault(), setSidebar((v) => !v), setSidebarPeek(false));
-      if (key === "s") (e.preventDefault(), run("Committing…", () => api.gitCommit()));
+      // ⌘S (or Ctrl S): the git button's Upload: commit, then pull and push (just commit without a remote).
+      if (key === "s") (e.preventDefault(), upload());
       if (key === ",") (e.preventDefault(), setSettings("appearance"));
       if (key === "[") (e.preventDefault(), go(-1));
       if (key === "]") (e.preventDefault(), go(1));
@@ -577,8 +581,8 @@ export default function App() {
               if (typeof dir === "string") await openVault(await api.openVault(dir));
             }}
             onOpenWorkspace={async (path) => openVault(await api.openVault(path))}
-            onCommit={() => run("Committing…", () => api.gitCommit())}
-            onSync={() => run("Syncing…", () => api.gitSync())}
+            onCommit={upload}
+            onSync={upload}
             onAgents={() => setAgents(true)}
             onSettings={() => setSettings("appearance")}
             onImport={() => setSettings("import")}
