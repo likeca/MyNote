@@ -39,8 +39,10 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 | `⌘D`             | Duplicate the current block                                    |
 | `⌘⇧E`            | Inline equation, or turn the selected text into one            |
 | `Ctrl E`         | Run the line the cursor is on, in a shell or Python code block |
+| `Home` and `End` | In a code block, go to the line's start or end (⇧ selects)     |
 | `Esc`            | Select the block with the cursor (again: back to the cursor)   |
 | `⇧↑` and `⇧↓`    | With blocks selected, add the block above or below             |
+| `Tab` and `⇧Tab` | Move the block (or selected blocks) into or out of a toggle    |
 
 ## Turn into
 

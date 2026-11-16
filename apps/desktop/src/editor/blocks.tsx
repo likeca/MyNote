@@ -14,7 +14,7 @@ import { CodeBlock as TiptapCodeBlock } from "@tiptap/extension-code-block";
 import { Details, DetailsSummary } from "@tiptap/extension-details";
 import Image from "@tiptap/extension-image";
 import { Fragment, type Node as PMNode } from "@tiptap/pm/model";
-import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, PluginKey, Selection, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
 import {
@@ -900,9 +900,32 @@ const RunShortcut = Extension.create({
         runner?.runLine();
         return !!runner;
       },
+      // Home and End go to the start and end of the line the cursor is on, as in a code editor
+      // (macOS's own Home/End only scroll); with ⇧ they select to there.
+      Home: () => toLineEdge(this.editor, "start", false),
+      End: () => toLineEdge(this.editor, "end", false),
+      "Shift-Home": () => toLineEdge(this.editor, "start", true),
+      "Shift-End": () => toLineEdge(this.editor, "end", true),
     };
   },
 });
+
+/**
+ * In a code block: puts the cursor at the start or end of the line it's on (`extend`: moves the
+ * selection's head there, keeping its anchor). False outside a code block.
+ */
+export function toLineEdge(editor: { state: EditorState; view: EditorView }, edge: "start" | "end", extend: boolean): boolean {
+  const { selection } = editor.state;
+  const { $head } = selection;
+  if ($head.parent.type.name !== "codeBlock") return false;
+  const text = $head.parent.textContent;
+  const offset = $head.parentOffset;
+  const end = text.indexOf("\n", offset);
+  const at = $head.start() + (edge === "start" ? text.lastIndexOf("\n", offset - 1) + 1 : end < 0 ? text.length : end);
+  const anchor = extend ? selection.anchor : at;
+  editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor, at)).scrollIntoView());
+  return true;
+}
 
 /** Whether a DOM node is inside a code block's run output. */
 const inRunOutput = (node: globalThis.Node) => !!(node.nodeType === 1 ? (node as Element) : node.parentElement)?.closest(".code-output");

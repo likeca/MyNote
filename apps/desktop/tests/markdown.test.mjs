@@ -187,6 +187,66 @@ test("pasted HTML toggle headings (GitHub, the web) keep their title and level",
   editor.destroy();
 });
 
+test("Tab puts blocks inside the toggle heading above; ⇧Tab takes them back out", async () => {
+  const { nestBlocks } = await import("../src/editor/blockSelect.ts");
+  const { NodeRangeSelection } = await import("@tiptap/extension-node-range");
+  /** Selects the blocks from the one starting with `first` to the one starting with `last`, as Esc and ⇧↓ would. */
+  const selectBlocks = (editor, first, last = first) => {
+    let from = -1;
+    let to = -1;
+    editor.state.doc.descendants((n, pos) => {
+      if (n.isText && n.text.startsWith(first) && from < 0) from = pos;
+      if (n.isText && n.text.startsWith(last)) to = pos;
+    });
+    editor.view.dispatch(editor.state.tr.setSelection(NodeRangeSelection.create(editor.state.doc, from, to)));
+  };
+  const H = "<details open>\n<summary><h2>Plan</h2></summary>\n\n";
+  const editor = editorAt(`${H}Inside.\n\n</details>\n\nOne.\n\nTwo.\n\nThree.`, "One.");
+  selectBlocks(editor, "One.", "Two.");
+  assert.equal(nestBlocks(editor, 1), true);
+  assert.equal(markdownOf(editor), `${H}Inside.\n\nOne.\n\nTwo.\n\n</details>\n\nThree.`);
+  assert.ok(editor.state.selection instanceof NodeRangeSelection, "still selected, to Tab again");
+  assert.equal(editor.state.selection.ranges.length, 2);
+  assert.equal(nestBlocks(editor, 1), false, "no toggle above them inside it");
+  assert.equal(nestBlocks(editor, -1), true);
+  assert.equal(markdownOf(editor), `${H}Inside.\n\n</details>\n\nOne.\n\nTwo.\n\nThree.`);
+  assert.equal(nestBlocks(editor, -1), false, "already at the top");
+  editor.destroy();
+
+  // A closed, empty toggle: opened, its empty line replaced. Taking everything out leaves it one again.
+  const empty = editorAt("<details>\n<summary>Notes</summary>\n\n\n\n</details>\n\nLine.", "Line.");
+  selectBlocks(empty, "Line.");
+  nestBlocks(empty, 1);
+  assert.equal(markdownOf(empty), "<details open>\n<summary>Notes</summary>\n\nLine.\n\n</details>");
+  nestBlocks(empty, -1);
+  assert.equal(markdownOf(empty), "<details open>\n<summary>Notes</summary>\n\n\n\n</details>\n\nLine.");
+  empty.destroy();
+
+  // With the cursor in a toggle heading's title, the whole toggle moves, cursor and all.
+  const cursor = editorAt(`${H}Inside.\n\n</details>\n\n<details open>\n<summary><h3>Sub</h3></summary>\n\nDeep.\n\n</details>`, "Sub", 2);
+  assert.equal(nestBlocks(cursor, 1), true);
+  assert.equal(markdownOf(cursor), `${H}Inside.\n\n<details open>\n<summary><h3>Sub</h3></summary>\n\nDeep.\n\n</details>\n\n</details>`);
+  assert.equal(cursor.state.selection.$from.parent.textContent, "Sub");
+  assert.equal(cursor.state.selection.$from.parentOffset, 2);
+  cursor.destroy();
+
+  // Under a paragraph there's nothing to go into; lines in lists keep the list's own Tab.
+  const plain = editorAt("Above.\n\nBelow.\n\n- item\n- next", "Below.");
+  assert.equal(nestBlocks(plain, 1), false);
+  plain.commands.setTextSelection(plain.state.doc.content.size - 2);
+  assert.equal(nestBlocks(plain, 1), false);
+  plain.destroy();
+
+  // ⇧Tab on the line between two lists in a toggle: the lists meet and are one list, as the saved
+  // page would read back (Markdown can't keep two adjacent lists apart). The saved page reloads the same.
+  const between = editorAt(`${H}- a\n- b\n\n**Sources:**\n\n- c\n- d\n\n</details>`, "Sources:");
+  assert.equal(nestBlocks(between, -1), true);
+  const out = markdownOf(between);
+  assert.equal(out, `${H}- a\n- b\n- c\n- d\n\n</details>\n\n**Sources:**`);
+  assert.equal(roundTrip(out).trim(), out, "reads back unchanged");
+  between.destroy();
+});
+
 test("columns", () => same('<div class="columns">\n<div class="column">\n\nLeft side\n\n</div>\n<div class="column">\n\n- right\n- list\n\n</div>\n</div>'));
 test("columns keep their widths (Notion's column ratios)", () =>
   same('<div class="columns">\n<div class="column" data-width="0.8">\n\nWide\n\n</div>\n<div class="column" data-width="0.2">\n\nNarrow\n\n</div>\n</div>'));

@@ -13,6 +13,8 @@ Click **Connect agents** in the sidebar, or **Settings → AI agents → Connect
 | Claude Code    | Run the `claude mcp add` command shown, then check it with `/mcp`              |
 | Claude Desktop | Add the snippet to `claude_desktop_config.json` and restart Claude             |
 | Cursor         | Add the snippet in **Settings → MCP**, or to `~/.cursor/mcp.json`              |
+| oh-my-pi       | Add the snippet to `~/.omp/agent/mcp.json`, then check it with `/mcp list`     |
+| Pi             | Run the `pi mcp add` command shown (Pi 1.0 or newer), then `pi mcp list`       |
 | HTTP           | Start the server with `--http 3917` and connect to `http://127.0.0.1:3917/mcp` |
 
 Turn on **read-only** to give an agent the reading tools only.

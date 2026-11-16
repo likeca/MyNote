@@ -62,6 +62,8 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
   const node = info.node_path ?? "node";
   const args = [info.server_path, "--workspace", info.vault, ...flags];
   const json = JSON.stringify({ mcpServers: { mynote: { command: node, args } } }, null, 2);
+  // oh-my-pi reads `type`; it infers stdio without it, but its schema asks for it.
+  const ompJson = JSON.stringify({ mcpServers: { mynote: { type: "stdio", command: node, args } } }, null, 2);
   const cli = `${node === "node" ? "node" : q(node)} ${q(info.server_path)} --workspace ${q(info.vault)}${readOnly ? " --read-only" : ""}`;
 
   const clients: Client[] = [
@@ -91,6 +93,26 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
       steps: [
         { text: <>Open <b>Settings → MCP → Add new global MCP server</b>, or edit:</>, code: "~/.cursor/mcp.json" },
         { text: "Add MyNote to mcpServers:", code: json },
+      ],
+    },
+    {
+      id: "omp",
+      name: "oh-my-pi",
+      mark: <span className="text-[14px] font-semibold">ω</span>,
+      steps: [
+        { text: <>Add MyNote to the MCP servers of every project, in this file (or <Kbd>.omp/mcp.json</Kbd> for one project):</>, code: "~/.omp/agent/mcp.json" },
+        { text: "Add MyNote to mcpServers:", code: ompJson },
+        { text: <>Start a new session, or run <Kbd>/mcp reload</Kbd>, then <Kbd>/mcp list</Kbd> to check that it connected. <Kbd>/mcp add</Kbd> in a session adds it from a form instead.</> },
+      ],
+    },
+    {
+      id: "pi",
+      name: "Pi",
+      mark: <span className="text-[14px] font-semibold">π</span>,
+      steps: [
+        { text: "Run this in your terminal (Pi 1.0 or newer):", code: `pi mcp add mynote -- ${cli}` },
+        { text: <>Start a new session, or run <Kbd>/reload</Kbd>; <Kbd>pi mcp list</Kbd> shows it. On an older Pi, run <Kbd>pi update self</Kbd> first.</> },
+        { text: <>Using the pi-mcp-adapter extension instead? It reads this file, with the same mcpServers as Cursor:</>, code: "~/.config/mcp/mcp.json" },
       ],
     },
     {
@@ -153,7 +175,7 @@ export function AgentsDialog({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Client picker */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {clients.map((c) => (
               <button
                 key={c.id}
