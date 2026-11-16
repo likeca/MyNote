@@ -14,6 +14,7 @@ import {
   Maximize2,
   MoreHorizontal,
   SmilePlus,
+  SquareTerminal,
   Star,
   Table2,
   Tag,
@@ -55,6 +56,9 @@ type Props = {
   favorite?: boolean;
   onToggleFavorite?: () => void;
   onToggleHistory?: () => void;
+  /** The terminal panel beside the page (App's, shared by every page). */
+  terminalOpen?: boolean;
+  onToggleTerminal?: () => void;
   onClose?: () => void;
   onRenamed: (oldPath: string, newPath: string) => void;
   onDeleted: (path: string) => void;
@@ -105,6 +109,8 @@ export function PageView(p: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f" || e.defaultPrevented) return;
+      // In the terminal beside the page, ⌘F isn't the page's.
+      if (e.target instanceof Element && e.target.closest("[data-terminal]")) return;
       const peekOpen = !!document.querySelector(".peek-panel");
       if (peekOpen !== (p.mode === "peek") || !editorRef.current) return;
       e.preventDefault();
@@ -745,6 +751,13 @@ function TopBar(p: Props & { meta?: NoteMeta; saving: boolean; onMenu: (el: HTML
             className="grid size-7 place-items-center rounded-md text-muted hover:bg-hover"
           >
             <Star size={16} className={p.favorite ? "fill-[#f6c050] text-[#f6c050]" : ""} />
+          </button>
+          <button
+            onClick={p.onToggleTerminal}
+            title="Terminal beside the page (⌘J)"
+            className={`grid size-7 place-items-center rounded-md ${p.terminalOpen ? "bg-hover text-ink" : "text-muted hover:bg-hover"}`}
+          >
+            <SquareTerminal size={16} />
           </button>
         </>
       )}

@@ -13,6 +13,7 @@ On Windows and Linux, use Ctrl for `⌘` and Alt for `⌥`.
 | `⌘N`                       | New page                     |
 | `⌘T`                       | New tab                      |
 | `Ctrl` + backtick          | New terminal                 |
+| `⌘J`                       | Terminal beside the page     |
 | `Ctrl Tab` and `Ctrl ⇧Tab` | Next and previous tab        |
 | `⌘\`                       | Show or hide the sidebar     |
 | `⌘[` and `⌘]`              | Back and forward             |

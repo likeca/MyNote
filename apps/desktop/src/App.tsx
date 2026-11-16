@@ -5,6 +5,7 @@ import { AgentsDialog } from "./components/AgentsDialog";
 import { SettingsDialog, type Section } from "./components/SettingsDialog";
 import { CommandPalette } from "./components/CommandPalette";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { TerminalPanel } from "./components/TerminalPanel";
 import { loadWorkspace as loadPlugins, parseViewPath, setHost as setPluginHost, viewPath } from "./plugins/runtime";
 import { PluginView } from "./plugins/slots";
 import { Logo } from "./components/Logo";
@@ -87,6 +88,14 @@ export default function App() {
   const [palette, setPalette] = useState(false);
   const [agents, setAgents] = useState(false);
   const [history, setHistory] = useState(false);
+  // The terminal beside the page: open or closed across restarts (its shell starts afresh).
+  const [terminalPanel, setTerminalPanel] = useState(() => store.get("terminal-panel") === "open");
+  const toggleTerminalPanel = (open?: boolean) =>
+    setTerminalPanel((v) => {
+      const next = open ?? !v;
+      store.set("terminal-panel", next ? "open" : "closed");
+      return next;
+    });
   const [sidebar, setSidebar] = useState(() => store.get("sidebar") !== "hidden");
   const [sidebarPeek, setSidebarPeek] = useState(false);
   const fullscreen = useFullscreen();
@@ -409,6 +418,7 @@ export default function App() {
       const inFileEditor = e.target instanceof Element && !!e.target.closest("[data-file-editor]");
       if (inFileEditor && ["s", "k", "[", "]"].includes(key)) return;
       if (key === "k" || key === "p") (e.preventDefault(), setPalette((v) => !v));
+      if (key === "j" && !e.shiftKey && !e.altKey) (e.preventDefault(), toggleTerminalPanel());
       if (key === "n" && !e.altKey) (e.preventDefault(), createHere().then(openPage));
       if (key === "\\") (e.preventDefault(), setSidebar((v) => !v), setSidebarPeek(false));
       // ⌘S (or Ctrl S): the git button's Upload: commit, then pull and push (just commit without a remote).
@@ -620,6 +630,8 @@ export default function App() {
               favorite={favorites.includes(pagePath)}
               onToggleFavorite={() => toggleFavorite(pagePath)}
               onToggleHistory={() => setHistory((v) => !v)}
+              terminalOpen={terminalPanel}
+              onToggleTerminal={() => toggleTerminalPanel()}
               {...pageProps}
             />
           ) : (
@@ -649,6 +661,9 @@ export default function App() {
           )}
           </div>
         </div>
+
+        {/* A terminal beside the page (⌘J): one shell, kept running while it's closed. */}
+        <TerminalPanel open={terminalPanel} onClose={() => toggleTerminalPanel(false)} />
 
         {history && pagePath && (
           <HistoryPanel

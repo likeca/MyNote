@@ -81,6 +81,27 @@ export const FindInPage = Extension.create({
 
 const setFind = (view: EditorView, meta: { query?: string; active?: number }) => view.dispatch(view.state.tr.setMeta(findKey, meta).setMeta("addToHistory", false));
 
+/** Opens the closed toggles holding `pos`, without an undo step. Whether any were closed. */
+function openTogglesAround(view: EditorView, pos: number): boolean {
+  const $pos = view.state.doc.resolve(pos);
+  const tr = view.state.tr;
+  for (let d = $pos.depth; d > 0; d--) {
+    const node = $pos.node(d);
+    if (node.type.name === "details" && !node.attrs.open) tr.setNodeAttribute($pos.before(d), "open", true);
+  }
+  if (!tr.docChanged) return false;
+  view.dispatch(tr.setMeta("addToHistory", false));
+  return true;
+}
+
+/** Scrolls the current match into view when it's off screen. */
+function scrollToCurrent(view: EditorView) {
+  const el = view.dom.querySelector(".find-match-current");
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (r.top < 96 || r.bottom > window.innerHeight - 48) el.scrollIntoView({ block: "center" });
+}
+
 /** The search the bar opens on: the last one, as the page search box does. */
 let lastQuery = "";
 
@@ -138,12 +159,17 @@ export function FindBar({ editor, focusKey, onClose }: { editor: TiptapEditor; f
   // Closing (or leaving the page) takes the highlights away.
   useEffect(() => () => void (!editor.isDestroyed && setFind(editor.view, { query: "" })), [editor]);
 
-  // The current match is scrolled into view when it's off screen.
+  // The current match is shown: the closed toggles it's inside are opened (as a browser's find and
+  // Notion's do), then it's scrolled into view when it's off screen.
   useLayoutEffect(() => {
-    const el = editor.view.dom.querySelector(".find-match-current");
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    if (r.top < 96 || r.bottom > window.innerHeight - 48) el.scrollIntoView({ block: "center" });
+    const m = findKey.getState(editor.state)?.matches[active];
+    if (!m) return;
+    if (openTogglesAround(editor.view, m.from)) {
+      // The toggle's contents show on its next frame.
+      const frame = requestAnimationFrame(() => scrollToCurrent(editor.view));
+      return () => cancelAnimationFrame(frame);
+    }
+    scrollToCurrent(editor.view);
   }, [editor, active, count, query]);
 
   const step = (dir: 1 | -1) => count && setFind(editor.view, { active: (active + dir + count) % count });

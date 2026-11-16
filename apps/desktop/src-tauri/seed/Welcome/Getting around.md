@@ -23,7 +23,7 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 
 `⌘K` (or `⌘P`) opens search. With nothing typed, it lists recent pages. Type to search page titles, tags and contents, with a snippet from each match. Use the arrow keys and Enter to open a result. A page found by its contents opens at the first place your search appears, highlighted as with `⌘F` below; `Enter` goes to the next. The last result, **New page**, creates a page with the title you typed. Search opens on your last search, selected, so typing starts a new one.
 
-`⌘F` finds words in the page you're on: every match is highlighted, `Enter` and `⇧Enter` step through them, and `Esc` closes the bar with the cursor on the match you stopped at.
+`⌘F` finds words in the page you're on: every match is highlighted, `Enter` and `⇧Enter` step through them, and `Esc` closes the bar with the cursor on the match you stopped at. A match inside a closed toggle opens the toggle, so you can see it.
 
 ## On a page
 
@@ -39,6 +39,8 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 Each page opens in a tab at the top of the window. Click `+` there for **New tab**, which shows the same page again (`⌘T`), or **New terminal** (`Ctrl` + backtick). Right-click a tab to close it, the others or the ones to its right; a middle-click closes it too.
 
 A terminal tab runs your own shell, as Terminal does, starting in the workspace folder, so you can use git, run scripts or start an agent next to your pages. It keeps running while you look at other tabs, and closing the tab ends it. Pages you open from a terminal tab open in a new tab beside it. In a terminal, `Ctrl` keys go to the shell (`Ctrl C`, `Ctrl R`…), and `⌘+` and `⌘−` zoom its text with the pages'. When the shell exits, press Enter to start a new one. Terminals aren't reopened the next time you start MyNote.
+
+To keep a terminal open while you read and write, for an AI agent such as Claude Code or oh-my-pi, press `⌘J` or click the terminal button in a page's top bar: a terminal opens beside the page. Drag its left edge to make it wider or narrower. It stays as you move between pages, and closing it (`⌘J` again, or `×`) only hides it: the shell and whatever runs in it keep going until MyNote quits.
 
 ## Workspaces
 
