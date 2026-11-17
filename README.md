@@ -1,8 +1,11 @@
-<img src="brand/app-icon.png" alt="" width="96" align="right">
+<img src="images/brand/app-icon.png" alt="" width="96" align="right">
 
 # MyNote
 
-A beautiful workspace for notes, docs and databases that stays yours. Every page is a plain Markdown file on your computer, and your AI agents can read only the pages you share.
+A replacement for Notion and Obsidian for engineer.
+You own your privete notes in Git Repository.
+Forked from devian-labs/betelgeuse.
+Improved to suit your need.
 
 [User guide](apps/desktop/src-tauri/seed/Welcome.md) · [Contributing](CONTRIBUTING.md)
 
@@ -16,24 +19,58 @@ A beautiful workspace for notes, docs and databases that stays yours. Every page
 
 ## Why MyNote
 
-- **Easy to use.** Type `/` for any block: headings, to-dos, callouts, tables, columns and more. Build databases with table, board and calendar views.
-- **Your files, on your disk.** Pages are Markdown files in a folder you own, saved to git as you go. Open them in any editor, any time.
-- **On every device.** Connect a private git repository and your computers and phone sync on their own in the background. A page changed in two places keeps both versions.
-- **AI on your terms.** Connect Claude, Cursor or any MCP client and they can search, read and update your notes. You choose which pages they see, and you can undo anything they change.
-- **Plugins for the rest.** Install what you need from the plugin store, on your computer or phone: [Finance](docs/content/plugins/finance.md) for budgets, investments and net worth, or [Media Library](docs/content/plugins/media-library.md) for your project files. Store plugins are signed, and their data stays in your pages. [Build your own](docs/content/developers/plugins.md) in TypeScript and React.
+- **Custom Icon from anywhere.** Paste the image URL for custom icon.
 
-## What MyNote adds
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/custom-icon.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/custom-icon.jpg">
+</picture>
 
-MyNote is a fork of [Betelgeuse](https://github.com/devian-labs/betelgeuse). On top of it, MyNote adds:
+- **Your files, privatly save on your disk and privte git repository.** Pages are Markdown files in a folder or git repository you own, saved to git as you go. Open them in any editor, any time.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/git.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/git.jpg">
+</picture>
 
 - **Pages side by side.** ⌥-click a page in the sidebar, or right-click it and choose **Open side by side**. You can write in both pages, and links on the right side open there. Drag the divider to resize.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/pages-side-by-side.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/pages-side-by-side.jpg">
+</picture>
+
 - **Run shell and Python in code blocks.** On the desktop, a **Bash**, **Bash + profile**, **Shell**, **Zsh** or **Python** block runs in the workspace folder, with your own `PATH`. Click **Run** for the whole block, or press `Ctrl E` for one line. The output is saved with the page.
-- **Terminals.** A terminal tab (`Ctrl` + backtick), or a terminal beside the page (`⌘J`) to keep an AI agent such as Claude Code or oh-my-pi running while you write.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/run-script.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/run-script.jpg">
+</picture>
+
+- **Terminals.** A terminal tab (`Ctrl` + backtick), or a terminal beside the page (`⌘J`) to keep an AI agent such as Claude Code or oh-my-pi running while you write.  
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/terminal.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/terminal.jpg">
+</picture>
+
 - **File attachments.** Drop, paste or `/File` any file onto a page:
   - each page keeps its files in its own `_assets/` folder, so they move and rename with it;
   - text and code files open in a tab with a VS Code-style editor (Monaco);
   - a deleted file waits in the Trash.
-- **Equations and diagrams.** LaTeX block and inline equations (`$$`, `⌘⇧E`), with left alignment. draw.io diagrams, stored as `.drawio.svg` files that draw.io can still open and edit.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/files.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/files.jpg">
+</picture>
+
+- **Equations and diagrams.** LaTeX block and inline equations (`$$`, `⌘⇧E`), with left alignment. full function draw.io diagrams, stored as `.drawio.svg` files that draw.io can still open and edit.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/screenshot/drawio.jpg">
+  <img alt="The MyNote editor with the Welcome guide open" src="images/screenshot/drawio.jpg">
+</picture>
+
 - **Link mentions.** Paste a web address and it shows the site's icon and the page's title. A GitHub repository shows its name and its owner's avatar.
 - **Toggle headings**, with `Tab` and `⇧Tab` to move blocks into and out of the toggle above.
 - **Block selection.** Select whole blocks to delete, copy, cut, colour or convert together:
@@ -48,6 +85,13 @@ MyNote is a fork of [Betelgeuse](https://github.com/devian-labs/betelgeuse). On 
 - **Your own colours.** Tune any theme's colours in **Settings → Appearance**, and zoom page text with `⌘+` and `⌘−`.
 - **More AI clients.** The **Connect agents** dialog adds oh-my-pi and Pi to Claude Code, Claude Desktop, Cursor and HTTP.
 - **Code block keys.** `Home` and `End` go to the start and end of the line inside a code block.
+
+
+- **On every device.** Connect a private git repository and your computers and phone sync on their own in the background. A page changed in two places keeps both versions.
+- **AI on your terms.** Connect Claude, Cursor or any MCP client and they can search, read and update your notes. You choose which pages they see, and you can undo anything they change.
+- **Plugins for the rest.** Install what you need from the plugin store, on your computer or phone: [Finance](docs/content/plugins/finance.md) for budgets, investments and net worth, or [Media Library](docs/content/plugins/media-library.md) for your project files. Store plugins are signed, and their data stays in your pages. [Build your own](docs/content/developers/plugins.md) in TypeScript and React.
+
+
 
 ## Install
 
