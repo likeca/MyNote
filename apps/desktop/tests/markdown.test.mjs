@@ -245,6 +245,31 @@ test("Tab puts blocks inside the toggle heading above; ⇧Tab takes them back ou
   assert.equal(out, `${H}- a\n- b\n- c\n- d\n\n</details>\n\n**Sources:**`);
   assert.equal(roundTrip(out).trim(), out, "reads back unchanged");
   between.destroy();
+
+  // The first item of a list under a toggle goes in on its own, joining a list already there;
+  // then the next one. Items further down are left to the list's own Tab (under the item above).
+  const list = editorAt(`${H}- a\n\n</details>\n\n- one\n- two`, "one", 1);
+  assert.equal(nestBlocks(list, 1), true);
+  assert.equal(markdownOf(list), `${H}- a\n- one\n\n</details>\n\n- two`);
+  assert.equal(list.state.selection.$from.parent.textContent, "one", "the cursor stays in its item");
+  const second = editorAt(`${H}Inside.\n\n</details>\n\n- one\n- two`, "two");
+  assert.equal(nestBlocks(second, 1), false, "not the list's first item");
+  second.destroy();
+  let two = -1;
+  list.state.doc.descendants((n, pos) => void (n.isText && n.text === "two" && (two = pos + 1)));
+  list.commands.setTextSelection(two);
+  assert.equal(nestBlocks(list, 1), true);
+  assert.equal(markdownOf(list), `${H}- a\n- one\n- two\n\n</details>`);
+  list.destroy();
+  // A numbered list stays numbered; with the cursor in a quote, the whole quote moves.
+  const numbered = editorAt(`${H}Inside.\n\n</details>\n\n1. first\n2. second`, "first");
+  nestBlocks(numbered, 1);
+  assert.equal(markdownOf(numbered), `${H}Inside.\n\n1. first\n\n</details>\n\n1. second`);
+  numbered.destroy();
+  const quote = editorAt(`${H}Inside.\n\n</details>\n\n> quoted`, "quoted");
+  assert.equal(nestBlocks(quote, 1), true);
+  assert.equal(markdownOf(quote), `${H}Inside.\n\n> quoted\n\n</details>`);
+  quote.destroy();
 });
 
 test("columns", () => same('<div class="columns">\n<div class="column">\n\nLeft side\n\n</div>\n<div class="column">\n\n- right\n- list\n\n</div>\n</div>'));

@@ -50,8 +50,8 @@ import { MenuDivider, MenuItem, MenuSection, Popover } from "./Popover";
 
 type Props = {
   path: string;
-  /** "peek" renders the compact side panel used for database rows. */
-  mode?: "page" | "peek";
+  /** "peek" renders the compact side panel used for database rows; "split", the right side of a split view. */
+  mode?: "page" | "peek" | "split";
   historyOpen?: boolean;
   favorite?: boolean;
   onToggleFavorite?: () => void;
@@ -71,6 +71,16 @@ type Doc = { frontmatter: string; body: string };
 const titleOf = fileTitle;
 const parentOf = (path: string) => (path.includes("/") ? `${path.slice(0, path.lastIndexOf("/"))}.md` : null);
 
+/**
+ * Whether the page view at `root` takes the page's shortcuts (⌘A, ⌘F): the one the cursor is in;
+ * with the cursor in neither, the side peek while it's open, else the main page.
+ */
+function ownsShortcuts(root: HTMLElement | null, mode: Props["mode"]): boolean {
+  const focused = (document.activeElement as HTMLElement | null)?.closest?.("[data-page-view]");
+  if (focused) return focused === root;
+  return document.querySelector(".peek-panel") ? mode === "peek" : (mode ?? "page") === "page";
+}
+
 export function PageView(p: Props) {
   const { notes, refreshKey, openPage, peek, createPage, refresh, aiPolicy, toast } = useVault();
   const settings = useSettings();
@@ -83,7 +93,21 @@ export function PageView(p: Props) {
     titleRef.current = v;
     setTitleState(v);
   };
-  const editorRef = useRef<TiptapEditor | null>(null);
+  // The page's editor. It's replaced when the page reloads (an outside change); parts that hold it,
+  // such as the find bar, re-render with the new one instead of keeping the destroyed one.
+  const [liveEditor, setLiveEditor] = useState<TiptapEditor | null>(null);
+  const editorRef = useMemo(() => {
+    let current: TiptapEditor | null = null;
+    return {
+      get current() {
+        return current;
+      },
+      set current(editor: TiptapEditor | null) {
+        current = editor;
+        setLiveEditor(editor);
+      },
+    };
+  }, []);
 
   // ⌘A outside any text field selects the whole page, as in Notion (the window itself selects
   // nothing). With the side peek open, it's the peeked page.
@@ -93,8 +117,7 @@ export function PageView(p: Props) {
       const active = document.activeElement as HTMLElement | null;
       if (active && (active.isContentEditable || active.matches("input, textarea, select"))) return;
       if (document.querySelector("[data-popover], .fixed.inset-0")) return;
-      const peekOpen = !!document.querySelector(".peek-panel");
-      if (peekOpen !== (p.mode === "peek")) return;
+      if (!ownsShortcuts(rootRef.current, p.mode)) return;
       const editor = editorRef.current;
       if (!editor) return;
       e.preventDefault();
@@ -103,16 +126,16 @@ export function PageView(p: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [p.mode]);
-  // ⌘F: find in this page (the side peek's page while it's open). Again with the bar open puts
-  // the cursor back in it.
+  const rootRef = useRef<HTMLDivElement>(null);
+  // ⌘F: find in this page (the one with the cursor in it; else the side peek while it's open, else
+  // the main page). Again with the bar open puts the cursor back in it.
   const [finding, setFinding] = useState<number | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f" || e.defaultPrevented) return;
       // In the terminal beside the page, ⌘F isn't the page's.
       if (e.target instanceof Element && e.target.closest("[data-terminal]")) return;
-      const peekOpen = !!document.querySelector(".peek-panel");
-      if (peekOpen !== (p.mode === "peek") || !editorRef.current) return;
+      if (!ownsShortcuts(rootRef.current, p.mode) || !editorRef.current) return;
       e.preventDefault();
       setFinding((n) => (n ?? 0) + 1);
     };
@@ -247,7 +270,8 @@ export function PageView(p: Props) {
   // Opened from a search on its contents: shows where they are, as ⌘F would (see findOnOpen).
   // Waits for this page's editor; a search that only matched the title shows nothing.
   useEffect(() => {
-    if (p.mode === "peek" || shownPath !== p.path || doc === null || doc === "missing") return;
+    if (p.mode !== "page" && p.mode !== undefined) return;
+    if (shownPath !== p.path || doc === null || doc === "missing") return;
     let frame = 0;
     let tries = 0;
     const attempt = () => {
@@ -355,7 +379,8 @@ export function PageView(p: Props) {
           }}
           onOpenLink={(target, newTab) => {
             const hit = resolveWikiLink(target, notesRef.current);
-            if (hit) openPage(hit.path, { newTab });
+            // A link on the right side of a split view opens there, keeping the left side as it is.
+            if (hit) openPage(hit.path, { newTab, side: p.mode === "split" && !newTab });
             else createPage(null, target.split("#")[0]).then(openPage);
           }}
           getNotes={() => notesRef.current}
@@ -375,7 +400,7 @@ export function PageView(p: Props) {
 
   if (doc === "missing") {
     return (
-      <div className="flex flex-1 flex-col">
+      <div ref={rootRef} data-page-view className="flex flex-1 flex-col">
         <TopBar {...p} path={path} meta={meta} saving={false} onMenu={setMenu} />
         <div className="grid flex-1 place-items-center text-sm text-muted">This page was moved or deleted.</div>
       </div>
@@ -389,7 +414,8 @@ export function PageView(p: Props) {
   const tags = doc ? frontmatterTags(doc.frontmatter) : [];
   const font = values.font === "serif" || values.font === "mono" ? values.font : "default";
   const small = values.small === true;
-  const peekMode = p.mode === "peek";
+  // The side peek and the right side of a split view: a narrower, simpler page.
+  const peekMode = p.mode === "peek" || p.mode === "split";
   // A page's own `fullWidth` wins; otherwise databases and (per Settings → Appearance) pages fill the
   // window. The side peek stays its own width unless the page asks for full width.
   const fullWidthDefault = isDb || settings.fullWidth;
@@ -398,13 +424,13 @@ export function PageView(p: Props) {
   const emptyBody = doc && !isDb && !body.current.trim() && !parentIsDb;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div ref={rootRef} data-page-view className="flex min-w-0 flex-1 flex-col">
       <TopBar {...p} path={path} meta={meta} saving={saving} onMenu={setMenu} hiddenFromAi={!ai.visible} />
 
       <div className="relative min-h-0 flex-1">
       {!peekMode && !isDb && <Outline key={`${path}:${editorKey}`} scroller={scroller} />}
-      {finding !== null && editorRef.current && (
-        <FindBar key={`find:${path}:${editorKey}`} editor={editorRef.current} focusKey={finding} onClose={() => setFinding(null)} />
+      {finding !== null && liveEditor && !liveEditor.isDestroyed && (
+        <FindBar key={`find:${path}:${editorKey}`} editor={liveEditor} focusKey={finding} onClose={() => setFinding(null)} />
       )}
       <div
         ref={scroller}
@@ -627,7 +653,7 @@ export function PageView(p: Props) {
               {showBacklinks && backlinks.map((b) => (
                 <button
                   key={b.path}
-                  onClick={(e) => (wantsNewTab(e) ? openPage(b.path, { newTab: true }) : peekMode ? peek(b.path) : openPage(b.path))}
+                  onClick={(e) => (wantsNewTab(e) ? openPage(b.path, { newTab: true }) : p.mode === "split" ? openPage(b.path, { side: true }) : peekMode ? peek(b.path) : openPage(b.path))}
                   className="group/bl flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted hover:bg-hover"
                 >
                   <span className="grid w-5 place-items-center">{b.icon ? <PageIcon icon={b.icon} size={16} /> : <FileText size={15} className="text-faint" />}</span>
@@ -691,7 +717,7 @@ function TopBar(p: Props & { meta?: NoteMeta; saving: boolean; onMenu: (el: HTML
     const note = notes.find((n) => n.path === `${key}.md`);
     return { key, title: note?.title ?? key.split("/").pop()!, note };
   });
-  const peekMode = p.mode === "peek";
+  const peekMode = p.mode === "peek" || p.mode === "split";
 
   return (
     <header
@@ -699,13 +725,19 @@ function TopBar(p: Props & { meta?: NoteMeta; saving: boolean; onMenu: (el: HTML
       className="flex h-11 shrink-0 items-center gap-1 px-3 text-sm"
     >
       {peekMode ? (
-        <div className="flex flex-1 items-center gap-0.5 text-muted">
-          <button onClick={p.onClose} title="Close" className="grid size-7 place-items-center rounded-md hover:bg-hover">
-            <ChevronsRight size={17} />
+        <div className="flex min-w-0 flex-1 items-center gap-0.5 text-muted">
+          <button onClick={p.onClose} title={p.mode === "split" ? "Close this side" : "Close"} className="grid size-7 shrink-0 place-items-center rounded-md hover:bg-hover">
+            {p.mode === "split" ? <X size={16} /> : <ChevronsRight size={17} />}
           </button>
-          <button onClick={() => openPage(p.path)} title="Open as full page" className="grid size-7 place-items-center rounded-md hover:bg-hover">
+          <button onClick={() => openPage(p.path)} title="Open as full page" className="grid size-7 shrink-0 place-items-center rounded-md hover:bg-hover">
             <Maximize2 size={15} />
           </button>
+          {p.mode === "split" && (
+            <span className="flex min-w-0 items-center gap-1 px-1.5 text-ink">
+              {p.meta?.icon && <PageIcon icon={p.meta.icon} size={16} />}
+              <span className="truncate">{p.meta?.title ?? titleOf(p.path)}</span>
+            </span>
+          )}
         </div>
       ) : (
         <div className="flex min-w-0 flex-1 items-center gap-0.5 text-ink" data-tauri-drag-region>

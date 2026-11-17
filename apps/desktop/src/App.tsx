@@ -5,6 +5,7 @@ import { AgentsDialog } from "./components/AgentsDialog";
 import { SettingsDialog, type Section } from "./components/SettingsDialog";
 import { CommandPalette } from "./components/CommandPalette";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { SplitPane } from "./components/SplitPane";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { loadWorkspace as loadPlugins, parseViewPath, setHost as setPluginHost, viewPath } from "./plugins/runtime";
 import { PluginView } from "./plugins/slots";
@@ -76,6 +77,8 @@ export default function App() {
   const pagePath = openPath?.startsWith("@plugin/") || isTerminalPath(openPath) || isFileTab(openPath) ? undefined : openPath;
   const [recents, setRecents] = useState<string[]>([]);
   const [peekPath, setPeekPath] = useState<string | null>(null);
+  // The right side of a split view: a second page beside the current one.
+  const [splitPath, setSplitPath] = useState<string | null>(null);
   const [status, setStatus] = useState<RepoStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // The sidebar opens fully collapsed; only the arrows (and adding or dragging a page into
@@ -232,6 +235,12 @@ export default function App() {
   // tab stays a terminal: the page opens in a new tab next to it.
   const openPage = useCallback(
     (path: string, opts?: OpenOptions) => {
+      // On the right side of a split view: only pages go there.
+      if (opts?.side && path.endsWith(".md")) {
+        setPeekPath(null);
+        setSplitPath(path);
+        return;
+      }
       reveal(path);
       setTabs((t) => {
         if (!t.list.length) return { list: [newTab(path)], active: 0 };
@@ -335,6 +344,7 @@ export default function App() {
       const n = await refresh();
       setFavorites((f) => f.filter((x) => x !== path && !x.startsWith(path.replace(/\.md$/, "/"))));
       if (peekPath === path) setPeekPath(null);
+      setSplitPath((s) => (s && (s === path || s.startsWith(path.replace(/\.md$/, "/"))) ? null : s));
       // Tabs showing a deleted page close; the last one moves to the first page left.
       setTabs((t) => {
         const alive = t.list.filter((tab) => isTerminalPath(current(tab)) || n.some((x) => x.path === current(tab)));
@@ -491,6 +501,7 @@ export default function App() {
         setFavorites((f) => f.map(remap));
         setExpanded((prev) => new Set([...prev, ...(dest ? [dest, ...ancestorKeys(`${dest}.md`)] : [])]));
         if (peekPath) setPeekPath(remap(peekPath));
+        setSplitPath((s) => s && remap(s));
         const byPath = new Map((await refresh()).map((n) => [n.path, n]));
         // Its old position means nothing here: it lands at `gap`, or last when dropped onto a page.
         const list = [...siblings.map((s) => ({ path: s, order: byPath.get(s)?.order ?? null })), { path: next, order: null }];
@@ -517,6 +528,7 @@ export default function App() {
       setRecents((r) => r.map(remap));
       setFavorites((f) => f.map(remap));
       setPeekPath((p) => p && remap(p));
+      setSplitPath((p) => p && remap(p));
       setExpanded((prev) => new Set([...prev].map(remapKey)));
       await refresh();
       setRefreshKey((k) => k + 1);
@@ -543,7 +555,7 @@ export default function App() {
 
   const pageProps = {
     onRenamed: async (old: string, next: string) => {
-      const peeked = peekPath === old;
+      const peeked = peekPath === old || splitPath === old;
       await renamed(old, next);
       if (!peeked) openPage(next);
     },
@@ -652,6 +664,13 @@ export default function App() {
             ))}
           </Suspense>
 
+          {/* A second page beside the first (⌥-click, or "Open side by side"); not the same page twice,
+              which two editors would each save over the other. */}
+          {splitPath && pagePath && splitPath !== pagePath && (
+            <SplitPane>
+              <PageView key={`split:${vault.path}`} path={splitPath} mode="split" onClose={() => setSplitPath(null)} {...pageProps} />
+            </SplitPane>
+          )}
           {peekPath && (
             <div className="peek-panel absolute inset-y-0 right-0 z-30 flex w-[min(720px,62%)] border-l border-line bg-surface shadow-peek">
               {/* Not keyed by path: switching rows swaps the page in place, keeping the old one on

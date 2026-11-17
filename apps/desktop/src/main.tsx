@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ErrorBoundary, recordGlobalErrors } from "./components/ErrorBoundary";
 import "./index.css";
 
 // A file dropped where nothing handles it would make the webview navigate to it, replacing the app
@@ -20,8 +21,13 @@ window.addEventListener("contextmenu", (e) => {
   if (!editable || t.closest("a, img")) e.preventDefault();
 });
 
+// An error while drawing would otherwise leave an empty window until a restart (see ErrorBoundary).
+recordGlobalErrors();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

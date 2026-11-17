@@ -1,7 +1,7 @@
 import { Extension, type Editor } from "@tiptap/core";
 import { NodeRangeSelection, getNodeRangeDecorations } from "@tiptap/extension-node-range";
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
-import type { Node as PMNode } from "@tiptap/pm/model";
+import type { Node as PMNode, ResolvedPos } from "@tiptap/pm/model";
 import { canJoin } from "@tiptap/pm/transform";
 
 /** The blocks a block selection holds: each node and where it starts. */
@@ -109,16 +109,29 @@ export const BlockSelect = Extension.create({
   },
 });
 
-/** Sibling blocks from `from` to `to` (their boundaries) in a parent at `depth`. */
-type Run = { from: number; to: number; depth: number };
+/**
+ * Sibling blocks from `from` to `to` (their boundaries) in a parent at `depth`. With `items`, the
+ * run is instead a list's first `items.count` items, moved as a list of their own.
+ */
+type Run = { from: number; to: number; depth: number; items?: { list: PMNode; count: number } };
 
 /** Blocks that hold the page's blocks: blocks inside them can move into a toggle beside them. */
 const CONTAINERS = ["doc", "detailsContent", "column"];
+const ITEMS = ["listItem", "taskItem"];
+
+/** A list's first `count` items, when the list sits among the page's blocks (`$list` is in the list). */
+function leadingItems($list: ResolvedPos, depth: number, count: number): Run | null {
+  if ($list.index(depth) !== 0 || depth < 1 || !CONTAINERS.includes($list.node(depth - 1).type.name)) return null;
+  const list = $list.node(depth);
+  const from = $list.before(depth);
+  return { from, to: from + list.nodeSize, depth: depth - 1, items: { list, count } };
+}
 
 /**
  * The blocks Tab moves: the selected blocks, or the block the cursor is in (a toggle's whole self
- * from its title). Selected lines in a table, callout or quote move the whole table, callout or
- * quote. A cursor in a list, table or code, or a selection in a list, is left to their own Tab.
+ * from its title; a quote's or callout's whole self from a line in it). In a list, the first items
+ * (the ones with no item above to go under). A cursor in a table or code, or further down a list,
+ * is left to their own Tab.
  */
 function runToMove(state: EditorState): Run | null {
   const { selection } = state;
@@ -127,9 +140,12 @@ function runToMove(state: EditorState): Run | null {
     // Only the title of a toggle selected: the toggle is what moves.
     if (first.parent.type.name === "details") return { from: first.before(), to: first.after(), depth: first.depth - 1 };
     if (CONTAINERS.includes(first.parent.type.name)) return { from: first.pos, to: selection.ranges[selection.ranges.length - 1].$to.pos, depth: first.depth };
-    // Inside a table, callout or quote: the whole of it (the block in the page holding the selection).
+    // List items selected: the list's first ones go as a list.
+    if (LISTS.includes(first.parent.type.name)) return leadingItems(first, first.depth, selection.ranges.length);
+    // Inside a list item (Esc on its line): that item, when it's the list's first. Inside a table,
+    // callout or quote: the whole of it (the block in the page holding the selection).
     for (let d = first.depth; d >= 1; d--) {
-      if (LISTS.includes(first.node(d).type.name)) return null;
+      if (ITEMS.includes(first.node(d).type.name)) return leadingItems(first, d - 1, 1);
       if (CONTAINERS.includes(first.node(d - 1).type.name)) return { from: first.before(d), to: first.after(d), depth: d - 1 };
     }
     return null;
@@ -137,9 +153,19 @@ function runToMove(state: EditorState): Run | null {
   if (!(selection instanceof TextSelection) || !selection.$from.sameParent(selection.$to)) return null;
   const { $from } = selection;
   if (!$from.parent.isTextblock || $from.parent.type.spec.code) return null;
-  const depth = $from.parent.type.name === "detailsSummary" ? $from.depth - 1 : $from.depth;
-  if (depth < 1 || !CONTAINERS.includes($from.node(depth - 1).type.name)) return null;
-  return { from: $from.before(depth), to: $from.after(depth), depth: depth - 1 };
+  if ($from.parent.type.name === "detailsSummary") {
+    const d = $from.depth - 1;
+    return d >= 1 && CONTAINERS.includes($from.node(d - 1).type.name) ? { from: $from.before(d), to: $from.after(d), depth: d - 1 } : null;
+  }
+  for (let d = $from.depth; d >= 1; d--) {
+    const name = $from.node(d).type.name;
+    // In a list item: only the list's first item moves (the others go under the item above).
+    if (ITEMS.includes(name)) return leadingItems($from, d - 1, 1);
+    if (name === "table") return null;
+    // The block in the page holding the cursor: the line itself, or its quote or callout.
+    if (CONTAINERS.includes($from.node(d - 1).type.name)) return { from: $from.before(d), to: $from.after(d), depth: d - 1 };
+  }
+  return null;
 }
 
 /**
@@ -153,8 +179,37 @@ export function nestBlocks(editor: Editor, dir: 1 | -1): boolean {
   if (!run) return false;
   const { doc } = state;
   const $at = doc.resolve(run.from);
-  const blocks = doc.slice(run.from, run.to).content;
+  const { selection } = state;
   const tr = state.tr;
+  if (run.items) {
+    // A list's first items, into the toggle above the list. (⇧Tab in a list is the list's own.)
+    if (dir === -1) return false;
+    const { list, count } = run.items;
+    const prev = $at.index() > 0 ? $at.parent.child($at.index() - 1) : null;
+    if (prev?.type.name !== "details") return false;
+    const items: PMNode[] = [];
+    for (let i = 0; i < count; i++) items.push(list.child(i));
+    const size = items.reduce((n, item) => n + item.nodeSize, 0);
+    const blocks = list.type.create(list.attrs, items);
+    const end = run.from - 2;
+    const only = prev.child(1).childCount === 1 ? prev.child(1).firstChild : null;
+    const start = only?.type.name === "paragraph" && only.content.size === 0 ? end - only.nodeSize : end;
+    // All of the list goes, or just its first items (the rest stays where it was).
+    if (count === list.childCount) tr.delete(run.from, run.to);
+    else tr.delete(run.from + 1, run.from + 1 + size);
+    tr.replaceWith(start, end, blocks);
+    if (!prev.attrs.open) tr.setNodeAttribute(run.from - prev.nodeSize, "open", true);
+    const shift = start + 1 - (run.from + 1);
+    tr.setSelection(
+      selection instanceof NodeRangeSelection
+        ? NodeRangeSelection.create(tr.doc, start + 1, start + 1 + size)
+        : TextSelection.create(tr.doc, selection.anchor + shift, selection.head + shift),
+    );
+    joinLists(tr, start);
+    editor.view.dispatch(tr.scrollIntoView());
+    return true;
+  }
+  const blocks = doc.slice(run.from, run.to).content;
   let start: number;
   let depth: number;
   if (dir === 1) {
@@ -181,7 +236,6 @@ export function nestBlocks(editor: Editor, dir: 1 | -1): boolean {
     depth = run.depth - 2;
   }
   const shift = start - run.from;
-  const { selection } = state;
   tr.setSelection(
     selection instanceof NodeRangeSelection
       ? NodeRangeSelection.create(tr.doc, start, start + blocks.size, depth)

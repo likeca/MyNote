@@ -15,6 +15,7 @@ import {
   Folder,
   FolderOpen,
   BookDown,
+  Columns2,
   ExternalLink,
   ListClock,
   MoreHorizontal,
@@ -353,6 +354,7 @@ export function Sidebar(p: Props) {
       {menu && (
         <Popover anchor={menu.el} onClose={() => setMenu(null)} className="w-56 p-1">
           <MenuItem icon={<ExternalLink size={15} />} label="Open in new tab" onClick={() => (p.onOpen(menu.note.path, { newTab: true }), setMenu(null))} />
+          <MenuItem icon={<Columns2 size={15} />} label="Open side by side" hint="⌥ click" onClick={() => (p.onOpen(menu.note.path, { side: true }), setMenu(null))} />
           <MenuItem
             icon={p.favorites.includes(menu.note.path) ? <StarOff size={15} /> : <Star size={15} />}
             label={p.favorites.includes(menu.note.path) ? "Remove from Favorites" : "Add to Favorites"}
@@ -533,7 +535,7 @@ function TreeRow({ node, depth, parent, ...p }: RowProps) {
         data-parent={parent ?? undefined}
         data-can-nest={parent !== null ? "" : undefined}
         data-open={open && children.length ? "" : undefined}
-        onClick={(e) => (node.note ? p.onOpen(node.note.path, { newTab: wantsNewTab(e) }) : p.onToggle(node.key))}
+        onClick={(e) => (node.note ? p.onOpen(node.note.path, { newTab: wantsNewTab(e), side: e.altKey }) : p.onToggle(node.key))}
         onAuxClick={(e) => node.note && e.button === 1 && p.onOpen(node.note.path, { newTab: true })}
         onContextMenu={(e) => {
           if (!node.note) return;

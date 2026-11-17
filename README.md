@@ -22,6 +22,33 @@ A beautiful workspace for notes, docs and databases that stays yours. Every page
 - **AI on your terms.** Connect Claude, Cursor or any MCP client and they can search, read and update your notes. You choose which pages they see, and you can undo anything they change.
 - **Plugins for the rest.** Install what you need from the plugin store, on your computer or phone: [Finance](docs/content/plugins/finance.md) for budgets, investments and net worth, or [Media Library](docs/content/plugins/media-library.md) for your project files. Store plugins are signed, and their data stays in your pages. [Build your own](docs/content/developers/plugins.md) in TypeScript and React.
 
+## What MyNote adds
+
+MyNote is a fork of [Betelgeuse](https://github.com/devian-labs/betelgeuse). On top of it, MyNote adds:
+
+- **Pages side by side.** ⌥-click a page in the sidebar, or right-click it and choose **Open side by side**. You can write in both pages, and links on the right side open there. Drag the divider to resize.
+- **Run shell and Python in code blocks.** On the desktop, a **Bash**, **Bash + profile**, **Shell**, **Zsh** or **Python** block runs in the workspace folder, with your own `PATH`. Click **Run** for the whole block, or press `Ctrl E` for one line. The output is saved with the page.
+- **Terminals.** A terminal tab (`Ctrl` + backtick), or a terminal beside the page (`⌘J`) to keep an AI agent such as Claude Code or oh-my-pi running while you write.
+- **File attachments.** Drop, paste or `/File` any file onto a page:
+  - each page keeps its files in its own `_assets/` folder, so they move and rename with it;
+  - text and code files open in a tab with a VS Code-style editor (Monaco);
+  - a deleted file waits in the Trash.
+- **Equations and diagrams.** LaTeX block and inline equations (`$$`, `⌘⇧E`), with left alignment. draw.io diagrams, stored as `.drawio.svg` files that draw.io can still open and edit.
+- **Link mentions.** Paste a web address and it shows the site's icon and the page's title. A GitHub repository shows its name and its owner's avatar.
+- **Toggle headings**, with `Tab` and `⇧Tab` to move blocks into and out of the toggle above.
+- **Block selection.** Select whole blocks to delete, copy, cut, colour or convert together:
+  - drag from the margin;
+  - press `Esc`, then `⇧↑` and `⇧↓` to add blocks;
+  - or shift-click.
+- **Richer tables.** Drag rows and columns, colour cells, header row and column, fit to page width, resize columns, and turn a table into a database.
+- **Resizable images**, saved as Obsidian does (`![alt|320](link)`).
+- **Better search.** `⌘K` searches page contents with snippets, opens the page at the match and keeps your last search. `⌘F` finds in the page and opens closed toggles to show matches.
+- **Databases with text.** A database page can have ordinary text above and below its views, and you can delete the database while keeping its rows as pages.
+- **Upload with `⌘S`.** Commits, pulls and pushes in one step from the cloud button in the sidebar, and syncs on its own in the background.
+- **Your own colours.** Tune any theme's colours in **Settings → Appearance**, and zoom page text with `⌘+` and `⌘−`.
+- **More AI clients.** The **Connect agents** dialog adds oh-my-pi and Pi to Claude Code, Claude Desktop, Cursor and HTTP.
+- **Code block keys.** `Home` and `End` go to the start and end of the line inside a code block.
+
 ## Install
 
 MyNote isn't published as a download yet, so build it yourself. You need [git](https://git-scm.com), [Node.js 20+](https://nodejs.org) and [Rust](https://rustup.rs). The script checks for anything else it needs.
