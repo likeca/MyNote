@@ -28,7 +28,7 @@ Drag the sidebar's right edge to resize it. `⌘\` hides it. While it's hidden, 
 ## On a page
 
 - The breadcrumbs at the top show where the page sits. Click a parent page to open it.
-- The arrows next to them go back and forward through the pages you've opened, like a browser (`⌘[` and `⌘]`).
+- The arrows next to them go back and forward through the pages you've opened, like a browser (`⌘[` and `⌘]`). Going back to a page, by any route, shows it where you left it.
 - The top bar shows "Saving…" while you type, then when the page was last edited.
 - The clock opens the page's history, the star adds it to Favorites, and `•••` opens the page menu. See [[Pages and sub-pages]].
 - On a page with two or more headings, an outline appears on the right. Hover it to see the headings, and click one to jump to it.

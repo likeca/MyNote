@@ -118,6 +118,9 @@ export function findOnOpen(path: string, query: string) {
   window.dispatchEvent(new Event(FIND_REQUEST));
 }
 
+/** Whether a search is waiting to show its matches in `path`. */
+export const hasFindRequest = (path: string) => pending?.path === path;
+
 /** The search waiting for `path`, taken (once), made the bar's search. */
 export function takeFindRequest(path: string): string | null {
   if (pending?.path !== path) return null;

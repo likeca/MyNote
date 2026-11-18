@@ -41,7 +41,7 @@ import { ancestorKeys, resolveWikiLink } from "../lib/tree";
 import { aiAccess, type AiAccess } from "../lib/ai";
 import { wantsNewTab } from "../lib/nav";
 import { useSettings } from "../lib/settings";
-import { FIND_REQUEST, FindBar, findMatches, takeFindRequest } from "../editor/findInPage";
+import { FIND_REQUEST, FindBar, findMatches, hasFindRequest, takeFindRequest } from "../editor/findInPage";
 import { OwnDatabase, useVault } from "../lib/vault";
 import { CoverBox, CoverCredit, CoverPicker, photoCover } from "./Cover";
 import { IconPicker } from "./LazyIconPicker";
@@ -70,6 +70,9 @@ type Doc = { frontmatter: string; body: string };
 /** The file name: what `[[links]]` to the page say (its name may be shared, its file name isn't). */
 const titleOf = fileTitle;
 const parentOf = (path: string) => (path.includes("/") ? `${path.slice(0, path.lastIndexOf("/"))}.md` : null);
+
+/** Where each page was scrolled to, so going back to it (tabs, back, sidebar) shows the same place. */
+const scrollPositions = new Map<string, number>();
 
 /**
  * Whether the page view at `root` takes the page's shortcuts (⌘A, ⌘F): the one the cursor is in;
@@ -165,6 +168,8 @@ export function PageView(p: Props) {
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
 
   const scroller = useRef<HTMLDivElement>(null);
+  /** The scroll position to go to once the page just loaded is on screen. */
+  const restoreTo = useRef<number | null>(null);
   const pathRef = useRef(p.path);
   const fm = useRef("");
   const body = useRef("");
@@ -223,7 +228,8 @@ export function PageView(p: Props) {
         if (cancelled) return;
         pathRef.current = path; // saves go to this page from now on
         setShownPath(path);
-        scroller.current?.scrollTo({ top: 0 }); // a new page starts at its top
+        // Where you left it; a new page (or one opened from a search, which goes to the match) at its top.
+        restoreTo.current = hasFindRequest(path) ? 0 : (scrollPositions.get(path) ?? 0);
         setTitle(pageTitle(path, splitNote(content).frontmatter));
         setBacklinks(links);
         load(content);
@@ -295,6 +301,30 @@ export function PageView(p: Props) {
       window.removeEventListener(FIND_REQUEST, onRequest);
     };
   }, [p.mode, p.path, shownPath, editorKey, doc === null || doc === "missing"]);
+
+  // Back on a page: where it was scrolled to. Its blocks (toggles, images, databases) can take a
+  // few frames to reach full height, so it keeps trying for a moment, until you scroll yourself.
+  useLayoutEffect(() => {
+    const target = restoreTo.current;
+    const el = scroller.current;
+    if (target === null || !el) return;
+    restoreTo.current = null;
+    el.scrollTop = target;
+    if (Math.abs(el.scrollTop - target) <= 1) return;
+    let frame = 0;
+    let tries = 0;
+    const events = ["wheel", "pointerdown", "keydown", "touchstart"] as const;
+    const off = () => events.forEach((t) => window.removeEventListener(t, stop, true));
+    const stop = () => (cancelAnimationFrame(frame), off());
+    events.forEach((t) => window.addEventListener(t, stop, true));
+    const step = () => {
+      el.scrollTop = target;
+      if (Math.abs(el.scrollTop - target) <= 1 || ++tries > 60) return off();
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return stop;
+  }, [editorKey, shownPath]);
 
   const patch = (values: Record<string, unknown>) => {
     fm.current = patchFrontmatter(fm.current, values);
@@ -435,6 +465,7 @@ export function PageView(p: Props) {
       <div
         ref={scroller}
         className="h-full overflow-y-auto"
+        onScroll={(e) => scrollPositions.set(pathRef.current, e.currentTarget.scrollTop)}
         data-font={font}
         data-small={small || undefined}
         // Files dropped beside the text (its margins, the space below it, the title) still attach:
