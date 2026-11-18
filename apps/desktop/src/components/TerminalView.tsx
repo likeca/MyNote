@@ -1,5 +1,6 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Terminal, type ITheme } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
 import { api } from "../lib/api";
@@ -58,6 +59,8 @@ export function TerminalView({ active }: { active: boolean }) {
       lineHeight: 1.15,
       cursorBlink: true,
       macOptionIsMeta: true,
+      // A right-click pastes (below), so it leaves the selection as it is.
+      rightClickSelectsWord: false,
       scrollback: 10000,
       theme: theme(),
     });
@@ -98,6 +101,24 @@ export function TerminalView({ active }: { active: boolean }) {
       else if (data === "\r") (t.reset(), start());
     });
     const resized = t.onResize(({ cols, rows }) => session !== null && api.terminalResize(session, cols, rows));
+    // Selecting text copies it, once the selection stops changing (a drag, a double or triple click).
+    let copyTimer: number | undefined;
+    const selected = t.onSelectionChange(() => {
+      window.clearTimeout(copyTimer);
+      copyTimer = window.setTimeout(() => {
+        const text = t.getSelection();
+        if (text) void writeText(text).catch(() => {});
+      }, 150);
+    });
+    // A right-click pastes, as in PuTTY or Windows Terminal (through the shell's paste mode, if on).
+    const el = box.current!;
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      readText()
+        .then((text) => text && (t.paste(text), t.focus()))
+        .catch(() => {});
+    };
+    el.addEventListener("contextmenu", onContextMenu);
     // Fits the window (and the sidebar opening or closing); not while hidden in the background.
     const observer = new ResizeObserver(() => box.current?.offsetParent && f.fit());
     observer.observe(box.current!);
@@ -110,6 +131,9 @@ export function TerminalView({ active }: { active: boolean }) {
       themed.disconnect();
       input.dispose();
       resized.dispose();
+      selected.dispose();
+      window.clearTimeout(copyTimer);
+      el.removeEventListener("contextmenu", onContextMenu);
       if (session !== null) api.terminalClose(session);
       t.dispose();
       term.current = fit.current = null;

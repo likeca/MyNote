@@ -750,7 +750,8 @@ pre {
 
 .mynote-prose table {
   border-collapse: collapse;
-  font-size: 14px;
+  /* 14px at the default size: follows the page's text size and the ⌘+ / ⌘− zoom. */
+  font-size: 0.875em;
 }
 
 /* 1px lines in a solid colour: the text colour mixed into the page background (what the

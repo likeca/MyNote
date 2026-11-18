@@ -42,6 +42,8 @@ To see two pages side by side, `⌥`-click a page in the sidebar, or right-click
 
 A terminal tab runs your own shell, as Terminal does, starting in the workspace folder, so you can use git, run scripts or start an agent next to your pages. It keeps running while you look at other tabs, and closing the tab ends it. Pages you open from a terminal tab open in a new tab beside it. In a terminal, `Ctrl` keys go to the shell (`Ctrl C`, `Ctrl R`…), and `⌘+` and `⌘−` zoom its text with the pages'. When the shell exits, press Enter to start a new one. Terminals aren't reopened the next time you start MyNote.
 
+In any terminal, selecting text (drag, or double-click a word) copies it, and a right-click pastes what you copied, as in PuTTY or Windows Terminal.
+
 To keep a terminal open while you read and write, for an AI agent such as Claude Code or oh-my-pi, press `⌘J` or click the terminal button in a page's top bar: a terminal opens beside the page. Drag its left edge to make it wider or narrower. It stays as you move between pages, and closing it (`⌘J` again, or `×`) only hides it: the shell and whatever runs in it keep going until MyNote quits.
 
 ## Workspaces
