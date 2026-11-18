@@ -21,7 +21,7 @@ Pages are listed A–Z until you drag one into place in the sidebar. The order i
 
 Hover above a page's title to see **Add icon**, **Add cover** and **Add tags**.
 
-- **Icon:** pick an emoji, or an icon in the colour you choose, or upload an image or paste a link to one. There's a random button, and your recent icons are kept at the top. Click the icon later to change or remove it.
+- **Icon:** pick an emoji, or an icon in the colour you choose, or upload an image or paste a link to one. On **Upload**, just press `⌘V`: a copied image link, or a copied image, becomes the icon straight away. There's a random button, and your recent icons are kept at the top. Click the icon later to change or remove it.
 - **Cover:** starts as a gradient. Hover it and click **Change cover** to pick another gradient, a colour or a link to an image, or **Remove**.
 - **Tags:** type a tag and press Enter. Hover a tag and click × to remove it.
 

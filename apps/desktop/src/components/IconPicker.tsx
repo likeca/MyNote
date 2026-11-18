@@ -333,9 +333,18 @@ function UploadPane({ onPick, page }: { onPick: (icon: string) => void; page?: s
         className="flex gap-2"
       >
         <input
+          // Ready to paste: ⌘V right after opening Upload sets the icon (see onPaste).
+          autoFocus
           value={link}
           onChange={(e) => setLink(e.target.value)}
-          placeholder="…or paste an image link"
+          // Pasting an image link, or an image itself, into the empty field sets the icon straight away.
+          onPaste={(e) => {
+            const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+            if (file) return (e.preventDefault(), void upload(file));
+            const text = e.clipboardData.getData("text/plain").trim();
+            if (!link.trim() && /^https?:\/\/\S+$/.test(text)) (e.preventDefault(), onPick(text));
+          }}
+          placeholder="Paste an image or an image link"
           className="h-8 min-w-0 flex-1 rounded-md border border-line bg-[var(--search-bg)] px-2 text-sm text-ink outline-none focus:border-[var(--blue)]"
         />
         <button className="h-8 rounded-md bg-[var(--blue)] px-3 text-sm font-medium text-white hover:brightness-110">Submit</button>
