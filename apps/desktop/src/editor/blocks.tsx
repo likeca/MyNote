@@ -1225,18 +1225,31 @@ export function dropFiles(view: EditorView, files: File[], page: string | null, 
 
 /**
  * Puts `node` in the page at `pos`, returning the position just after it. A file (an inline chip)
- * goes right there in the line; where a line can't hold it (a code block, between blocks) it gets a
- * line of its own after. An image is a block: it takes the place of an empty line, or goes after
- * the line `pos` is in, never splitting it.
+ * goes right there in the line, a space after another file; with `ownLine` (one of several files),
+ * or where a line can't hold it (a code block, between blocks), it gets a line of its own. An image
+ * is a block. A line of its own takes the place of an empty line, or goes after the line `pos` is
+ * in, never splitting it. On a toggle's title (which holds only text), the files go into the
+ * toggle, at the top, and it opens to show them.
  */
-function placeFile(tr: Transaction, node: PMNode, pos: number): number {
-  const $pos = tr.doc.resolve(pos);
-  const { parent } = $pos;
-  if (node.isInline && parent.isTextblock && parent.canReplaceWith($pos.index(), $pos.index(), node.type)) {
-    tr.insert(pos, node);
-    return pos + node.nodeSize;
+function placeFile(tr: Transaction, node: PMNode, pos: number, ownLine = false): number {
+  let $pos = tr.doc.resolve(pos);
+  if ($pos.parent.type.name === "detailsSummary") {
+    const toggle = $pos.depth - 1;
+    if (!$pos.node(toggle).attrs.open) tr.setNodeAttribute($pos.before(toggle), "open", true);
+    // Inside the toggle's body (just after the title); into its first line when that's empty.
+    const start = $pos.after() + 1;
+    const first = tr.doc.nodeAt(start);
+    $pos = tr.doc.resolve(first?.type.name === "paragraph" && !first.content.size ? start + 1 : start);
+    pos = $pos.pos;
   }
-  const block = node.isInline ? tr.doc.type.schema.nodes.paragraph.create(null, node) : node;
+  const { parent } = $pos;
+  const { schema } = tr.doc.type;
+  if (!ownLine && node.isInline && parent.isTextblock && parent.canReplaceWith($pos.index(), $pos.index(), node.type)) {
+    const content = $pos.nodeBefore?.type.name === "fileAttachment" ? [schema.text(" "), node] : [node];
+    tr.insert(pos, content);
+    return pos + content.reduce((n, c) => n + c.nodeSize, 0);
+  }
+  const block = node.isInline ? schema.nodes.paragraph.create(null, node) : node;
   if (parent.isTextblock && $pos.depth > 0 && !parent.content.size && parent.type.name === "paragraph") {
     tr.replaceWith($pos.before(), $pos.after(), block);
     return $pos.before() + block.nodeSize;
@@ -1246,8 +1259,12 @@ function placeFile(tr: Transaction, node: PMNode, pos: number): number {
   return tr.mapping.map(at);
 }
 
-/** Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
+/**
+ * Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image
+ * block or an attachment. One file goes in the line at `pos`; several, each on a line of its own.
+ */
 async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null) {
+  const ownLine = files.length > 1;
   for (const file of files) {
     const { schema } = view.state;
     let node;
@@ -1268,14 +1285,14 @@ async function insertFiles(view: EditorView, files: File[], pos: number, page: s
     if (view.isDestroyed) return;
     // Clamped: the page may have got shorter while the file saved.
     const tr = view.state.tr;
-    pos = placeFile(tr, node, Math.min(pos, tr.doc.content.size));
-    // The cursor waits after it, so typing (or the next file) carries on from there.
-    if (node.isInline) tr.setSelection(TextSelection.create(tr.doc, pos));
+    pos = placeFile(tr, node, Math.min(pos, tr.doc.content.size), ownLine);
+    // The cursor waits after it (at the end of its line), so typing carries on from there.
+    if (node.isInline) tr.setSelection(Selection.near(tr.doc.resolve(ownLine ? pos - 1 : pos), -1));
     view.dispatch(tr.scrollIntoView());
   }
 }
 
-/** The `/File` command: asks for files to attach and puts them at the cursor, in the line. */
+/** The `/File` command: asks for files to attach and puts one at the cursor, in the line; several, each on its own line. */
 export async function pickAttachments(editor: TiptapEditor) {
   const page = editor.storage.fileAttachment.page;
   // Where the cursor was: the dialog takes the focus, and the page may change while files copy.
@@ -1285,7 +1302,6 @@ export async function pickAttachments(editor: TiptapEditor) {
   try {
     const picked = await openDialog({ multiple: true, title: "Attach files" });
     const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
-    let placed = 0;
     for (const path of paths) {
       let node;
       try {
@@ -1297,10 +1313,8 @@ export async function pickAttachments(editor: TiptapEditor) {
       }
       if (editor.isDestroyed) return;
       const tr = editor.state.tr;
-      // Several files: a space between them, as typed.
-      if (placed++) tracked.pos = placeFile(tr, editor.schema.text(" "), Math.min(tracked.pos, tr.doc.content.size));
-      tracked.pos = placeFile(tr, node, Math.min(tracked.pos, tr.doc.content.size));
-      tr.setSelection(TextSelection.create(tr.doc, tracked.pos));
+      tracked.pos = placeFile(tr, node, Math.min(tracked.pos, tr.doc.content.size), paths.length > 1);
+      tr.setSelection(Selection.near(tr.doc.resolve(paths.length > 1 ? tracked.pos - 1 : tracked.pos), -1));
       editor.off("transaction", track);
       editor.view.dispatch(tr.scrollIntoView());
       editor.on("transaction", track);
@@ -1332,6 +1346,26 @@ export function assetPath(href: string) {
   }
 }
 
+/**
+ * Deletes the file at `pos` from the page. Alone on its line (nothing else there but spaces), the
+ * line goes too, and the cursor goes to the end of the line above.
+ */
+function removeAttachment(tr: Transaction, pos: number): Transaction {
+  const $pos = tr.doc.resolve(pos);
+  const node = tr.doc.nodeAt(pos);
+  if (!node) return tr;
+  const line = $pos.parent;
+  let things = 0;
+  line.forEach((c) => void ((c.isText ? c.text!.trim() : true) && things++));
+  // The only line of a toggle, column or the page stays, empty: they can't be left with none.
+  if (things === 1 && line.type.name === "paragraph" && $pos.depth > 0 && $pos.node($pos.depth - 1).childCount > 1) {
+    const from = $pos.before();
+    tr.delete(from, $pos.after());
+    return tr.setSelection(Selection.near(tr.doc.resolve(Math.min(from, tr.doc.content.size)), -1));
+  }
+  return tr.delete(pos, pos + node.nodeSize);
+}
+
 export const FileAttachment = Node.create({
   name: "fileAttachment",
   group: "inline",
@@ -1355,6 +1389,24 @@ export const FileAttachment = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(AttachmentView);
+  },
+  // Backspace or Delete on a file (selected, or next to the cursor) removes it, and its line too
+  // when it was alone there (see removeAttachment).
+  addKeyboardShortcuts() {
+    const remove = (dir: -1 | 1) => () => {
+      const { state, view } = this.editor;
+      const { selection } = state;
+      let pos: number | null = null;
+      if (selection instanceof NodeSelection && selection.node.type.name === this.name) pos = selection.from;
+      else if (selection.empty) {
+        const near = dir < 0 ? selection.$from.nodeBefore : selection.$from.nodeAfter;
+        if (near?.type.name === this.name) pos = dir < 0 ? selection.from - near.nodeSize : selection.from;
+      }
+      if (pos === null) return false;
+      view.dispatch(removeAttachment(state.tr, pos).scrollIntoView());
+      return true;
+    };
+    return { Backspace: remove(-1), Delete: remove(1) };
   },
   // When the last link to a file leaves the page (Backspace, cut, deleting its block, its bin
   // button), the file leaves `_assets/` too, unless another page links to it. It waits in the Trash:
@@ -1425,7 +1477,7 @@ export function formatFileSize(bytes: number) {
  * editor, anything else in its own app; ⌘-click shows it in Finder. Its bin (on hover) removes it
  * from the page, and with it the file (see FileAttachment's plugin); undo brings both back.
  */
-function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
+function AttachmentView({ node, selected, editor, getPos }: NodeViewProps) {
   const { src, name } = node.attrs as { src: string; name: string };
   const { openPage } = useVault();
   // undefined: not known (yet, or this app can't tell); null: the file isn't there.
@@ -1453,7 +1505,8 @@ function AttachmentView({ node, selected, deleteNode }: NodeViewProps) {
   const remove = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    deleteNode();
+    const pos = getPos();
+    if (typeof pos === "number") editor.view.dispatch(removeAttachment(editor.state.tr, pos));
   };
   return (
     <NodeViewWrapper
