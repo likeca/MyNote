@@ -1211,17 +1211,39 @@ export const ImageBlock = Image.extend({
 });
 
 /**
- * Attaches dropped or pasted files at `pos`: after the line it's in, never splitting it (or at the
- * end of the page with no `pos`, for a drop beside the text). See insertFiles.
+ * Attaches dropped or pasted files at `pos`, where the cursor or the pointer is (or at the end of
+ * the page with no `pos`). `beside`: dropped in the margin by a line, so they go after it, on a
+ * line of their own. See insertFiles.
  */
-export function dropFiles(view: EditorView, files: File[], page: string | null, pos?: number | null) {
+export function dropFiles(view: EditorView, files: File[], page: string | null, pos?: number | null, beside = false) {
   const { doc } = view.state;
-  let at = doc.content.size;
-  if (pos != null) {
-    const $pos = doc.resolve(Math.min(Math.max(0, pos), doc.content.size));
-    at = $pos.parent.isTextblock && $pos.depth > 0 ? $pos.after() : $pos.pos;
-  }
+  let at = pos == null ? doc.content.size : Math.min(Math.max(0, pos), doc.content.size);
+  const $at = doc.resolve(at);
+  if (beside && $at.parent.isTextblock && $at.depth > 0) at = $at.after();
   return insertFiles(view, files, at, page);
+}
+
+/**
+ * Puts `node` in the page at `pos`, returning the position just after it. A file (an inline chip)
+ * goes right there in the line; where a line can't hold it (a code block, between blocks) it gets a
+ * line of its own after. An image is a block: it takes the place of an empty line, or goes after
+ * the line `pos` is in, never splitting it.
+ */
+function placeFile(tr: Transaction, node: PMNode, pos: number): number {
+  const $pos = tr.doc.resolve(pos);
+  const { parent } = $pos;
+  if (node.isInline && parent.isTextblock && parent.canReplaceWith($pos.index(), $pos.index(), node.type)) {
+    tr.insert(pos, node);
+    return pos + node.nodeSize;
+  }
+  const block = node.isInline ? tr.doc.type.schema.nodes.paragraph.create(null, node) : node;
+  if (parent.isTextblock && $pos.depth > 0 && !parent.content.size && parent.type.name === "paragraph") {
+    tr.replaceWith($pos.before(), $pos.after(), block);
+    return $pos.before() + block.nodeSize;
+  }
+  const at = parent.isTextblock && $pos.depth > 0 ? $pos.after() : pos;
+  tr.replaceRangeWith(at, at, block);
+  return tr.mapping.map(at);
 }
 
 /** Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image block or an attachment. */
@@ -1237,36 +1259,56 @@ async function insertFiles(view: EditorView, files: File[], pos: number, page: s
       } else {
         const name = file.name || "file";
         const src = assetHref(await api.attachBytes(name, bytes, page));
-        node = schema.nodes.paragraph.create(null, schema.nodes.fileAttachment.create({ src, name }));
+        node = schema.nodes.fileAttachment.create({ src, name });
       }
     } catch (e) {
       console.error(`Couldn't save ${file.name}`, e);
       continue;
     }
     if (view.isDestroyed) return;
-    const at = Math.min(pos, view.state.doc.content.size);
-    const tr = view.state.tr.replaceRangeWith(at, at, node);
-    view.dispatch(tr);
-    // The next file goes right after this one.
-    pos = tr.mapping.map(at);
+    // Clamped: the page may have got shorter while the file saved.
+    const tr = view.state.tr;
+    pos = placeFile(tr, node, Math.min(pos, tr.doc.content.size));
+    // The cursor waits after it, so typing (or the next file) carries on from there.
+    if (node.isInline) tr.setSelection(TextSelection.create(tr.doc, pos));
+    view.dispatch(tr.scrollIntoView());
   }
 }
 
-/** The `/File` command: asks for files to attach and puts them at the cursor, each on its own line. */
+/** The `/File` command: asks for files to attach and puts them at the cursor, in the line. */
 export async function pickAttachments(editor: TiptapEditor) {
   const page = editor.storage.fileAttachment.page;
-  const picked = await openDialog({ multiple: true, title: "Attach files" });
-  const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
-  const lines: JSONContent[] = [];
-  for (const path of paths) {
-    try {
-      const src = assetHref(await api.attachFile(path, page));
-      lines.push({ type: "paragraph", content: [{ type: "fileAttachment", attrs: { src, name: path.split(/[\\/]/).pop() } }] });
-    } catch (e) {
-      console.error(`Couldn't attach ${path}`, e);
+  // Where the cursor was: the dialog takes the focus, and the page may change while files copy.
+  const tracked = { pos: editor.state.selection.from };
+  const track = ({ transaction }: { transaction: Transaction }) => (tracked.pos = transaction.mapping.map(tracked.pos));
+  editor.on("transaction", track);
+  try {
+    const picked = await openDialog({ multiple: true, title: "Attach files" });
+    const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
+    let placed = 0;
+    for (const path of paths) {
+      let node;
+      try {
+        const src = assetHref(await api.attachFile(path, page));
+        node = editor.schema.nodes.fileAttachment.create({ src, name: path.split(/[\\/]/).pop() });
+      } catch (e) {
+        console.error(`Couldn't attach ${path}`, e);
+        continue;
+      }
+      if (editor.isDestroyed) return;
+      const tr = editor.state.tr;
+      // Several files: a space between them, as typed.
+      if (placed++) tracked.pos = placeFile(tr, editor.schema.text(" "), Math.min(tracked.pos, tr.doc.content.size));
+      tracked.pos = placeFile(tr, node, Math.min(tracked.pos, tr.doc.content.size));
+      tr.setSelection(TextSelection.create(tr.doc, tracked.pos));
+      editor.off("transaction", track);
+      editor.view.dispatch(tr.scrollIntoView());
+      editor.on("transaction", track);
     }
+    if (!editor.isDestroyed) editor.commands.focus();
+  } finally {
+    editor.off("transaction", track);
   }
-  if (lines.length && !editor.isDestroyed) editor.chain().focus().insertContent(lines).run();
 }
 
 // ---------- file attachment ----------
