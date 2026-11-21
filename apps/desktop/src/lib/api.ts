@@ -50,6 +50,8 @@ export const api = {
   linkPreview: (url: string) => invoke<{ title: string | null; icon: string | null; avatar: string | null }>("link_preview", { url }),
   /** Attaches a file picked on disk: copies it into `page`'s attachment folder; returns its vault path. */
   attachFile: (path: string, page: string | null) => invoke<string>("attach_file", { path, page }),
+  /** Files dragged in from Finder (`drag`) or copied there (the clipboard), as paths (macOS; empty elsewhere). See file_paths. */
+  filePaths: (drag: boolean) => invoke<string[]>("file_paths", { drag }),
   /** Attaches a dropped or pasted file to `page`, sent as raw bytes; returns its vault path. */
   attachBytes: (name: string, bytes: ArrayBuffer, page: string | null) =>
     invoke<string>("attach_bytes", bytes, { headers: { "x-file-name": encodeURIComponent(name), "x-page": encodeURIComponent(page ?? "") } }),

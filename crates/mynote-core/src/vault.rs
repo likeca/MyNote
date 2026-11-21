@@ -761,12 +761,14 @@ pub fn link_path(path: &str) -> String {
     out
 }
 
-/// A file's name as kept: no folders, control characters or leading dots, at most ~100 characters
-/// before its extension; "file" when nothing's left.
+/// A file's name as kept: no folders or control characters, at most ~100 characters before its
+/// extension; "file" when nothing's left. A leading dot stays (`.env`, `.gitignore`).
 fn clean_file_name(name: &str) -> String {
     let base = name.rsplit(['/', '\\']).next().unwrap_or("");
     let base: String = base.chars().map(|c| if c.is_control() || c == ':' { '-' } else { c }).collect();
-    let base = base.trim().trim_start_matches('.').trim();
+    let base = base.trim();
+    // "." and ".." name a folder, not a file.
+    let base = if base.chars().all(|c| c == '.') { "" } else { base };
     let (stem, ext) = match base.rsplit_once('.') {
         Some((s, e)) if !s.is_empty() && !e.is_empty() => (s, format!(".{e}")),
         _ => (base, String::new()),
@@ -1346,10 +1348,14 @@ mod tests {
         // A second file of the same name is numbered, not overwritten.
         assert_eq!(save_attachment(&dir, Some(page), "Q3 Report.pdf", b"2").unwrap(), "Projects/Launch plan/_assets/Q3 Report (2).pdf");
         assert_eq!(read_asset(&dir, "Projects/Launch plan/_assets/Q3 Report.pdf").unwrap(), b"1");
-        // Names can't climb out of the folder or hide.
+        // Names can't climb out of the folder, or name the folder itself.
         assert_eq!(save_attachment(&dir, Some(page), "../../evil.sh", b"x").unwrap(), "Projects/Launch plan/_assets/evil.sh");
-        assert_eq!(save_attachment(&dir, Some(page), ".env", b"x").unwrap(), "Projects/Launch plan/_assets/env");
-        assert_eq!(save_attachment(&dir, Some(page), "", b"x").unwrap(), "Projects/Launch plan/_assets/file");
+        assert_eq!(save_attachment(&dir, Some(page), "..", b"x").unwrap(), "Projects/Launch plan/_assets/file");
+        // Dot-files keep their dot, also when the name is taken.
+        assert_eq!(save_attachment(&dir, Some(page), ".env", b"x").unwrap(), "Projects/Launch plan/_assets/.env");
+        assert_eq!(save_attachment(&dir, Some(page), ".env", b"y").unwrap(), "Projects/Launch plan/_assets/.env (2)");
+        assert_eq!(save_attachment(&dir, Some(page), ".env.local", b"x").unwrap(), "Projects/Launch plan/_assets/.env.local");
+        assert_eq!(save_attachment(&dir, Some(page), "", b"x").unwrap(), "Projects/Launch plan/_assets/file (2)");
         assert!(save_attachment(&dir, Some("../Outside.md"), "a.txt", b"x").is_err());
         // Without a page: the workspace's `_assets/`, no extension invented.
         let plain = save_attachment(&dir, None, "Makefile", b"all:").unwrap();

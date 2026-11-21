@@ -1195,7 +1195,7 @@ export const ImageBlock = Image.extend({
             if (moved || !files.length) return false;
             event.preventDefault();
             const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            void dropFiles(view, files, editor.storage.fileAttachment.page, at?.pos);
+            void dropFiles(view, files, editor.storage.fileAttachment.page, at?.pos, false, true);
             return true;
           },
           handlePaste: (view, event) => {
@@ -1214,14 +1214,16 @@ export const ImageBlock = Image.extend({
 /**
  * Attaches dropped or pasted files at `pos`, where the cursor or the pointer is (or at the end of
  * the page with no `pos`). `beside`: dropped in the margin by a line, so they go after it, on a
- * line of their own. See insertFiles.
+ * line of their own. `dragged`: dragged in rather than pasted, which tells where their real names
+ * are (see realPaths). See insertFiles.
  */
-export function dropFiles(view: EditorView, files: File[], page: string | null, pos?: number | null, beside = false) {
+export async function dropFiles(view: EditorView, files: File[], page: string | null, pos?: number | null, beside = false, dragged = false) {
   const { doc } = view.state;
   let at = pos == null ? doc.content.size : Math.min(Math.max(0, pos), doc.content.size);
   const $at = doc.resolve(at);
   if (beside && $at.parent.isTextblock && $at.depth > 0) at = $at.after();
-  return insertFiles(view, files, at, page);
+  const paths = await realPaths(files, dragged);
+  return insertFiles(view, files, at, page, paths);
 }
 
 /**
@@ -1261,22 +1263,42 @@ export function placeFile(tr: Transaction, node: PMNode, pos: number, ownLine = 
 }
 
 /**
+ * The real paths of files dragged in from Finder (`dragged`) or copied there and pasted, by their
+ * place in `files` (null where unknown). WebKit's File can lack a name's leading dot
+ * (".dockerignore" comes as "dockerignore"); the pasteboard has the paths. It can still hold files
+ * from before (the last drag, an older copy), so only paths whose names match (leading dots aside)
+ * are taken.
+ */
+async function realPaths(files: File[], dragged: boolean): Promise<(string | null)[]> {
+  const paths = await api.filePaths(dragged).catch(() => [] as string[]);
+  const bare = (name: string) => name.replace(/^\.+/, "");
+  const left = [...paths];
+  return files.map((file) => {
+    const i = left.findIndex((p) => bare(p.split(/[\\/]/).pop() ?? "") === bare(file.name));
+    return i < 0 ? null : left.splice(i, 1)[0];
+  });
+}
+
+/**
  * Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image
  * block or an attachment. One file goes in the line at `pos`; several, each on a line of its own.
+ * A file with a known path (`paths`, dragged from Finder) is copied from it, under its own name.
  */
-async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null) {
+async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null, paths: (string | null)[] = []) {
   const ownLine = files.length > 1;
-  for (const file of files) {
+  for (const [i, file] of files.entries()) {
     const { schema } = view.state;
+    const path = paths[i] ?? null;
     let node;
     try {
-      const bytes = await file.arrayBuffer();
       if (showsAsImage(file.type)) {
+        const bytes = await file.arrayBuffer();
         const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)], page);
         node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
       } else {
-        const name = file.name || "file";
-        const src = assetHref(await api.attachBytes(name, bytes, page));
+        const name = (path && path.split(/[\\/]/).pop()) || file.name || "file";
+        const saved = path ? await api.attachFile(path, page).catch(() => null) : null;
+        const src = assetHref(saved ?? (await api.attachBytes(name, await file.arrayBuffer(), page)));
         node = schema.nodes.fileAttachment.create({ src, name });
       }
     } catch (e) {

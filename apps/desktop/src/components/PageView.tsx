@@ -479,7 +479,7 @@ export function PageView(p: Props) {
           const r = view.dom.getBoundingClientRect();
           const pos =
             e.clientY < r.top ? 0 : e.clientY > r.bottom ? null : view.posAtCoords({ left: Math.min(Math.max(e.clientX, r.left + 1), r.right - 1), top: e.clientY })?.pos;
-          void dropFiles(view, files, path, pos, true);
+          void dropFiles(view, files, path, pos, true, true);
         }}
         // A drag that starts beside the text (its margins, the space below it) draws a box: the
         // blocks it crosses are selected, ready to delete, copy or move (see blockSelect.ts).

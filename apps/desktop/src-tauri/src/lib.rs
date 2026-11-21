@@ -899,6 +899,48 @@ fn set_dock_icon(app: AppHandle, dark: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// The files being dragged in (`drag`), or copied and pasted (the clipboard), as paths: their real
+/// names, which the page's own copies (File) can lack. Apps built on Chromium (VS Code, Chrome) hand
+/// a file over as a promise, and the copy WebKit makes of it loses a leading dot (".dockerignore"
+/// arrives as "dockerignore"). The drag pasteboard still holds the last drag after the drop; the
+/// page matches the paths to its files by name.
+// Async: plain commands run on the main thread, where the pasteboard read is queued (a deadlock).
+#[tauri::command]
+async fn file_paths(app: AppHandle, drag: bool) -> Vec<String> {
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let read = app.run_on_main_thread(move || {
+            use objc2_app_kit::{NSPasteboard, NSPasteboardNameDrag, NSPasteboardTypeFileURL, NSPasteboardTypeURL};
+            use objc2_foundation::NSURL;
+            let mut paths = Vec::new();
+            let board = if drag { NSPasteboard::pasteboardWithName(unsafe { NSPasteboardNameDrag }) } else { NSPasteboard::generalPasteboard() };
+            for item in board.pasteboardItems().iter().flat_map(|items| items.iter()) {
+                // Finder gives a file URL; Chromium apps only a URL, which is a file:// one for files
+                // (web links have no file path, so they're skipped). Finder's can be file references
+                // (file:///.file/id=…): filePathURL resolves them.
+                let url = [unsafe { NSPasteboardTypeFileURL }, unsafe { NSPasteboardTypeURL }]
+                    .into_iter()
+                    .find_map(|kind| item.stringForType(kind))
+                    .and_then(|s| NSURL::URLWithString(&s));
+                if let Some(path) = url.and_then(|u| u.filePathURL()).and_then(|u| u.path()) {
+                    paths.push(path.to_string());
+                }
+            }
+            let _ = tx.send(paths);
+        });
+        if read.is_ok() {
+            return rx.recv_timeout(std::time::Duration::from_secs(2)).unwrap_or_default();
+        }
+        Vec::new()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, drag);
+        Vec::new()
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // First, while nothing else runs: the login shell's PATH, so git finds gpg, ssh and helpers.
@@ -999,6 +1041,7 @@ pub fn run() {
             terminal_resize,
             terminal_close,
             set_dock_icon,
+            file_paths,
             link_preview::link_preview
         ])
         .run(tauri::generate_context!())
