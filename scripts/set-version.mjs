@@ -36,8 +36,9 @@ function setJson(file, edit) {
 console.log(`Setting version ${version}:`);
 replaceOnce("apps/desktop/src-tauri/tauri.conf.json", /("version":\s*)"[^"]+"/, `$1"${version}"`);
 replaceOnce("apps/desktop/src-tauri/Cargo.toml", /^(version\s*=\s*)"[^"]+"/m, `$1"${version}"`);
-replaceOnce("Cargo.lock", /(name = "mynote"\nversion = )"[^"]+"/, `$1"${version}"`);
-replaceOnce("Cargo.lock", /(name = "mynote-mobile"\nversion = )"[^"]+"/, `$1"${version}"`);
+// `\r?\n`: Windows checkouts (the release's Windows build) have CRLF line endings.
+replaceOnce("Cargo.lock", /(name = "mynote"\r?\nversion = )"[^"]+"/, `$1"${version}"`);
+replaceOnce("Cargo.lock", /(name = "mynote-mobile"\r?\nversion = )"[^"]+"/, `$1"${version}"`);
 replaceOnce("apps/mobile/src-tauri/tauri.conf.json", /("version":\s*)"[^"]+"/, `$1"${version}"`);
 replaceOnce("apps/mobile/src-tauri/Cargo.toml", /^(version\s*=\s*)"[^"]+"/m, `$1"${version}"`);
 setJson("apps/desktop/package.json", (j) => (j.version = version));
