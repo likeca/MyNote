@@ -24,7 +24,7 @@ Everything on a page is a block: a paragraph, a heading, a list, a table. You ca
 
 Hover a block to see the `⋮⋮` handle on its left.
 
-- **Drag** the handle to move the block.
+- **Drag** the handle to move the block. Just below an open toggle, where you are across the page decides: in line with the toggle's text, the block goes in at the end of the toggle (the line shows inside it); under the toggle's arrow, it goes after the toggle.
 - **Click** it to open the block menu: **Turn into**, **Color**, **Duplicate** (`⌘D`) and **Delete**. Type in the menu's search box to find an action.
 - `⌘⌥0` to `⌘⌥8` turn the current block into another type. See [[Keyboard shortcuts]].
 

@@ -55,6 +55,7 @@ import { TableControls, TableMenu, TableOptions } from "./TableControls";
 import { normalizeMarkdown } from "./markdown";
 import { BlockEquation, InlineEquation, MathAwareMarkdown } from "./math";
 import { BlockSelect, deleteBlocks, selectedBlocks } from "./blockSelect";
+import { ToggleDrop } from "./toggleDrop";
 import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, SlashCommand, type PageActions, type PageLinkOptions } from "./suggestions";
 import { FindInPage } from "./findInPage";
 import { LinkMention } from "./LinkMention";
@@ -186,6 +187,7 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       Focus.configure({ className: "has-focus", mode: "deepest" }),
       BlockKeys,
       BlockSelect,
+      ToggleDrop,
       SlashCommand.configure({ page }),
       PageLinkSuggestion.configure({ getNotes, createPage }),
       MentionSuggestion.configure({ getNotes, createPage }),

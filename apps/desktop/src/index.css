@@ -403,6 +403,11 @@ pre {
 
 /* ---------- Editor ---------- */
 
+/* A block dragged into the toggle above (editor/toggleDrop.ts) shows its own line, inside the toggle. */
+body[data-drop-into-toggle] .prosemirror-dropcursor-block {
+  display: none;
+}
+
 /* Dark themes: the sidebar's inactive text (page rows, Import, Settings…) a little lighter than the
    theme's muted grey. From --ink, so every palette (and Black) keeps its own tint. */
 :root[data-theme="dark"] [data-sidebar] {
