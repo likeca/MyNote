@@ -43,6 +43,7 @@ import {
   Presentation,
   Square,
   Trash2,
+  FolderOpen,
   WrapText,
   X,
 } from "lucide-react";
@@ -60,7 +61,7 @@ import { currentPlatform } from "../plugins/runtime";
 import { useVault } from "../lib/vault";
 import { fileTab, opensInEditor } from "../lib/fileTabs";
 import { claimRun, holdRun, releaseRun, setRunCode, updateRun, useScriptRun, type ScriptRun } from "./scriptRuns";
-import { isAssetPath } from "../lib/assets";
+import { isAssetPath, showsAsImage } from "../lib/assets";
 import { codeHighlight } from "./highlight";
 import { isEditableDiagram, openDiagramEditor } from "./drawio";
 
@@ -1270,7 +1271,7 @@ async function insertFiles(view: EditorView, files: File[], pos: number, page: s
     let node;
     try {
       const bytes = await file.arrayBuffer();
-      if (file.type.startsWith("image/")) {
+      if (showsAsImage(file.type)) {
         const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)], page);
         node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
       } else {
@@ -1523,15 +1524,31 @@ function AttachmentView({ node, selected, editor, getPos }: NodeViewProps) {
       <span className={`min-w-0 truncate text-ink ${missing ? "line-through" : ""}`}>{name || src.split("/").pop()}</span>
       {size != null && <span className="shrink-0 text-xs text-faint">{formatFileSize(size)}</span>}
       {missing && <span className="shrink-0 text-xs text-faint">missing</span>}
-      {/* Floats over the chip's end on hover, so nothing around the chip moves. */}
-      <button
-        title="Delete file"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={remove}
-        className="absolute top-1/2 right-1 hidden size-5 -translate-y-1/2 place-items-center rounded border border-line bg-raised text-muted shadow-sm group-hover/att:grid hover:text-[var(--c-red-text)]"
-      >
-        <Trash2 size={13} />
-      </button>
+      {/* Float over the chip's end on hover, so nothing around the chip moves. */}
+      <span className="absolute top-1/2 right-1 hidden -translate-y-1/2 items-center gap-1 group-hover/att:flex">
+        {!missing && currentPlatform() === "desktop" && (
+          <button
+            title="Show in Finder"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void api.openAttachment(assetPath(src), true).catch(() => setSize(null));
+            }}
+            className="grid size-5 place-items-center rounded border border-line bg-raised text-muted shadow-sm hover:text-ink"
+          >
+            <FolderOpen size={13} />
+          </button>
+        )}
+        <button
+          title="Delete file"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={remove}
+          className="grid size-5 place-items-center rounded border border-line bg-raised text-muted shadow-sm hover:text-[var(--c-red-text)]"
+        >
+          <Trash2 size={13} />
+        </button>
+      </span>
     </NodeViewWrapper>
   );
 }

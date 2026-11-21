@@ -3,7 +3,7 @@ import { Search, Shuffle, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import emojiGroups from "unicode-emoji-json/data-by-group.json";
 import { api } from "../lib/api";
-import { isAssetPath } from "../lib/assets";
+import { isAssetPath, showsAsImage } from "../lib/assets";
 import { COLORS, colorLabel, textColor } from "../lib/colors";
 import { PageIcon, lucideIcon } from "./PageIcon";
 
@@ -290,7 +290,7 @@ function UploadPane({ onPick, page }: { onPick: (icon: string) => void; page?: s
 
   const upload = async (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("Choose an image file (PNG, JPG, GIF, SVG or WebP).");
+    if (!showsAsImage(file.type)) return setError("Choose an image file (PNG, JPG, GIF, SVG or WebP).");
     setBusy(true);
     setError(null);
     try {
@@ -339,7 +339,7 @@ function UploadPane({ onPick, page }: { onPick: (icon: string) => void; page?: s
           onChange={(e) => setLink(e.target.value)}
           // Pasting an image link, or an image itself, into the empty field sets the icon straight away.
           onPaste={(e) => {
-            const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+            const file = Array.from(e.clipboardData.files).find((f) => showsAsImage(f.type));
             if (file) return (e.preventDefault(), void upload(file));
             const text = e.clipboardData.getData("text/plain").trim();
             if (!link.trim() && /^https?:\/\/\S+$/.test(text)) (e.preventDefault(), onPick(text));
