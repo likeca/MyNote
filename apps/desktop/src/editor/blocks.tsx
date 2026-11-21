@@ -1232,7 +1232,7 @@ export function dropFiles(view: EditorView, files: File[], page: string | null, 
  * in, never splitting it. On a toggle's title (which holds only text), the files go into the
  * toggle, at the top, and it opens to show them.
  */
-function placeFile(tr: Transaction, node: PMNode, pos: number, ownLine = false): number {
+export function placeFile(tr: Transaction, node: PMNode, pos: number, ownLine = false): number {
   let $pos = tr.doc.resolve(pos);
   if ($pos.parent.type.name === "detailsSummary") {
     const toggle = $pos.depth - 1;

@@ -59,6 +59,7 @@ import { LINK_DATABASE, MentionSuggestion, NEW_SUBPAGE, PageLinkSuggestion, Slas
 import { FindInPage } from "./findInPage";
 import { LinkMention } from "./LinkMention";
 import { WikiLink } from "./WikiLink";
+import { usePageDrop } from "./pageDrop";
 
 type Props = PageLinkOptions & {
   initial: string;
@@ -222,6 +223,8 @@ export function Editor({ initial, onChange, onOpenLink, getNotes, createPage, pa
       if (editorRef.current === editor) editorRef.current = null;
     };
   }, [editor, editorRef]);
+  // Pages dragged here from the sidebar drop in as links.
+  usePageDrop(editor, getNotes);
 
   if (!editor) return null;
 

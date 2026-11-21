@@ -40,6 +40,7 @@ import type { TreeNode } from "../lib/tree";
 import { aiAccess } from "../lib/ai";
 import { LINKS, open as openLink } from "../lib/links";
 import { wantsNewTab, type OpenOptions } from "../lib/nav";
+import { sendPageDrag } from "../lib/pageDrag";
 import { useSettings } from "../lib/settings";
 import { PluginSidebarItems } from "../plugins/slots";
 import { useVault } from "../lib/vault";
@@ -266,7 +267,7 @@ export function Sidebar(p: Props) {
         createPortal(
         <div
           ref={drag.ghost}
-          className={`pointer-events-none fixed top-0 left-0 z-50 flex h-[30px] max-w-[240px] items-center gap-1 rounded-md border border-line bg-raised px-1.5 text-sm text-ink shadow-pop ${drag.state.target ? "opacity-90" : "opacity-50"}`}
+          className={`pointer-events-none fixed top-0 left-0 z-50 flex h-[30px] max-w-[240px] items-center gap-1 rounded-md border border-line bg-raised px-1.5 text-sm text-ink shadow-pop ${drag.state.target || drag.state.over ? "opacity-90" : "opacity-50"}`}
         >
           <span className="grid size-6 shrink-0 place-items-center text-faint">{rowIcon(drag.state.node)}</span>
           <span className="min-w-0 truncate pr-1">{drag.state.node.title}</span>
@@ -601,13 +602,14 @@ function TreeRow({ node, depth, parent, ...p }: RowProps) {
 // page before or after it (in that row's folder, so between top-level rows moves it to the top
 // level), or on the middle of a page to make it a sub-page. A drop among its own siblings is a
 // reorder (`onReorder`, which writes `order` frontmatter); anywhere else is a move (`onMove`).
+// Dragged out over a page's text, it drops in as a link to the page (see lib/pageDrag).
 
 type DropTarget =
   /** Drop position `gap` among the pages of folder `parent` ("" is the top level), shown as a line. */
   | { kind: "between"; parent: string; gap: number; top: number; left: number }
   /** Onto page (or folder) `key`, shown by highlighting its row. */
   | { kind: "inside"; key: string; top: number; height: number };
-type DragState = { node: TreeNode; target: DropTarget | null };
+type DragState = { node: TreeNode; target: DropTarget | null; over: boolean };
 type TreeDrag = {
   state: DragState | null;
   /** Ref for the floating copy of the row that follows the pointer. */
@@ -660,6 +662,8 @@ function useTreeDrag(scroller: RefObject<HTMLDivElement | null>, tree: TreeNode[
     let dragging = false;
     let cancelled = false;
     let target: DropTarget | null = null;
+    /** Over a page's text, where letting go puts a link to the page. */
+    let over = false;
     let frame = 0;
 
     /** The rows in folder `key` ("" is the top level), as shown; `pages` are the ones with a page. */
@@ -715,12 +719,16 @@ function useTreeDrag(scroller: RefObject<HTMLDivElement | null>, tree: TreeNode[
       return between(key, parentKey, true, block.bottom);
     };
 
+    // Out past the tree, over a page's text: the page shows where a link to this page would go.
+    const toPage = (phase: "move" | "end") => !!node.note && sendPageDrag(phase, pointer.current.x, pointer.current.y, node.note.path);
     const update = () => {
       place();
       const next = measure();
-      if (!sameTarget(next, target)) {
+      const nextOver = next ? (toPage("end"), false) : toPage("move");
+      if (!sameTarget(next, target) || nextOver !== over) {
         target = next;
-        setState({ node, target });
+        over = nextOver;
+        setState({ node, target, over });
       }
     };
 
@@ -748,6 +756,7 @@ function useTreeDrag(scroller: RefObject<HTMLDivElement | null>, tree: TreeNode[
       cancelAnimationFrame(frame);
       document.body.style.removeProperty("cursor");
       document.body.style.removeProperty("user-select");
+      if (node.note) sendPageDrag("end", 0, 0, node.note.path);
       setState(null);
     };
 
@@ -761,7 +770,8 @@ function useTreeDrag(scroller: RefObject<HTMLDivElement | null>, tree: TreeNode[
         document.body.style.userSelect = "none";
         frame = requestAnimationFrame(autoscroll);
         target = measure();
-        setState({ node, target });
+        over = !target && toPage("move");
+        setState({ node, target, over });
         return;
       }
       update();
@@ -769,7 +779,9 @@ function useTreeDrag(scroller: RefObject<HTMLDivElement | null>, tree: TreeNode[
 
     const up = () => {
       const drop = dragging && !cancelled ? target : null;
+      const onPage = dragging && !cancelled && !target && over;
       finish();
+      if (onPage && node.note) sendPageDrag("drop", pointer.current.x, pointer.current.y, node.note.path);
       if (!dragging) return;
       // The release would otherwise click the row under the pointer and open it.
       const swallow = (ev: MouseEvent) => (ev.stopPropagation(), ev.preventDefault());

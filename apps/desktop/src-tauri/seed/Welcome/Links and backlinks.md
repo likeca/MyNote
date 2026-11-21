@@ -10,6 +10,7 @@ Pages link to each other with double square brackets, like this: [[Ideas]]. Clic
 - Type `@` for the same list, plus **Today**, **Tomorrow** and **Yesterday**, which insert the date.
 - `/Link to page` in the block menu works the same as typing `[[`.
 - **Copy link** in a page's `•••` menu copies its link, ready to paste into another page.
+- Drag a page from the sidebar onto the page you're writing. A line shows where the link will go; let go to put it there.
 
 If a link points at a page that doesn't exist yet, clicking it creates the page.
 

@@ -12,6 +12,7 @@ MyNote has two parts: the sidebar on the left and the open page on the right.
   - Hover a page and click `+` to add a page inside it.
   - Click `•••` to add it to Favorites, hide it from AI agents, duplicate it, add a page inside or move it to the Trash.
   - Drag a page up or down to change its place among the pages next to it. A line shows where it will land; press `Esc` to cancel.
+  - Drag a page out of the sidebar onto a page's text to link to it there. See [[Links and backlinks]].
 - **Add new**, or the pen icon at the top, creates a page. So does `⌘N`.
 - **Connect agents** sets up AI agents. See [[Connect your AI agents]].
 - **Import**, items added by plugins (such as **Library** from Media Library), **Settings** and **Trash** are at the bottom. See [[Import]], [[Plugins]] and [[Trash]].
