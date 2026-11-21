@@ -1,6 +1,6 @@
 [package]
 name = "mynote-mobile"
-version = "0.5.0"
+version = "0.6.0"
 description = "MyNote for iOS and Android: your notes as Markdown, on your phone"
 authors = ["Devian Labs and contributors"]
 license = "MIT"

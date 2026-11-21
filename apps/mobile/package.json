@@ -1,7 +1,7 @@
 {
   "name": "@mynote/mobile",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "MyNote for iOS and Android",
   "license": "MIT",
   "type": "module",
