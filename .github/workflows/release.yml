@@ -1,10 +1,18 @@
-# Builds MyNote for macOS, Windows and Linux.
+# Builds MyNote for macOS, Windows, Linux and Android, and publishes them as a GitHub release.
 #
-#   Release:  npm run version:set 0.2.0 → commit → git tag v0.2.0 → git push --follow-tags
+#   Release:  npm run version:set 0.6.0 → commit → git tag v0.6.0 → git push --follow-tags
 #             The tests run first; then every platform builds and its installers are attached to a
-#             draft GitHub release. Review the draft and click Publish.
+#             draft GitHub release, which is published once they're all there. If a build fails, the
+#             draft stays unpublished: fix it and re-run the failed jobs.
 #   Dry run:  Actions → Release → Run workflow. Builds everything and attaches the installers to the
 #             run as downloadable artifacts; publishes nothing.
+#
+# GitHub Actions must be enabled for the repository (a fork has them off: Actions tab → enable).
+#
+# In-app updates need your own signing key: `npx tauri signer generate`, put its public key in
+# apps/desktop/src-tauri/tauri.conf.json (plugins.updater.pubkey) and the private key in the
+# TAURI_SIGNING_PRIVATE_KEY (and _PASSWORD) secrets. Without it the release has no latest.json, and
+# people update by downloading the new version.
 #
 # The builds are NOT signed with an Apple Developer ID or a Windows certificate. macOS builds are
 # ad-hoc signed, so they run, but Gatekeeper warns on first launch: see the release notes below.
@@ -110,7 +118,8 @@ jobs:
           projectPath: apps/desktop
           # Without the signing key, build without update bundles rather than fail.
           args: ${{ matrix.args }} ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && format('--config {0}/apps/desktop/src-tauri/tauri.updater.conf.json', github.workspace) || '' }}
-          # A tag makes (or adds to) the draft release; a dry run has no tag and only uploads artifacts.
+          # A tag makes (or adds to) the draft release, published once everything is attached (see
+          # `publish`); a dry run has no tag and only uploads artifacts.
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('MyNote {0}', github.ref_name) || '' }}
           releaseDraft: true
@@ -120,9 +129,9 @@ jobs:
             ## Install
 
             **The easiest and safest way is to build it yourself**: it takes one command and avoids every warning below.
-            See [Install from source](https://github.com/likeca/MyNote#install-from-source).
+            See [Install](https://github.com/likeca/MyNote#install).
 
-            These downloads are not signed with an Apple or Microsoft certificate yet (that costs money; [sponsoring](https://github.com/sponsors/devian-labs) helps).
+            These downloads are not signed with an Apple or Microsoft certificate.
 
             - **macOS** (`aarch64` for Apple Silicon, `x64` for Intel): open the `.dmg` and drag MyNote to Applications.
               The first time, macOS says it "can't verify the developer". Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
@@ -134,8 +143,7 @@ jobs:
               To have your desktop workspace on it, open **Settings → Sync** and connect the same git repository. Phone plugins, such as Finance, install from **Settings → Plugins**.
 
             The MCP server for AI agents needs **Node.js 20+**.
-
-            Already using MyNote 0.5 or later? It offers this update itself, in the sidebar.
+            ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && 'Already using MyNote? It offers this update itself, in the sidebar.' || '' }}
 
   android:
     name: Build (Android)
@@ -188,7 +196,7 @@ jobs:
             echo "::warning::No ANDROID_KEYSTORE secret: signing with a throwaway key. People will have to uninstall the previous version before installing this one."
             alias=mynote; store_pass=$(openssl rand -hex 16); key_pass=$store_pass
             keytool -genkeypair -keystore "$RUNNER_TEMP/release.keystore" -alias "$alias" -keyalg RSA -keysize 4096 -validity 10000 \
-              -storepass "$store_pass" -keypass "$key_pass" -dname "CN=MyNote, O=Devian Labs" > /dev/null
+              -storepass "$store_pass" -keypass "$key_pass" -dname "CN=MyNote" > /dev/null
           fi
           "$tools/zipalign" -f 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
           mkdir -p dist-mobile
@@ -241,6 +249,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "$GITHUB_REF_NAME" dist-plugins/* --clobber
+
+  publish:
+    name: Publish the release
+    # Once every download is attached: the draft becomes the latest release, which in-app updates
+    # and the plugin store read from.
+    needs: [build, android, plugins]
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && !cancelled() && needs.build.result == 'success' && needs.android.result == 'success' && needs.plugins.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
 
   ios:
     name: Build (iOS, simulator)

@@ -939,7 +939,7 @@ fn rewrite_attachment_links(text: &str, old_page: &str, new_page: &str) -> Strin
 /// A file's size in bytes, or `None` when it isn't there (deleted, or not pulled yet).
 pub fn file_size(vault: &Path, rel: &str) -> Option<u64> {
     let meta = fs::metadata(resolve(vault, rel).ok()?).ok()?;
-    meta.is_file().then(|| meta.len())
+    meta.is_file().then_some(meta.len())
 }
 
 pub fn read_asset(vault: &Path, rel: &str) -> Result<Vec<u8>, String> {

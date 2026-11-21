@@ -23,6 +23,8 @@ jobs:
       - run: npm run plugins
       - run: node --import tsx --test tests/*.test.mjs
         working-directory: apps/desktop
+        env:
+          LC_ALL: en_US.UTF-8
       - run: npm test -w mynote-mcp
 
   lander:
