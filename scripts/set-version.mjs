@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Sets the app's version everywhere it is written down, so a release tag and the built files agree.
+// Sets the app's version everywhere it is written down. Releases run it on their own with each
+// version they make (see .github/workflows/release.yml); run it yourself to start a new major or
+// minor version:
 //
-//   npm run version:set 0.2.0
-//
-// Then commit, tag and push:  git add -A && git commit -m "release: v0.2.0" && git tag v0.2.0 && git push --follow-tags
+//   npm run version:set 0.7.0   then commit and push to main: that push is released as 0.7.0.
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,4 +47,4 @@ setJson("package-lock.json", (j) => {
   for (const ws of ["apps/desktop", "apps/mobile", "packages/mcp"]) if (j.packages?.[ws]) j.packages[ws].version = version;
 });
 replaceOnce("packages/mcp/src/index.ts", /(new McpServer\(\{ name: "mynote", version: )"[^"]+"/, `$1"${version}"`);
-console.log(`\nNext: git add -A && git commit -m "release: v${version}" && git tag v${version} && git push --follow-tags`);
+console.log(`\nNext: git add -A && git commit -m "version ${version}" && git push   (that push is released as v${version})`);

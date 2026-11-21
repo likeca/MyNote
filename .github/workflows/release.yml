@@ -1,9 +1,11 @@
 # Builds MyNote for macOS, Windows, Linux and Android, and publishes them as a GitHub release.
 #
-#   Release:  npm run version:set 0.6.0 → commit → git tag v0.6.0 → git push --follow-tags
-#             The tests run first; then every platform builds and its installers are attached to a
-#             draft GitHub release, which is published once they're all there. If a build fails, the
-#             draft stays unpublished: fix it and re-run the failed jobs.
+#   Release:  every push to main. The tests run first; then the commit is tagged with the next
+#             version (see the `version` job), every platform builds, and the installers are attached
+#             to a draft GitHub release, published once they're all there. If a build fails, the
+#             draft stays unpublished: fix it and push again (that's the next version).
+#   Version:  0.6.0, then 0.6.1, 0.6.2… on their own. For a bigger step, `npm run version:set 0.7.0`,
+#             commit and push: that push is released as 0.7.0.
 #   Dry run:  Actions → Release → Run workflow. Builds everything and attaches the installers to the
 #             run as downloadable artifacts; publishes nothing.
 #
@@ -30,9 +32,11 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
 
+# One release at a time, in order. Pushes made while one builds wait; if several pile up, only the
+# newest runs, and its release includes the commits before it.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -43,25 +47,47 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   version:
-    name: Tag matches the app version
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Version
+    needs: [checks]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      tag: v${{ steps.next.outputs.version }}
+      # A push to main publishes; a manual run only builds.
+      release: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v7
-      - name: Compare
+      # The version in tauri.conf.json while it hasn't been released, else the next patch after the
+      # newest release of that major.minor: 0.6.0, 0.6.1, 0.6.2… `npm run version:set 0.7.0` (and
+      # commit) starts 0.7.x.
+      - id: next
         run: |
-          app=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$app" != "$tag" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match the app version $app. Run 'npm run version:set $tag', commit, and tag that commit."
-            exit 1
-          fi
+          base=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          base=${base%%-*}
+          IFS=. read -r major minor patch <<< "$base"
+          last=$(git ls-remote --tags origin "refs/tags/v$major.$minor.*" | sed -E 's#.*refs/tags/v##; s#\^\{\}$##' \
+            | cut -d. -f3 | { grep -E '^[0-9]+$' || true; } | sort -n | tail -n 1)
+          next=$(( ${last:--1} + 1 ))
+          [ "$patch" -gt "$next" ] && next=$patch
+          echo "version=$major.$minor.$next" >> "$GITHUB_OUTPUT"
+          echo "Version $major.$minor.$next"
+      # Tagged now, after the tests: a build that fails later leaves an unpublished draft, and the
+      # next push takes the next number. (Tags pushed with this token don't start workflows.)
+      - name: Tag
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: |
+          tag="v${{ steps.next.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "MyNote $tag" "$GITHUB_SHA"
+          git push origin "$tag"
 
   build:
     name: Build (${{ matrix.name }})
     needs: [checks, version]
-    # `version` only runs for tags; a dry run skips it.
-    if: ${{ !cancelled() && needs.checks.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.version.result) }}
+    if: ${{ !cancelled() && needs.version.result == 'success' }}
     permissions:
       contents: write
     strategy:
@@ -103,6 +129,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       # Install from the repo root: the app's build also builds the MCP server it bundles.
       - run: npm ci
+      # This release's version, in every file that has it (only on the runner: nothing is committed).
+      - run: npm run version:set ${{ needs.version.outputs.version }}
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -118,12 +146,12 @@ jobs:
           projectPath: apps/desktop
           # Without the signing key, build without update bundles rather than fail.
           args: ${{ matrix.args }} ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && format('--config {0}/apps/desktop/src-tauri/tauri.updater.conf.json', github.workspace) || '' }}
-          # A tag makes (or adds to) the draft release, published once everything is attached (see
-          # `publish`); a dry run has no tag and only uploads artifacts.
-          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('MyNote {0}', github.ref_name) || '' }}
+          # A push to main makes the draft release (tagged by `version`), published once everything
+          # is attached (see `publish`); a dry run has no tag and only uploads artifacts.
+          tagName: ${{ needs.version.outputs.release == 'true' && needs.version.outputs.tag || '' }}
+          releaseName: ${{ needs.version.outputs.release == 'true' && format('MyNote {0}', needs.version.outputs.tag) || '' }}
           releaseDraft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: false
           uploadWorkflowArtifacts: true
           releaseBody: |
             ## Install
@@ -149,7 +177,7 @@ jobs:
     name: Build (Android)
     # After the desktop builds, so their draft release already exists to attach the APK to.
     needs: [checks, version, build]
-    if: ${{ !cancelled() && needs.checks.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.version.result) }}
+    if: ${{ !cancelled() && needs.version.result == 'success' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -176,6 +204,7 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - run: npm ci
+      - run: npm run version:set ${{ needs.version.outputs.version }}
       # Through the wrapper: it points OpenSSL's build (git sync) at the NDK's llvm-ranlib.
       - name: Build the APK
         run: npm run android:build -w @mynote/mobile -- --apk
@@ -210,10 +239,11 @@ jobs:
           name: android-apk
           path: dist-mobile/*.apk
       - name: Attach to the draft release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: needs.version.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist-mobile/*.apk --clobber
+          TAG: ${{ needs.version.outputs.tag }}
+        run: gh release upload "$TAG" dist-mobile/*.apk --clobber
 
   plugins:
     name: Plugins (store packages)
@@ -245,17 +275,18 @@ jobs:
           name: plugins
           path: dist-plugins/*
       - name: Attach to the draft release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: needs.version.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist-plugins/* --clobber
+          TAG: ${{ needs.version.outputs.tag }}
+        run: gh release upload "$TAG" dist-plugins/* --clobber
 
   publish:
     name: Publish the release
     # Once every download is attached: the draft becomes the latest release, which in-app updates
     # and the plugin store read from.
-    needs: [build, android, plugins]
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && !cancelled() && needs.build.result == 'success' && needs.android.result == 'success' && needs.plugins.result == 'success' }}
+    needs: [version, build, android, plugins]
+    if: ${{ !cancelled() && needs.version.outputs.release == 'true' && needs.build.result == 'success' && needs.android.result == 'success' && needs.plugins.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -263,7 +294,8 @@ jobs:
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+          TAG: ${{ needs.version.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false
 
   ios:
     name: Build (iOS, simulator)
