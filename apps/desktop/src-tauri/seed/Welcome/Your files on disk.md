@@ -16,7 +16,7 @@ MyNote/
 ├── Ideas.md
 ├── Roadmap.md
 ├── Roadmap/
-│   ├── _assets/    files attached to Roadmap, and images uploaded to it
+│   ├── _assets/    files attached to Roadmap, and images uploaded to it (in a folder per heading)
 │   ├── Design the database views.md
 │   └── …
 ├── _assets/        images and files that came in with an import (an older .assets/ or assets/ folder is moved automatically, each page's files into its own folder)

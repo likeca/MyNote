@@ -15,15 +15,16 @@ Deleting a page moves it, and everything inside it, to the Trash. A message at t
 
 Open **Trash** at the bottom of the sidebar, below Settings.
 
-- Search it by title or by where the page used to be.
+- Search it by title or by where the page used to be. Files are found by name or folder.
 - **Restore** puts a page back where it was. If that name is taken by then, the restored page is renamed.
-- **Delete forever** removes one page, and **Empty Trash** removes everything.
-- Pages are deleted for good after **30 days**.
+- Files you deleted from a page are listed under **Files**. **Restore** puts one back in its folder and its link at the end of its page, which opens. If its page is in the Trash too, restore the page first.
+- **Delete forever** removes one page or file, and **Empty Trash** removes everything.
+- Pages and files are deleted for good after **30 days**.
 
 <details>
 <summary>Where trashed pages go</summary>
 
-Trashed pages move to a hidden `.trash/` folder in the workspace. Git ignores that folder, and trashed pages are left out of search, links and the MCP server.
+Trashed pages move to a hidden `.trash/` folder in the workspace, and files deleted from a page to `.trash/.files/`. Git ignores that folder, and trashed pages are left out of search, links and the MCP server.
 
 Even after a page is deleted forever, every earlier version is still in git history. See [[History and sync]].
 

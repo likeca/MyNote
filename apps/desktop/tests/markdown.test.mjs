@@ -14,7 +14,7 @@ for (const key of ["window", "document", "navigator", "Node", "HTMLElement", "El
 
 const { Editor } = await import("@tiptap/core");
 const { contentExtensions } = await import("../src/editor/Editor.tsx");
-const { assetHref, assetPath } = await import("../src/editor/blocks.tsx");
+const { assetHref, assetPath, headingAbove } = await import("../src/editor/blocks.tsx");
 const { normalizeMarkdown } = await import("../src/editor/markdown.ts");
 const { joinNote, patchFrontmatter, readFrontmatter, splitNote } = await import("../src/lib/frontmatter.ts");
 const { parseSchema } = await import("../src/database/model.ts");
@@ -582,4 +582,29 @@ test("malformed frontmatter values read as their text and are repaired when patc
   const dash = "order: 3\nObjectives: - Recursion & Backtracking\ntags:\n- a\n- b";
   assert.deepEqual(readFrontmatter(dash), { order: 3, Objectives: "- Recursion & Backtracking", tags: ["a", "b"] });
   assert.deepEqual(readFrontmatter(patchFrontmatter(dash, {})), readFrontmatter(dash));
+});
+
+test("files go in the folder of the heading they're under", () => {
+  const md = [
+    "Before any heading.",
+    "## Setup",
+    "Under setup.",
+    "<details open>\n<summary><h1>Docker build</h1></summary>\n\nIn the toggle.\n\n### Push\n\nAfter push.\n\n</details>",
+    "Right after the toggle.",
+    "<details open>\n<summary>A plain toggle</summary>\n\nInside it.\n\n</details>",
+  ].join("\n\n");
+  const sectionAt = (text, offset = 0) => {
+    const editor = editorAt(md, text, offset);
+    const section = headingAbove(editor.state.doc, editor.state.selection.from);
+    editor.destroy();
+    return section;
+  };
+  assert.equal(sectionAt("Before any heading."), null);
+  assert.equal(sectionAt("Under setup."), "Setup");
+  assert.equal(sectionAt("Setup", 2), "Setup", "in the heading's own line");
+  assert.equal(sectionAt("In the toggle."), "Docker build", "inside a toggle heading");
+  assert.equal(sectionAt("Docker build", 1), "Docker build", "on its title (files go inside it)");
+  assert.equal(sectionAt("After push."), "Push", "a heading inside the toggle comes first");
+  assert.equal(sectionAt("Right after the toggle."), "Docker build", "the toggle heading just above");
+  assert.equal(sectionAt("Inside it."), "Docker build", "a plain toggle isn't a heading: the one above it");
 });

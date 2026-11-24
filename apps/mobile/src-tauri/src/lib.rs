@@ -120,10 +120,12 @@ fn duplicate_note(app: AppHandle, state: State<AppState>, path: String) -> Resul
     done
 }
 
+/// Saves a pasted picture in `page`'s attachment folder, in the folder of the heading it goes under
+/// (`section`), as on the desktop.
 #[tauri::command]
-fn save_asset(app: AppHandle, state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>) -> Result<String, String> {
+fn save_asset(app: AppHandle, state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>, section: Option<String>) -> Result<String, String> {
     let _writes = state.write();
-    let done = vault::save_asset(&state.workspace, page.as_deref().filter(|p| !p.is_empty()), &name, &bytes);
+    let done = vault::save_asset(&state.workspace, page.as_deref().filter(|p| !p.is_empty()), section.as_deref(), &name, &bytes);
     changed(&app, &[]);
     done
 }

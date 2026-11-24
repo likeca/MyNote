@@ -382,11 +382,11 @@ fn duplicate_note(state: State<AppState>, path: String) -> Result<String, String
     vault::duplicate_note(&vault(&state)?, &path)
 }
 
-/// Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder, or the
-/// workspace's `_assets/` without one.
+/// Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder (in the
+/// folder of the heading it goes under, `section`), or the workspace's `_assets/` without one.
 #[tauri::command]
-fn save_asset(state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>) -> Result<String, String> {
-    vault::save_asset(&vault(&state)?, page.as_deref().filter(|p| !p.is_empty()), &name, &bytes)
+fn save_asset(state: State<AppState>, name: String, bytes: Vec<u8>, page: Option<String>, section: Option<String>) -> Result<String, String> {
+    vault::save_asset(&vault(&state)?, page.as_deref().filter(|p| !p.is_empty()), section.as_deref(), &name, &bytes)
 }
 
 /// Returns raw bytes (an ArrayBuffer in JS) rather than a JSON number array.
@@ -406,15 +406,16 @@ fn write_asset_text(state: State<AppState>, path: String, text: String) -> Resul
     vault::write_asset(&vault(&state)?, &path, text.as_bytes())
 }
 
-/// Copies a file picked on disk into `page`'s attachment folder; returns its vault path.
+/// Copies a file picked on disk into `page`'s attachment folder (in the folder of the heading it
+/// goes under, `section`); returns its vault path.
 #[tauri::command]
-fn attach_file(state: State<AppState>, path: String, page: Option<String>) -> Result<String, String> {
-    vault::copy_attachment(&vault(&state)?, page.as_deref(), Path::new(&path))
+fn attach_file(state: State<AppState>, path: String, page: Option<String>, section: Option<String>) -> Result<String, String> {
+    vault::copy_attachment(&vault(&state)?, page.as_deref(), section.as_deref(), Path::new(&path))
 }
 
 /// Saves a dropped or pasted file in its page's attachment folder. Its bytes are the raw request body
-/// (a JSON list of numbers would be slow for big files); its name and page come percent-encoded in
-/// the `x-file-name` and `x-page` headers.
+/// (a JSON list of numbers would be slow for big files); its name, page and heading (`section`)
+/// come percent-encoded in the `x-file-name`, `x-page` and `x-section` headers.
 #[tauri::command]
 fn attach_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Result<String, String> {
     let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
@@ -422,7 +423,8 @@ fn attach_bytes(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Res
     };
     let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).map(percent_decode);
     let page = header("x-page").filter(|p| !p.is_empty());
-    vault::save_attachment(&vault(&state)?, page.as_deref(), &header("x-file-name").unwrap_or_default(), bytes)
+    let section = header("x-section").filter(|s| !s.is_empty());
+    vault::save_attachment(&vault(&state)?, page.as_deref(), section.as_deref(), &header("x-file-name").unwrap_or_default(), bytes)
 }
 
 /// Decodes `%XX` escapes (what JS's `encodeURIComponent` makes); anything else is kept as is.
@@ -507,6 +509,23 @@ fn restore_trash(state: State<AppState>, id: String) -> Result<String, String> {
 #[tauri::command]
 fn purge_trash(state: State<AppState>, id: Option<String>) -> Result<(), String> {
     vault::purge_trash(&vault(&state)?, id.as_deref())
+}
+
+/// Files deleted from their pages, in the Trash on their own.
+#[tauri::command]
+fn list_trashed_files(state: State<AppState>) -> Result<Vec<vault::TrashedFile>, String> {
+    Ok(vault::list_trashed_files(&vault(&state)?))
+}
+
+/// Puts a deleted file back, linked at the end of its page; returns that page.
+#[tauri::command]
+fn restore_trashed_file(state: State<AppState>, id: String) -> Result<Option<String>, String> {
+    vault::restore_trashed_file(&vault(&state)?, &id)
+}
+
+#[tauri::command]
+fn purge_trashed_file(state: State<AppState>, id: String) -> Result<(), String> {
+    vault::purge_trashed_file(&vault(&state)?, &id)
 }
 
 #[tauri::command]
@@ -986,6 +1005,9 @@ pub fn run() {
             list_trash,
             restore_trash,
             purge_trash,
+            list_trashed_files,
+            restore_trashed_file,
+            purge_trashed_file,
             search_notes,
             backlinks,
             git_status,

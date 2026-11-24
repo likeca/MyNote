@@ -12,6 +12,7 @@ import { createRoot } from "react-dom/client";
 import { assetChanged } from "../components/PageIcon";
 import { api } from "../lib/api";
 import { isAssetPath } from "../lib/assets";
+import { headingAbove } from "./blocks";
 
 const ORIGIN = "https://embed.diagrams.net";
 /** Shape libraries on, Save plus Save & Exit buttons, "Unsaved changes" while there are some. */
@@ -35,7 +36,8 @@ export function newDiagram(editor: Editor) {
         await api.writeAsset(src, [...bytes]);
         return assetChanged(src);
       }
-      src = await api.saveAsset("Diagram.drawio.svg", [...bytes], editor.storage.fileAttachment.page);
+      // In the folder of the heading the diagram goes under, as files dropped there.
+      src = await api.saveAsset("Diagram.drawio.svg", [...bytes], editor.storage.fileAttachment.page, headingAbove(editor.state.doc, at));
       if (editor.isDestroyed) return;
       editor.chain().insertContentAt(Math.min(at, editor.state.doc.content.size), { type: "image", attrs: { src, alt: "Diagram" } }).run();
     },

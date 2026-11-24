@@ -25,6 +25,8 @@ export type Commit = { hash: string; short: string; author: string; timestamp: n
 export type GitSettings = { branch: string; remote_url: string | null; user_name: string | null; user_email: string | null; commits: number };
 export type AiPolicy = "all" | "shared";
 export type TrashItem = { id: string; title: string; icon: string | null; original: string; deleted: number; pages: number };
+/** A file deleted from its page (see list_trashed_files). `page`: where it was attached, if not the workspace's own `_assets/`. */
+export type TrashedFile = { id: string; name: string; original: string; page: string | null; deleted: number; size: number };
 export type ImportReport = { root: string; pages: number; databases: number; assets: number; skipped: string[] };
 export type McpInfo = { server_path: string; built: boolean; vault: string; node_path: string | null };
 
@@ -40,21 +42,27 @@ export const api = {
   createNote: (parent: string | null, title: string) => invoke<string>("create_note", { parent, title }),
   databaseRows: (path: string) => invoke<RawRow[]>("database_rows", { path }),
   duplicateNote: (path: string) => invoke<string>("duplicate_note", { path }),
-  /** Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder, or the workspace's `_assets/`. */
-  saveAsset: (name: string, bytes: number[], page?: string | null) => invoke<string>("save_asset", { name, bytes, page: page ?? null }),
+  /**
+   * Saves an uploaded image (icon, pasted picture, diagram) in `page`'s attachment folder (in the
+   * folder of the heading it goes under, `section`), or the workspace's `_assets/`.
+   */
+  saveAsset: (name: string, bytes: number[], page?: string | null, section?: string | null) =>
+    invoke<string>("save_asset", { name, bytes, page: page ?? null, section: section ?? null }),
   readAsset: (path: string) => invoke<ArrayBuffer>("read_asset", { path }),
   writeAsset: (path: string, bytes: number[]) => invoke<void>("write_asset", { path, bytes }),
   /** Saves an attached text file edited in its tab. */
   writeAssetText: (path: string, text: string) => invoke<void>("write_asset_text", { path, text }),
   /** A web page's title, its site's icon and (GitHub) its owner's avatar, as `data:` URLs, for link mentions (desktop only). */
   linkPreview: (url: string) => invoke<{ title: string | null; icon: string | null; avatar: string | null }>("link_preview", { url }),
-  /** Attaches a file picked on disk: copies it into `page`'s attachment folder; returns its vault path. */
-  attachFile: (path: string, page: string | null) => invoke<string>("attach_file", { path, page }),
+  /** Attaches a file picked on disk: copies it into `page`'s attachment folder (`section`: see saveAsset); returns its vault path. */
+  attachFile: (path: string, page: string | null, section: string | null = null) => invoke<string>("attach_file", { path, page, section }),
   /** Files dragged in from Finder (`drag`) or copied there (the clipboard), as paths (macOS; empty elsewhere). See file_paths. */
   filePaths: (drag: boolean) => invoke<string[]>("file_paths", { drag }),
-  /** Attaches a dropped or pasted file to `page`, sent as raw bytes; returns its vault path. */
-  attachBytes: (name: string, bytes: ArrayBuffer, page: string | null) =>
-    invoke<string>("attach_bytes", bytes, { headers: { "x-file-name": encodeURIComponent(name), "x-page": encodeURIComponent(page ?? "") } }),
+  /** Attaches a dropped or pasted file to `page` (`section`: see saveAsset), sent as raw bytes; returns its vault path. */
+  attachBytes: (name: string, bytes: ArrayBuffer, page: string | null, section: string | null = null) =>
+    invoke<string>("attach_bytes", bytes, {
+      headers: { "x-file-name": encodeURIComponent(name), "x-page": encodeURIComponent(page ?? ""), "x-section": encodeURIComponent(section ?? "") },
+    }),
   /** A workspace file's size in bytes, or null when it isn't there. */
   fileSize: (path: string) => invoke<number | null>("file_size", { path }),
   /** Opens an attached file in its default app, or with `reveal`, shows it in Finder. */
@@ -69,6 +77,11 @@ export const api = {
   listTrash: () => invoke<TrashItem[]>("list_trash"),
   restoreTrash: (id: string) => invoke<string>("restore_trash", { id }),
   purgeTrash: (id?: string) => invoke<void>("purge_trash", { id: id ?? null }),
+  /** Files deleted from their pages, in the Trash on their own (desktop). */
+  listTrashedFiles: () => invoke<TrashedFile[]>("list_trashed_files"),
+  /** Puts a deleted file back, linked at the end of its page; returns that page. */
+  restoreTrashedFile: (id: string) => invoke<string | null>("restore_trashed_file", { id }),
+  purgeTrashedFile: (id: string) => invoke<void>("purge_trashed_file", { id }),
   search: (query: string) => invoke<SearchHit[]>("search_notes", { query }),
   backlinks: (path: string) => invoke<NoteMeta[]>("backlinks", { path }),
   gitStatus: () => invoke<RepoStatus>("git_status"),

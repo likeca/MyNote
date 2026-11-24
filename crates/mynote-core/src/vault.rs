@@ -583,6 +583,102 @@ pub fn purge_trash(vault: &Path, id: Option<&str>) -> Result<(), String> {
     }
 }
 
+/// A file in the Trash on its own: deleted from its page (its last link removed), not with its page.
+#[derive(Serialize)]
+pub struct TrashedFile {
+    /// `<millis>/<path>` inside `.trash/.files`: what restore_trashed_file and purge_trashed_file take.
+    pub id: String,
+    pub name: String,
+    /// Where it was, e.g. "Projects/Plan/_assets/Q3 Report.pdf".
+    pub original: String,
+    /// The page it was attached to ("Projects/Plan.md"); None for the workspace's own `_assets/`.
+    pub page: Option<String>,
+    /// Unix millis.
+    pub deleted: u64,
+    pub size: u64,
+}
+
+/// The page whose `_assets/` holds `rel` ("Plan/_assets/Docker/a.txt" → "Plan.md"); None for the
+/// workspace's `_assets/`. (No page is named like the attachments folder, so the first one is it.)
+fn attachment_page(rel: &str) -> Option<String> {
+    let i = rel.find(&format!("/{ASSETS}/"))?;
+    Some(format!("{}.md", &rel[..i]))
+}
+
+/// Files in the Trash on their own (see TrashedFile), newest first. Those older than 30 days are
+/// left out: list_trash removes them.
+pub fn list_trashed_files(vault: &Path) -> Vec<TrashedFile> {
+    let root = vault.join(TRASH).join(RELEASED_FILES);
+    let cutoff = now_millis().saturating_sub(TRASH_DAYS * 24 * 3600 * 1000);
+    let mut files: Vec<TrashedFile> = WalkDir::new(&root)
+        .min_depth(2)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file() && e.file_name() != ".DS_Store")
+        .filter_map(|e| {
+            let id = rel_string(&root, e.path());
+            let (stamp, original) = id.split_once('/')?;
+            let deleted = stamp.parse::<u64>().ok().filter(|t| *t >= cutoff)?;
+            Some(TrashedFile {
+                name: e.file_name().to_string_lossy().into_owned(),
+                page: attachment_page(original),
+                original: original.to_string(),
+                deleted,
+                size: e.metadata().map_or(0, |m| m.len()),
+                id: id.clone(),
+            })
+        })
+        .collect();
+    files.sort_by_key(|f| std::cmp::Reverse(f.deleted));
+    files
+}
+
+/// A trashed file's place in the Trash and where it was, from its id (see TrashedFile).
+fn trashed_file(vault: &Path, id: &str) -> Result<(PathBuf, String), String> {
+    let (stamp, original) = id.split_once('/').ok_or("invalid file id")?;
+    if stamp.is_empty() || !stamp.chars().all(|c| c.is_ascii_digit()) || !in_assets(original) {
+        return Err("invalid file id".into());
+    }
+    let src = resolve(&vault.join(TRASH).join(RELEASED_FILES).join(stamp), original)?;
+    if !src.is_file() {
+        return Err("This file is no longer in the Trash.".into());
+    }
+    Ok((src, original.to_string()))
+}
+
+/// Puts a file from the Trash back in its folder (numbered if its name is taken by now), with a
+/// link to it at the end of its page. Returns that page (None for the workspace's `_assets/`).
+pub fn restore_trashed_file(vault: &Path, id: &str) -> Result<Option<String>, String> {
+    let (src, original) = trashed_file(vault, id)?;
+    let page = attachment_page(&original);
+    let page_file = page.as_deref().map(|p| resolve(vault, p)).transpose()?;
+    if let (Some(page), Some(file)) = (&page, &page_file) {
+        if !file.is_file() {
+            return Err(format!("Its page, “{}”, isn't there any more. Restore the page first.", title_of(page)));
+        }
+    }
+    let (dir, name) = original.rsplit_once('/').ok_or("invalid file id")?;
+    let (rel, abs) = new_attachment(vault, dir, name)?;
+    fs::rename(&src, &abs).map_err(|e| e.to_string())?;
+    remove_empty_dirs(src.parent(), &vault.join(TRASH).join(RELEASED_FILES));
+    if let Some(file) = page_file {
+        let text = fs::read_to_string(&file).map_err(|e| e.to_string())?;
+        let label = rel.rsplit('/').next().unwrap_or(&rel).replace('\\', "\\\\").replace('[', "\\[").replace(']', "\\]");
+        let link = format!("[{label}]({})", link_path(&rel));
+        let text = text.trim_end();
+        fs::write(&file, if text.is_empty() { format!("{link}\n") } else { format!("{text}\n\n{link}\n") }).map_err(|e| e.to_string())?;
+    }
+    Ok(page)
+}
+
+/// Permanently deletes one file from the Trash (git history still has it).
+pub fn purge_trashed_file(vault: &Path, id: &str) -> Result<(), String> {
+    let (src, _) = trashed_file(vault, id)?;
+    fs::remove_file(&src).map_err(|e| e.to_string())?;
+    remove_empty_dirs(src.parent(), &vault.join(TRASH).join(RELEASED_FILES));
+    Ok(())
+}
+
 /// Yields the target of every `[[target|alias]]` / `[[target#heading]]` link.
 pub fn wikilinks(text: &str) -> impl Iterator<Item = &str> {
     text.split("[[").skip(1).filter_map(|chunk| {
@@ -727,9 +823,10 @@ fn new_asset(vault: &Path, dir: &str, name: &str, default_ext: Option<&str>) -> 
 }
 
 /// Saves an uploaded image (a page icon, a pasted picture, a diagram) in `page`'s attachment
-/// folder, or the workspace's `_assets/` without one; returns its vault path.
-pub fn save_asset(vault: &Path, page: Option<&str>, name: &str, bytes: &[u8]) -> Result<String, String> {
-    let dir = page.map_or_else(|| ASSETS.to_string(), attachments_dir);
+/// folder (in `section`'s folder, see section_dir), or the workspace's `_assets/` without one;
+/// returns its vault path.
+pub fn save_asset(vault: &Path, page: Option<&str>, section: Option<&str>, name: &str, bytes: &[u8]) -> Result<String, String> {
+    let dir = page.map_or_else(|| ASSETS.to_string(), |page| section_dir(page, section));
     let (rel, abs) = new_asset(vault, &dir, name, Some("png"))?;
     fs::write(abs, bytes).map_err(|e| e.to_string())?;
     Ok(rel)
@@ -777,11 +874,26 @@ fn clean_file_name(name: &str) -> String {
     if stem.trim().is_empty() { format!("file{ext}") } else { format!("{}{ext}", stem.trim_end()) }
 }
 
-/// A new, unused path for `name` in `page`'s attachment folder: the name itself, or "name (2).ext"
-/// when a file of that name is already there. Creates the folder.
-fn new_attachment(vault: &Path, page: &str, name: &str) -> Result<(String, PathBuf), String> {
+/// The folder for `page`'s files under the heading `section`: a folder named after it inside the
+/// page's `_assets/` ("Plan/_assets/Docker build"), or `_assets/` itself with no heading. What a
+/// folder name can't hold (`/`, `:` and the like) becomes a space, and leading dots go, so a
+/// heading can neither climb out of `_assets/` nor hide its folder.
+fn section_dir(page: &str, section: Option<&str>) -> String {
     let dir = attachments_dir(page);
-    let abs_dir = resolve(vault, &dir)?;
+    let Some(section) = section else { return dir };
+    let cleaned: String = section.chars().map(|c| if "/\\:*?\"<>|#^[]".contains(c) || c.is_control() { ' ' } else { c }).collect();
+    let cleaned = cleaned.split_whitespace().collect::<Vec<_>>().join(" ");
+    let name: String = cleaned.trim_start_matches(['.', ' ']).chars().take(80).collect();
+    match name.trim_end() {
+        "" => dir,
+        name => format!("{dir}/{name}"),
+    }
+}
+
+/// A new, unused path for `name` in the folder `dir`: the name itself, or "name (2).ext" when a file
+/// of that name is already there. Creates the folder.
+fn new_attachment(vault: &Path, dir: &str, name: &str) -> Result<(String, PathBuf), String> {
+    let abs_dir = resolve(vault, dir)?;
     fs::create_dir_all(&abs_dir).map_err(|e| e.to_string())?;
     let name = clean_file_name(name);
     let (stem, ext) = match name.rsplit_once('.') {
@@ -797,25 +909,27 @@ fn new_attachment(vault: &Path, page: &str, name: &str) -> Result<(String, PathB
     Ok((format!("{dir}/{candidate}"), abs_dir.join(candidate)))
 }
 
-/// Saves a file attached to `page` (dropped or pasted) in its attachment folder; returns its vault
-/// path. Without a page, it goes in the workspace's `_assets/`, named like an image.
-pub fn save_attachment(vault: &Path, page: Option<&str>, name: &str, bytes: &[u8]) -> Result<String, String> {
+/// Saves a file attached to `page` (dropped or pasted) in its attachment folder, in the folder of
+/// the heading it's under (`section`, see section_dir); returns its vault path. Without a page, it
+/// goes in the workspace's `_assets/`, named like an image.
+pub fn save_attachment(vault: &Path, page: Option<&str>, section: Option<&str>, name: &str, bytes: &[u8]) -> Result<String, String> {
     let (rel, abs) = match page {
-        Some(page) => new_attachment(vault, page, name)?,
+        Some(page) => new_attachment(vault, &section_dir(page, section), name)?,
         None => new_asset(vault, ASSETS, name, None)?,
     };
     fs::write(abs, bytes).map_err(|e| e.to_string())?;
     Ok(rel)
 }
 
-/// Copies a file from anywhere on disk into `page`'s attachment folder; returns its vault path.
-pub fn copy_attachment(vault: &Path, page: Option<&str>, src: &Path) -> Result<String, String> {
+/// Copies a file from anywhere on disk into `page`'s attachment folder (in `section`'s folder, as
+/// save_attachment); returns its vault path.
+pub fn copy_attachment(vault: &Path, page: Option<&str>, section: Option<&str>, src: &Path) -> Result<String, String> {
     if !src.is_file() {
         return Err(format!("not a file: {}", src.display()));
     }
     let name = src.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let (rel, abs) = match page {
-        Some(page) => new_attachment(vault, page, &name)?,
+        Some(page) => new_attachment(vault, &section_dir(page, section), &name)?,
         None => new_asset(vault, ASSETS, &name, None)?,
     };
     fs::copy(src, abs).map_err(|e| e.to_string())?;
@@ -1344,38 +1458,50 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("mynote-attach-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let page = "Projects/Launch plan.md";
-        assert_eq!(save_attachment(&dir, Some(page), "Q3 Report.pdf", b"1").unwrap(), "Projects/Launch plan/_assets/Q3 Report.pdf");
+        assert_eq!(save_attachment(&dir, Some(page), None, "Q3 Report.pdf", b"1").unwrap(), "Projects/Launch plan/_assets/Q3 Report.pdf");
         // A second file of the same name is numbered, not overwritten.
-        assert_eq!(save_attachment(&dir, Some(page), "Q3 Report.pdf", b"2").unwrap(), "Projects/Launch plan/_assets/Q3 Report (2).pdf");
+        assert_eq!(save_attachment(&dir, Some(page), None, "Q3 Report.pdf", b"2").unwrap(), "Projects/Launch plan/_assets/Q3 Report (2).pdf");
         assert_eq!(read_asset(&dir, "Projects/Launch plan/_assets/Q3 Report.pdf").unwrap(), b"1");
         // Names can't climb out of the folder, or name the folder itself.
-        assert_eq!(save_attachment(&dir, Some(page), "../../evil.sh", b"x").unwrap(), "Projects/Launch plan/_assets/evil.sh");
-        assert_eq!(save_attachment(&dir, Some(page), "..", b"x").unwrap(), "Projects/Launch plan/_assets/file");
+        assert_eq!(save_attachment(&dir, Some(page), None, "../../evil.sh", b"x").unwrap(), "Projects/Launch plan/_assets/evil.sh");
+        assert_eq!(save_attachment(&dir, Some(page), None, "..", b"x").unwrap(), "Projects/Launch plan/_assets/file");
         // Dot-files keep their dot, also when the name is taken.
-        assert_eq!(save_attachment(&dir, Some(page), ".env", b"x").unwrap(), "Projects/Launch plan/_assets/.env");
-        assert_eq!(save_attachment(&dir, Some(page), ".env", b"y").unwrap(), "Projects/Launch plan/_assets/.env (2)");
-        assert_eq!(save_attachment(&dir, Some(page), ".env.local", b"x").unwrap(), "Projects/Launch plan/_assets/.env.local");
-        assert_eq!(save_attachment(&dir, Some(page), "", b"x").unwrap(), "Projects/Launch plan/_assets/file (2)");
-        assert!(save_attachment(&dir, Some("../Outside.md"), "a.txt", b"x").is_err());
+        assert_eq!(save_attachment(&dir, Some(page), None, ".env", b"x").unwrap(), "Projects/Launch plan/_assets/.env");
+        assert_eq!(save_attachment(&dir, Some(page), None, ".env", b"y").unwrap(), "Projects/Launch plan/_assets/.env (2)");
+        assert_eq!(save_attachment(&dir, Some(page), None, ".env.local", b"x").unwrap(), "Projects/Launch plan/_assets/.env.local");
+        assert_eq!(save_attachment(&dir, Some(page), None, "", b"x").unwrap(), "Projects/Launch plan/_assets/file (2)");
+        assert!(save_attachment(&dir, Some("../Outside.md"), None, "a.txt", b"x").is_err());
         // Without a page: the workspace's `_assets/`, no extension invented.
-        let plain = save_attachment(&dir, None, "Makefile", b"all:").unwrap();
+        let plain = save_attachment(&dir, None, None, "Makefile", b"all:").unwrap();
         assert!(plain.starts_with("_assets/Makefile-") && !plain.trim_start_matches("_assets/").contains('.'), "{plain}");
         // Uploaded images get a stamped name, and default to .png.
-        assert!(save_asset(&dir, None, "clipboard", b"p").unwrap().ends_with(".png"));
-        assert!(save_asset(&dir, Some(page), "clipboard", b"p").unwrap().starts_with("Projects/Launch plan/_assets/clipboard-"));
+        assert!(save_asset(&dir, None, None, "clipboard", b"p").unwrap().ends_with(".png"));
+        assert!(save_asset(&dir, Some(page), None, "clipboard", b"p").unwrap().starts_with("Projects/Launch plan/_assets/clipboard-"));
+        // Under a heading: in a folder named after it, inside the page's `_assets/`.
+        let docker = save_attachment(&dir, Some(page), Some("Docker build"), "Q3 Report.pdf", b"h").unwrap();
+        assert_eq!(docker, "Projects/Launch plan/_assets/Docker build/Q3 Report.pdf");
+        let shot = save_asset(&dir, Some(page), Some("Docker build"), "shot", b"p").unwrap();
+        assert!(shot.starts_with("Projects/Launch plan/_assets/Docker build/shot-"), "{shot}");
+        // What a folder name can't hold becomes a space; a heading can't climb out or hide the folder.
+        assert_eq!(save_attachment(&dir, Some(page), Some("../Step 1: set up / build"), "a.txt", b"h").unwrap(), "Projects/Launch plan/_assets/Step 1 set up build/a.txt");
+        assert_eq!(save_attachment(&dir, Some(page), Some(" .. "), "b.txt", b"h").unwrap(), "Projects/Launch plan/_assets/b.txt");
+        // Its last file deleted, the heading's folder goes too.
+        assert!(delete_attachment(&dir, &docker, page).unwrap().is_empty());
+        assert!(delete_attachment(&dir, &shot, page).unwrap().is_empty());
+        assert!(!dir.join("Projects/Launch plan/_assets/Docker build").exists());
         // A Markdown file attached to a page isn't a page.
         write_note(&dir, page, "").unwrap();
-        save_attachment(&dir, Some(page), "notes.md", b"# x").unwrap();
+        save_attachment(&dir, Some(page), None, "notes.md", b"# x").unwrap();
         assert_eq!(list_notes(&dir).iter().map(|n| n.path.as_str()).collect::<Vec<_>>(), [page]);
 
         let outside = std::env::temp_dir().join(format!("mynote-attach-src-{}.numbers", std::process::id()));
         fs::write(&outside, b"%PDF-1.7 hello").unwrap();
-        let copied = copy_attachment(&dir, Some(page), &outside).unwrap();
+        let copied = copy_attachment(&dir, Some(page), None, &outside).unwrap();
         assert_eq!(copied, format!("Projects/Launch plan/_assets/{}", outside.file_name().unwrap().to_string_lossy()));
         assert_eq!(file_size(&dir, &copied), Some(14));
         assert_eq!(file_size(&dir, "_assets/missing.pdf"), None);
         assert_eq!(file_size(&dir, "_assets"), None, "a folder isn't a file");
-        assert!(copy_attachment(&dir, Some(page), &dir).is_err(), "folders can't be attached");
+        assert!(copy_attachment(&dir, Some(page), None, &dir).is_err(), "folders can't be attached");
         let _ = fs::remove_file(&outside);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1385,8 +1511,8 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("mynote-attach-del-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Work/Plan.md", "").unwrap();
-        let a = save_attachment(&dir, Some("Work/Plan.md"), "a.pdf", b"a").unwrap();
-        let b = save_attachment(&dir, Some("Work/Plan.md"), "b c.pdf", b"b").unwrap();
+        let a = save_attachment(&dir, Some("Work/Plan.md"), None, "a.pdf", b"a").unwrap();
+        let b = save_attachment(&dir, Some("Work/Plan.md"), None, "b c.pdf", b"b").unwrap();
         let link = |rel: &str| format!("[f]({})", link_path(rel));
         write_note(&dir, "Work/Plan.md", &format!("{}\n{}", link(&a), link(&b))).unwrap();
         write_note(&dir, "Other.md", &link(&b)).unwrap();
@@ -1430,13 +1556,52 @@ mod tests {
     }
 
     #[test]
+    fn deleted_files_are_listed_in_the_trash_and_come_back_linked_at_the_end_of_their_page() {
+        let dir = std::env::temp_dir().join(format!("mynote-trashed-files-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let page = "Work/Plan.md";
+        write_note(&dir, page, "# Plan\n\nSome text.\n").unwrap();
+        let report = save_attachment(&dir, Some(page), Some("Budget"), "Q3 [final].pdf", b"r").unwrap();
+        let gone = save_attachment(&dir, Some("Gone.md"), None, "old.txt", b"o").unwrap();
+        write_note(&dir, "Gone.md", "").unwrap();
+        assert!(delete_attachment(&dir, &report, page).unwrap().is_empty());
+        assert!(delete_attachment(&dir, &gone, "Gone.md").unwrap().is_empty());
+        fs::remove_file(dir.join("Gone.md")).unwrap();
+
+        let files = list_trashed_files(&dir);
+        let listed = files.iter().find(|f| f.original == report).expect("the report is in the Trash");
+        assert_eq!((listed.name.as_str(), listed.page.as_deref(), listed.size), ("Q3 [final].pdf", Some(page), 1));
+        // Its name taken in the meantime: it comes back numbered, linked under that name.
+        save_attachment(&dir, Some(page), Some("Budget"), "Q3 [final].pdf", b"new").unwrap();
+        assert_eq!(restore_trashed_file(&dir, &listed.id).unwrap().as_deref(), Some(page));
+        assert_eq!(read_asset(&dir, "Work/Plan/_assets/Budget/Q3 [final] (2).pdf").unwrap(), b"r");
+        assert_eq!(
+            fs::read_to_string(dir.join(page)).unwrap(),
+            "# Plan\n\nSome text.\n\n[Q3 \\[final\\] (2).pdf](Work/Plan/_assets/Budget/Q3%20%5Bfinal%5D%20%282%29.pdf)\n"
+        );
+        assert!(list_trashed_files(&dir).iter().all(|f| f.original != report), "out of the Trash");
+        assert!(restore_trashed_file(&dir, &listed.id).is_err(), "only once");
+
+        // Its page gone: it stays in the Trash until the page is back.
+        let orphan = list_trashed_files(&dir).into_iter().find(|f| f.original == gone).unwrap();
+        assert!(restore_trashed_file(&dir, &orphan.id).unwrap_err().contains("Restore the page first"));
+        // Ids can't reach outside the Trash.
+        assert!(purge_trashed_file(&dir, "1/../../Work/Plan.md").is_err());
+        assert!(purge_trashed_file(&dir, "x/Gone/_assets/old.txt").is_err());
+        purge_trashed_file(&dir, &orphan.id).unwrap();
+        assert!(list_trashed_files(&dir).is_empty());
+        assert!(!dir.join(TRASH).join(RELEASED_FILES).read_dir().is_ok_and(|mut d| d.next().is_some()), "emptied folders go");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_deleted_pages_attachments_go_to_the_trash_and_come_back() {
         let dir = std::env::temp_dir().join(format!("mynote-attach-trash-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         write_note(&dir, "Plan.md", "").unwrap();
         write_note(&dir, "Plan/Step.md", "").unwrap();
-        let report = save_attachment(&dir, Some("Plan.md"), "Q3 Report.pdf", b"r").unwrap();
-        save_attachment(&dir, Some("Plan/Step.md"), "data.csv", b"c").unwrap();
+        let report = save_attachment(&dir, Some("Plan.md"), None, "Q3 Report.pdf", b"r").unwrap();
+        save_attachment(&dir, Some("Plan/Step.md"), None, "data.csv", b"c").unwrap();
         write_note(&dir, "Plan.md", &format!("[f]({})", link_path(&report))).unwrap();
 
         let id = delete_note(&dir, "Plan.md").unwrap();
@@ -1478,8 +1643,8 @@ mod tests {
         write_note(&dir, "Work.md", "").unwrap();
         write_note(&dir, "Work/Plan.md", "").unwrap();
         write_note(&dir, "Work/Plan/Step.md", "").unwrap();
-        let report = save_attachment(&dir, Some("Work/Plan.md"), "Q3 Report.pdf", b"r").unwrap();
-        let sheet = save_attachment(&dir, Some("Work/Plan/Step.md"), "data.csv", b"c").unwrap();
+        let report = save_attachment(&dir, Some("Work/Plan.md"), None, "Q3 Report.pdf", b"r").unwrap();
+        let sheet = save_attachment(&dir, Some("Work/Plan/Step.md"), None, "data.csv", b"c").unwrap();
         let link = |rel: &str| format!("[f]({})", link_path(rel));
         assert_eq!(link(&report), "[f](Work/Plan/_assets/Q3%20Report.pdf)");
         write_note(&dir, "Work/Plan.md", &link(&report)).unwrap();
@@ -1515,9 +1680,9 @@ mod tests {
     fn diagrams_keep_their_drawio_extension_and_only_assets_are_rewritten() {
         let dir = std::env::temp_dir().join(format!("mynote-assets-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        let diagram = save_asset(&dir, None, "Flow chart.drawio.svg", b"<svg/>").unwrap();
+        let diagram = save_asset(&dir, None, None, "Flow chart.drawio.svg", b"<svg/>").unwrap();
         assert!(diagram.starts_with("_assets/Flowchart-") && diagram.ends_with(".drawio.svg"), "{diagram}");
-        let photo = save_asset(&dir, Some("Page.md"), "photo.png", b"png").unwrap();
+        let photo = save_asset(&dir, Some("Page.md"), None, "photo.png", b"png").unwrap();
         assert!(photo.starts_with("Page/_assets/photo-") && !photo.contains("drawio"), "{photo}");
 
         write_asset(&dir, &diagram, b"<svg>2</svg>").unwrap();
@@ -1529,7 +1694,7 @@ mod tests {
         }
         assert_eq!(fs::read_to_string(dir.join("Page.md")).unwrap(), "text");
         // A file in a page's attachment folder is edited in its tab, but a linked folder can't lead out.
-        let attached = save_attachment(&dir, Some("Page.md"), "notes.json", b"{}").unwrap();
+        let attached = save_attachment(&dir, Some("Page.md"), None, "notes.json", b"{}").unwrap();
         write_asset(&dir, &attached, b"{\"a\":1}").unwrap();
         assert_eq!(read_asset(&dir, &attached).unwrap(), b"{\"a\":1}");
         #[cfg(unix)]

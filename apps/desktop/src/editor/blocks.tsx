@@ -1262,6 +1262,41 @@ export function placeFile(tr: Transaction, node: PMNode, pos: number, ownLine = 
   return tr.mapping.map(at);
 }
 
+/** A toggle heading's title (its level set), else null. */
+const toggleHeadingTitle = (node: PMNode) => (node.type.name === "details" && node.attrs.level ? node.child(0).textContent.trim() || null : null);
+
+/**
+ * The title of the heading `pos` is under, which names the folder its files go in (see section_dir
+ * in vault.rs): the nearest heading (or toggle heading) above it among the blocks beside it, else
+ * the toggle heading it's inside, and so on outwards. In a heading's own line, or on a toggle
+ * heading's title (where files go inside the toggle, see placeFile), that heading. Null when there's
+ * none above it.
+ */
+export function headingAbove(doc: PMNode, pos: number): string | null {
+  const $pos = doc.resolve(Math.min(Math.max(0, pos), doc.content.size));
+  if ($pos.parent.type.name === "heading") return $pos.parent.textContent.trim() || null;
+  for (let d = $pos.depth; d >= 0; d--) {
+    const node = $pos.node(d);
+    if (node.type.name === "detailsSummary") {
+      const title = toggleHeadingTitle($pos.node(d - 1));
+      if (title) return title;
+      continue;
+    }
+    if (node.isTextblock) continue;
+    for (let i = $pos.index(d) - 1; i >= 0; i--) {
+      const block = node.child(i);
+      if (block.type.name === "heading") return block.textContent.trim() || null;
+      const title = toggleHeadingTitle(block);
+      if (title) return title;
+    }
+    if (node.type.name === "detailsContent") {
+      const title = toggleHeadingTitle($pos.node(d - 1));
+      if (title) return title;
+    }
+  }
+  return null;
+}
+
 /**
  * The real paths of files dragged in from Finder (`dragged`) or copied there and pasted, by their
  * place in `files` (null where unknown). WebKit's File can lack a name's leading dot
@@ -1280,12 +1315,15 @@ async function realPaths(files: File[], dragged: boolean): Promise<(string | nul
 }
 
 /**
- * Saves each file into the page's `_assets/` and puts it in the page at `pos`, in order: an image
- * block or an attachment. One file goes in the line at `pos`; several, each on a line of its own.
- * A file with a known path (`paths`, dragged from Finder) is copied from it, under its own name.
+ * Saves each file into the page's `_assets/` (in the folder of the heading at `pos`, see
+ * headingAbove) and puts it in the page at `pos`, in order: an image block or an attachment. One
+ * file goes in the line at `pos`; several, each on a line of its own. A file with a known path
+ * (`paths`, dragged from Finder) is copied from it, under its own name.
  */
 async function insertFiles(view: EditorView, files: File[], pos: number, page: string | null, paths: (string | null)[] = []) {
   const ownLine = files.length > 1;
+  // All of them under the heading where they land, in its folder.
+  const section = headingAbove(view.state.doc, pos);
   for (const [i, file] of files.entries()) {
     const { schema } = view.state;
     const path = paths[i] ?? null;
@@ -1293,12 +1331,12 @@ async function insertFiles(view: EditorView, files: File[], pos: number, page: s
     try {
       if (showsAsImage(file.type)) {
         const bytes = await file.arrayBuffer();
-        const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)], page);
+        const src = await api.saveAsset(file.name || "image.png", [...new Uint8Array(bytes)], page, section);
         node = schema.nodes.image.create({ src, alt: file.name.replace(/\.\w+$/, "") });
       } else {
         const name = (path && path.split(/[\\/]/).pop()) || file.name || "file";
-        const saved = path ? await api.attachFile(path, page).catch(() => null) : null;
-        const src = assetHref(saved ?? (await api.attachBytes(name, await file.arrayBuffer(), page)));
+        const saved = path ? await api.attachFile(path, page, section).catch(() => null) : null;
+        const src = assetHref(saved ?? (await api.attachBytes(name, await file.arrayBuffer(), page, section)));
         node = schema.nodes.fileAttachment.create({ src, name });
       }
     } catch (e) {
@@ -1325,10 +1363,11 @@ export async function pickAttachments(editor: TiptapEditor) {
   try {
     const picked = await openDialog({ multiple: true, title: "Attach files" });
     const paths = picked == null ? [] : Array.isArray(picked) ? picked : [picked];
+    const section = headingAbove(editor.state.doc, tracked.pos);
     for (const path of paths) {
       let node;
       try {
-        const src = assetHref(await api.attachFile(path, page));
+        const src = assetHref(await api.attachFile(path, page, section));
         node = editor.schema.nodes.fileAttachment.create({ src, name: path.split(/[\\/]/).pop() });
       } catch (e) {
         console.error(`Couldn't attach ${path}`, e);
@@ -1486,6 +1525,9 @@ const ATTACHMENT_ICONS: [RegExp, typeof FileText][] = [
   [/\.(json|ya?ml|xml|html?|css|js|ts|tsx|py|rb|go|rs|java|c|cpp|h|sh|sql)$/i, FileCode],
 ];
 
+/** The icon for an attached file, by the first of `names` with a known kind (its name, its path). */
+export const attachmentIcon = (...names: string[]) => ATTACHMENT_ICONS.find(([re]) => names.some((n) => re.test(n)))?.[1] ?? FileGeneric;
+
 export function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB"];
@@ -1516,7 +1558,7 @@ function AttachmentView({ node, selected, editor, getPos }: NodeViewProps) {
     };
   }, [src]);
   const missing = size === null;
-  const Icon = ATTACHMENT_ICONS.find(([re]) => re.test(name) || re.test(src))?.[1] ?? FileGeneric;
+  const Icon = attachmentIcon(name, src);
   // Text and code open in a tab of their own, in a code editor (desktop); the rest in their own app.
   const inTab = !missing && currentPlatform() === "desktop" && opensInEditor(name || src);
   const open = (e: React.MouseEvent) => {
