@@ -15,7 +15,7 @@ A page's title is its file name. Characters that can't go in a file name or a li
 
 A sub-page lives in a folder named after its parent. This page is `Welcome/Pages and sub-pages.md`, under [[Welcome]]. Sub-pages are nested under their parent in the sidebar and in the breadcrumbs, and moving a page to the [[Trash]] takes its sub-pages with it.
 
-Pages are listed A–Z until you drag one into place in the sidebar. The order is saved as a number in each page's frontmatter, such as `order: 2`. The first time you reorder a list, every page in it gets a number; after that, usually only the page you moved changes. New pages go after the ones you've ordered.
+Pages are listed A–Z until you drag one into place in the sidebar. The order is saved as a number in each page's frontmatter, such as `order: 2`. The first time you reorder a list, every page in it gets a number; after that, usually only the page you moved changes. New pages go after the ones you've ordered. To go back to A–Z, choose **Sort pages A–Z** in the parent page's `•••` menu in the sidebar (it shows on pages with two or more sub-pages): their numbers are removed.
 
 ## Icon, cover and tags
 

@@ -10,7 +10,7 @@ MyNote has two parts: the sidebar on the left and the open page on the right.
 - **Favorites** lists the pages you've starred. It only appears once you have some.
 - **The page tree** shows every page, with sub-pages nested under their parent. Click the arrow next to a page to expand it.
   - Hover a page and click `+` to add a page inside it.
-  - Click `•••` to add it to Favorites, hide it from AI agents, duplicate it, add a page inside or move it to the Trash.
+  - Click `•••` (or right-click) to add it to Favorites, hide it from AI agents, duplicate it, add a page inside, sort its sub-pages A–Z or move it to the Trash.
   - Drag a page up or down to change its place among the pages next to it. A line shows where it will land; press `Esc` to cancel.
   - Drag a page out of the sidebar onto a page's text to link to it there. See [[Links and backlinks]].
 - **Add new**, or the pen icon at the top, creates a page. So does `⌘N`.

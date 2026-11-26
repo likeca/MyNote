@@ -486,6 +486,27 @@ export default function App() {
     [refresh],
   );
 
+  // "Sort pages A–Z" on a page: its sub-pages lose their manual `order`, so they list by name.
+  const sortChildren = useCallback(
+    async (path: string) => {
+      const key = path.replace(/\.md$/, "");
+      const ordered = childrenOf(buildTree(notesRef.current), key).filter((n) => n.order !== null);
+      setExpanded((prev) => new Set([...prev, key]));
+      if (!ordered.length) return;
+      const writes = Object.fromEntries(ordered.map((n) => [n.path, null]));
+      setNotes((ns) => ns.map((n) => (n.path in writes ? { ...n, order: null } : n)));
+      try {
+        await writeOrders(writes);
+      } catch (e) {
+        await message(String(e), { title: "MyNote", kind: "error" });
+      } finally {
+        await refresh();
+        setRefreshKey((k) => k + 1);
+      }
+    },
+    [refresh],
+  );
+
   // Dragging a page into another page (or to the top level): move the file and its sub-pages, then
   // write the `order` that puts it where it was dropped (dropped onto a page, it goes last).
   const movePage = useCallback(
@@ -595,6 +616,7 @@ export default function App() {
             onDuplicate={async (path) => openPage(await api.duplicateNote(path))}
             onToggleFavorite={toggleFavorite}
             onReorder={reorderPage}
+            onSortChildren={sortChildren}
             onMove={movePage}
             onSearch={() => setPalette(true)}
             onOpenPluginView={(pluginId, viewId, e) => openPage(viewPath(pluginId, viewId), { newTab: wantsNewTab(e) })}

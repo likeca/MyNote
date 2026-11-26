@@ -1,4 +1,5 @@
 import {
+  ArrowDownAZ,
   Bot,
   Check,
   ChevronDown,
@@ -68,6 +69,8 @@ type Props = {
   onToggleFavorite: (path: string) => void;
   /** A page was dragged to drop position `gap` among `siblings` (its folder's pages, as shown). */
   onReorder: (path: string, siblings: string[], gap: number) => void;
+  /** Lists a page's sub-pages A–Z again, dropping their dragged-in order. */
+  onSortChildren: (path: string) => void;
   /**
    * A page was dragged into another folder `dest` (a page's sub-pages, or "" for the top level):
    * at drop position `gap` among that folder's `siblings`, or (gap null) dropped onto the page.
@@ -364,6 +367,9 @@ export function Sidebar(p: Props) {
           <AiMenuItem path={menu.note.path} onDone={() => setMenu(null)} />
           <MenuItem icon={<Copy size={15} />} label="Duplicate" onClick={() => (p.onDuplicate(menu.note.path), setMenu(null))} />
           <MenuItem icon={<Plus size={15} />} label="Add a page inside" onClick={() => (p.onCreate(menu.note.path), setMenu(null))} />
+          {(findNode(p.tree, menu.note.path.replace(/\.md$/, ""))?.children.filter((c) => c.note).length ?? 0) > 1 && (
+            <MenuItem icon={<ArrowDownAZ size={15} />} label="Sort pages A–Z" onClick={() => (p.onSortChildren(menu.note.path), setMenu(null))} />
+          )}
           <MenuDivider />
           <MenuItem icon={<Trash2 size={15} />} label="Move to Trash" danger onClick={() => (p.onDelete(menu.note.path), setMenu(null))} />
         </Popover>
